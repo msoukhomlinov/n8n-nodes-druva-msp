@@ -1,23 +1,41 @@
 {
   "openapi": "3.0.2",
-  "info": { "title": "Druva MSP", "version": "1.0.0", "x-logo": { "url": "" } },
-  "servers": [{ "url": "https://apis.druva.com/" }],
+  "info": {
+    "title": "Druva MSP",
+    "version": "1.0.0",
+    "x-logo": {
+      "url": ""
+    }
+  },
+  "servers": [
+    {
+      "url": "https://apis.druva.com/"
+    }
+  ],
   "paths": {
     "/msp/auth/v1/admins": {
       "get": {
-        "tags": ["Admins"],
+        "tags": [
+          "Admins"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "pageNumber",
             "description": "Specify the number of the result's page you wish to receive.",
-            "schema": { "format": "int64", "default": 1, "type": "integer" },
+            "schema": {
+              "format": "int64",
+              "default": 1,
+              "type": "integer"
+            },
             "in": "query"
           },
           {
@@ -34,7 +52,9 @@
           {
             "name": "search",
             "description": "Specify the part of admin's name or email by which you intend to search and list admins. Example, 'Smith' will return admin with the name of 'John Smith'.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
@@ -42,7 +62,11 @@
             "description": "Specify the parameter by which you intend to sort the admin list results. The available sorting options are: \n- **id:** Sort by the admin's unique identifier.\n- **name:** Sort by the admin's first name. \n- **email:** Sort by the admin's email address. \n\nBy default, the id is used to sort the results.",
             "schema": {
               "default": "id",
-              "enum": ["id", "name", "email"],
+              "enum": [
+                "id",
+                "name",
+                "email"
+              ],
               "type": "string"
             },
             "in": "query"
@@ -52,7 +76,10 @@
             "description": "Specify the order in which you intend to sort admins list results.",
             "schema": {
               "default": "ASC",
-              "enum": ["ASC", "DESC"],
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
               "type": "string"
             },
             "in": "query"
@@ -63,7 +90,11 @@
             "schema": {
               "type": "array",
               "items": {
-                "enum": ["adminIDs", "emails", "roleIDs"],
+                "enum": [
+                  "adminIDs",
+                  "emails",
+                  "roleIDs"
+                ],
                 "type": "string"
               }
             },
@@ -74,14 +105,22 @@
             "description": "Specify the IDs of admins you wish to list.",
             "schema": {
               "type": "array",
-              "items": { "format": "int64", "type": "integer" }
+              "items": {
+                "format": "int64",
+                "type": "integer"
+              }
             },
             "in": "query"
           },
           {
             "name": "emails",
             "description": "Specify the emails of admins you wish to list.",
-            "schema": { "type": "array", "items": { "type": "string" } },
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
             "in": "query"
           },
           {
@@ -91,7 +130,11 @@
               "type": "array",
               "items": {
                 "format": "int64",
-                "enum": [2, 3, 4],
+                "enum": [
+                  2,
+                  3,
+                  4
+                ],
                 "type": "integer"
               }
             },
@@ -102,48 +145,182 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ListAdminsResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ListAdminsResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "ListAdmins",
+        "summary": "List all administrators",
+        "description": "⚠ **Warning**: This API version will be deprecated on March 26, 2025, to provide you with the latest features, including detailed information about the timezone and status for each admin.\n Upgrade to <a href=\"https://developer.druva.com/reference/listadminsv2\">v2 API</a> now to experience enhanced functionality and performance."
+      }
+    },
+    "/msp/v2/admins": {
+      "get": {
+        "tags": [
+          "Admins"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "description": "Specify the Bearer access token",
+            "schema": {
+              "type": "string"
+            },
+            "in": "header",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "pageToken",
+            "in": "query",
+            "description": "- The token to access the next page of results. Use the token value received in the previous response's parameter 'nextPageToken'.\n - Keep this field blank in the first request."
+          },
+          {
+            "name": "pageSize",
+            "description": "Specify the number of records you wish to receive in the API response. Example - 30.",
+            "schema": {
+              "format": "int64",
+              "default": 10,
+              "maximum": 500,
+              "type": "integer"
+            },
+            "in": "query"
+          },
+          {
+            "name": "id",
+            "description": "Specify the IDs of admins you wish to list, separated by commas. Example- 1,2",
+            "schema": {
+              "type": "array",
+              "items": {
+                "format": "int64",
+                "type": "integer"
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "in": "query"
+          },
+          {
+            "name": "email",
+            "description": "Specify the email addresses of the admins you wish to list, separated by commas. \n Example- email@example.com, email1@example.com",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "in": "query"
+          },
+          {
+            "name": "role",
+            "description": "Specify the role IDs of admins you wish to list, separated by commas. Example- 2, 4 \n - 2 - MSP Admin\n - 3 - Tenant Admin\n - 4 - Read Only Admin\n",
+            "schema": {
+              "type": "array",
+              "items": {
+                "format": "int64",
+                "enum": [
+                  2,
+                  3,
+                  4
+                ],
+                "type": "integer"
+              }
+            },
+            "style": "form",
+            "explode": false,
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAdminsV2Response"
+                }
+              }
+            },
+            "description": "Ok"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
+              }
+            },
+            "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "operationId": "ListAdminsV2",
         "summary": "List all administrators",
         "description": "Returns the list of admins with their details."
       }
     },
     "/msp/v2/servicePlans": {
       "get": {
-        "tags": ["Service Plans"],
+        "tags": [
+          "Service Plans"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "pageSize",
             "description": "Specify the number of records you wish to receive in API response. Example - 30.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "pageToken",
             "description": "- The token to access the next page of results. Use the token value received in the previous response's parameter 'nextPageToken'.\n- Keep this field blank in the first request.\n",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           }
         ],
@@ -163,20 +340,28 @@
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "ListServicePlans",
         "summary": "List all service plans",
         "description": "Returns the list of service plans configured along with the details."
@@ -184,19 +369,26 @@
     },
     "/msp/v2/servicePlans/{servicePlanID}": {
       "get": {
-        "tags": ["Service Plans"],
+        "tags": [
+          "Service Plans"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "servicePlanID",
             "description": "Specify the unique ID of a service plan. Get the ID of a service plan using the 'List all service plans' API.",
-            "schema": { "format": "int64", "type": "integer" },
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
             "in": "path",
             "required": true
           }
@@ -205,26 +397,38 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ServicePlan" }
+                "schema": {
+                  "$ref": "#/components/schemas/ServicePlan"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
-          "404": { "description": "The requested resource was not found." },
+          "404": {
+            "description": "The requested resource was not found."
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetServicePlan",
         "summary": "Get service plan",
         "description": "Returns information about a particular service plan using provided service plan ID."
@@ -232,25 +436,33 @@
     },
     "/msp/v2/customers": {
       "get": {
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "pageSize",
             "description": "Specify the number of records you wish to receive in API response. Example - 30.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "pageToken",
             "description": "- The token to access the next page of results. Use the token value received in the previous response's parameter 'nextPageToken'. \n- Keep this field blank in the first request.\n",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           }
         ],
@@ -270,20 +482,28 @@
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetCustomers",
         "summary": "List all customers",
         "description": "Returns the list of all customers."
@@ -293,16 +513,22 @@
           "description": "Specify the details for a new customer.",
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateCustomerRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerRequest"
+              }
             }
           }
         },
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -311,22 +537,32 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TaskCreatedResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreatedResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "CreateCustomer",
         "summary": "Create a new customer",
         "description": "- Creates a new customer with provided details.\n- After you initiate the operation, it is queued and a task ID is generated. You can get the task ID from the success response. Use this task ID in the 'Get Task Details' API to track the operation's progress.\n"
@@ -334,19 +570,25 @@
     },
     "/msp/v2/customers/{customerID}": {
       "get": {
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the unique ID of the customer. Get the ID of the customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -355,26 +597,38 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/GetCustomerResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/GetCustomerResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
-          "404": { "description": "The requested resource was not found." },
+          "404": {
+            "description": "The requested resource was not found."
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetCustomer",
         "summary": "Get customer details",
         "description": "Returns information about a customer using Customer ID."
@@ -384,23 +638,31 @@
           "description": "- Provide the updated details for the customer.\n- You MUST provide information for all the fields in this update request. If you do not wish to update any existing information, provide the current value for this field. You can get current values for all fields using the 'Get customer details' API.\n",
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateCustomerRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerRequest"
+              }
             }
           }
         },
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the unique ID of the customer you wish to update. Get the unique ID of the customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -409,26 +671,38 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TaskCreatedResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreatedResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
-          "404": { "description": "The requested resource was not found." },
+          "404": {
+            "description": "The requested resource was not found."
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "UpdateCustomerRequest",
         "summary": "Update customer details",
         "description": "Update existing customer details.\n- After you initiate the operation, it is queued and a task ID is generated. You can get the task ID from the success response. Use this task ID in the 'Get Task Details' API to track the operation's progress.\n- You must provide existing information in all the fields that do not require an update.\n"
@@ -436,50 +710,73 @@
     },
     "/msp/v3/customers/{customerID}/events": {
       "get": {
-        "tags": ["Events"],
+        "tags": [
+          "Events"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the unique ID of the customer. Get the ID of the customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           },
           {
             "name": "pageSize",
             "description": "Specify the number of records you wish to receive in a single API response.\n The maximum allowed value is 500.\n Example - 30.",
-            "schema": { "type": "integer", "default": 500, "maximum": 500 },
+            "schema": {
+              "type": "integer",
+              "default": 500,
+              "maximum": 500
+            },
             "in": "query"
           },
           {
             "name": "pageToken",
             "description": "The token to access the next page of results. Use the token value received in the previous response's parameter 'nextPageToken'.\n Keep this field blank in the first request.\n",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "category",
             "description": "Specify the category of events to be included in response.\n",
-            "schema": { "type": "string", "enum": ["EVENT", "AUDIT", "ALERT"] },
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EVENT",
+                "AUDIT",
+                "ALERT"
+              ]
+            },
             "in": "query"
           },
           {
             "name": "type",
             "description": "Specify the type of events to be included in response.\n For all valid values of event types, please refer to : <a href=\"https://developer.druva.com/docs/events-api-for-msps#supported-druva-workloads\">Supported Druva Workloads</a>. New type of events will be added in the list with time.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "syslogSeverity",
             "description": "Specify the syslogSeverity of events to be included in response.\n Specify the severity code as follows:\n\nFor Emergency use 0\n\nFor Alert (action must be taken immediately) use 1\n\nFor Critical (critical conditions) use 2\n\nFor Error (error conditions) use 3\n\nFor Warning (warning conditions) use 4\n\nFor Notice (normal but significant condition) use 5\n\nFor Informational (informational messages) use 6\n\nFor Debug (debug-level messages) use 7",
-            "schema": { "type": "integer" },
+            "schema": {
+              "type": "integer"
+            },
             "in": "query"
           }
         ],
@@ -494,22 +791,34 @@
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
-          "404": { "description": "The requested resource was not found." },
-          "429": { "description": "Too many requests" },
+          "404": {
+            "description": "The requested resource was not found."
+          },
+          "429": {
+            "description": "Too many requests"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetCustomerEvents",
         "summary": "List all customer level events",
         "description": "Returns the list of all events generated at a customer level.\n- Recommended polling frequency per customer - **only once in 30 minutes**."
@@ -521,23 +830,31 @@
           "description": "Generate API Access Token for a customer.",
           "content": {
             "application/x-www-form-urlencoded": {
-              "schema": { "$ref": "#/components/schemas/GenerateTokenRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/GenerateTokenRequest"
+              }
             }
           }
         },
-        "tags": ["Customers"],
+        "tags": [
+          "Customers"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the unique ID of the customer for whom you wish to generate the API access token. Get the ID of the customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -553,18 +870,28 @@
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
-          "404": { "description": "The requested resource was not found." },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "The requested resource was not found."
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "Generate API access token",
         "summary": "Generate API access token for a customer",
         "description": "Use this API to generate an API access token that is unique to the customer. Use this token for accessing Druva APIs relevant to the specific customer.\n"
@@ -576,23 +903,31 @@
           "description": "Specify the details for a new tenant.",
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateTenantRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantRequest"
+              }
             }
           }
         },
-        "tags": ["Tenants"],
+        "tags": [
+          "Tenants"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the unique ID of the customer for whom you wish to create a new tenant. Get the ID of the customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -601,23 +936,35 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TaskCreatedResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreatedResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
-          "422": { "description": "Unprocessable Entity" },
+          "400": {
+            "description": "Bad Request"
+          },
+          "422": {
+            "description": "Unprocessable Entity"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "CreateTenant",
         "summary": "Create a new tenant",
         "description": "- Creates a new tenant for a customer.\n- After you initiate the operation, it is queued and a task ID is generated. You can get the task ID from the success response. Use this task ID in the 'Get Task Details' API to track the operation's progress.\n- Note\n    - This API does not support the creation of a Sandbox tenant.\n    - Hybrid Workloads license is valid for eight years, while a SaaS Apps and Endpoints license is valid for three years.\n    - Storage Regions once added, cannot be removed.\n    - For SaaS Apps & Endpoint and Hybrid Workloads with Business Edition, any one storage region is supported.\n    - All features enabled in the associated Service plan will be enabled compulsorily for the tenant. Need to send those feature attributes in the API.\n    - Feature Endpoints do not support business edition.\n    - For valid products and their values, see - https://developer.druva.com/docs/msp-product-and-attribute-values\n"
@@ -625,43 +972,74 @@
     },
     "/msp/v2/events": {
       "get": {
-        "tags": ["Events"],
+        "tags": [
+          "Events"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "pageSize",
             "description": "Specify the number of records you wish to receive in a single API response.\n The maximum allowed value is 500.\n Example - 30.",
-            "schema": { "type": "integer", "default": 500, "maximum": 500 },
+            "schema": {
+              "type": "integer",
+              "default": 500,
+              "maximum": 500
+            },
             "in": "query"
           },
           {
             "name": "pageToken",
             "description": "The token to access the next page of results. Use the token value received in the previous response's parameter 'nextPageToken'.\n Keep this field blank in the first request.\n",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "category",
             "description": "Specify the category of events to be included in response.\n",
-            "schema": { "type": "string", "enum": ["EVENT", "AUDIT", "ALERT"] },
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EVENT",
+                "AUDIT",
+                "ALERT"
+              ]
+            },
             "in": "query"
           },
           {
             "name": "type",
             "description": "Specify the type of events to be included in response.\n For all valid values of event types, please refer to : <a href=\"https://developer.druva.com/docs/supported-msp-events\">Supported MSP Events</a>. \n New type of events will be added in the list with time.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "syslogSeverity",
             "description": "Specify the syslogSeverity of events to be included in response.\n Specify the severity code as follows:\n\nFor Emergency use 0\n\nFor Alert (action must be taken immediately) use 1\n\nFor Critical (critical conditions) use 2\n\nFor Error (error conditions) use 3\n\nFor Warning (warning conditions) use 4\n\nFor Notice (normal but significant condition) use 5\n\nFor Informational (informational messages) use 6\n\nFor Debug (debug-level messages) use 7",
-            "schema": { "type": "integer", "enum": [0, 1, 2, 3, 4, 5, 6, 7] },
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7
+              ]
+            },
             "in": "query"
           }
         ],
@@ -676,54 +1054,76 @@
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
-          "429": { "description": "Too many requests" },
+          "429": {
+            "description": "Too many requests"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           },
-          "503": { "description": "Service is not available" }
+          "503": {
+            "description": "Service is not available"
+          }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetMSPEvents",
         "summary": "List all MSP level events",
-        "description": "Returns the list of events generated at MSP level"
+        "description": "Returns the list of events generated at MSP level. For the list of valid event types, see [Supported MSP events](/docs/supported-msp-events)."
       }
     },
     "/msp/v2/tenants": {
       "get": {
-        "tags": ["Tenants"],
+        "tags": [
+          "Tenants"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "pageToken",
             "description": "Specify the token to access the next page of results. Keep this field blank in the first request. Use the token value received in the previous response's parameter 'nextPageToken'.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "customerIds",
             "description": "Specify the unique customer id for which you want to retrieve the tenant information.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           },
           {
             "name": "pageSize",
             "description": "Specify the number of records you wish to receive in API response. Example - 30.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "query"
           }
         ],
@@ -731,7 +1131,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/GetTenantsResponse" },
+                "schema": {
+                  "$ref": "#/components/schemas/GetTenantsResponse"
+                },
                 "examples": {
                   "ListTenant Sample 1": {
                     "value": "{\n  \"tenants\": [\n    {\n      \"id\": \"e293b4c7-a984-4813-8fba-526d5b0edc80\",\n      \"customerID\": \"78ccbc1c-0ca0-4077-ad94-a74479c299b8\",\n      \"productID\": 2,\n      \"licenseExpiryDate\": \"2022-10-25T00:00:00Z\",\n      \"quota\": 1.5,\n      \"quotaEndDate\": \"2022-10-25T00:00:00Z\",\n      \"quotaStartDate\": \"2022-10-25T00:00:00Z\",\n      \"servicePlanID\": 1,\n      \"storageRegions\": [\n        \"us-east-1\",\n        \"us-east-2\"\n      ],\n      \"features\": [\n        {\n          \"name\": \"M365\",\n          \"attrs\": [\n            {\n              \"name\": \"userCount\",\n              \"value\": 100\n            }\n          ]\n        }\n      ],\n      \"tenantType\": 2,\n      \"status\": 1,\n      \"createdOn\": \"2022-10-25T00:00:00Z\",\n      \"activeSince\": \"2022-10-25T00:00:00Z\",\n      \"deleteDate\": \"2022-10-25T00:00:00Z\"\n    },\n\t{\n      \"id\": \"e433b4c7-a984-4813-8fba-526d5b0edc81\",\n      \"customerID\": \"91ccbc1c-0ca0-4077-ad94-a74479c299b8\",\n      \"productID\": 2,\n      \"licenseExpiryDate\": \"2022-10-25T00:00:00Z\",\n      \"quota\": 1.5,\n      \"quotaEndDate\": \"2022-10-25T00:00:00Z\",\n      \"quotaStartDate\": \"2022-10-25T00:00:00Z\",\n      \"servicePlanID\": 1,\n      \"storageRegions\": [\n        \"us-east-1\"\n      ],\n      \"features\": [\n        {\n          \"name\": \"M365\",\n          \"attrs\": [\n            {\n              \"name\": \"userCount\",\n              \"value\": 100\n            }\n          ]\n        }\n      ],\n      \"tenantType\": 2,\n      \"status\": 1,\n      \"createdOn\": \"2022-10-25T00:00:00Z\",\n      \"activeSince\": \"2022-10-25T00:00:00Z\",\n      \"deleteDate\": \"2022-10-25T00:00:00Z\"\n    }\n  ],\n  \"nextPageToken\": \"eyJwYWdlU2l6ZSI6IDEwMH0=\"\n}"
@@ -741,21 +1143,31 @@
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
-          "404": { "description": "The requested resource was not found." },
+          "404": {
+            "description": "The requested resource was not found."
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetTenants",
         "summary": "Get tenants list",
         "description": "Returns list of tenants."
@@ -763,26 +1175,34 @@
     },
     "/msp/v2/customers/{customerID}/tenants/{tenantID}": {
       "get": {
-        "tags": ["Tenants"],
+        "tags": [
+          "Tenants"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the unique ID of a customer in MSP. Get the ID of a customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           },
           {
             "name": "tenantID",
             "description": "Specify the unique ID of a tenant in MSP. Get the ID of a tenant using the 'List all tenants' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -791,26 +1211,38 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/GetTenantResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/GetTenantResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "The request did not include a valid Access Token. Kindly provide a valid Access Token to process the request."
           },
-          "404": { "description": "The requested resource was not found." },
+          "404": {
+            "description": "The requested resource was not found."
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error. Kindly try again later. If the error persists, contact Druva Support."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetTenant",
         "summary": "Get tenant details",
         "description": "Returns information about a particular customer's tenant."
@@ -820,30 +1252,40 @@
           "description": "Specify the details for a new customer.",
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateTenantRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantRequest"
+              }
             }
           }
         },
-        "tags": ["Tenants"],
+        "tags": [
+          "Tenants"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the ID of a customer for which you wish to update tenant. Get the ID of a customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           },
           {
             "name": "tenantID",
             "description": "Specify the ID of a tenant for which you wish to update. Get the ID of a tenant using the 'List all tenants' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -852,22 +1294,32 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TaskCreatedResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreatedResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "UpdateTenant",
         "summary": "Update an existing tenant",
         "description": "- Updates existing tenant for given customer for the MSP with given details.\n- After you initiate the operation, it is queued and a task ID is generated. You can get the task ID from the success response. Use this task ID in the 'Get Task Details' API to track the operation's progress.\n- Notes\n  - All features enabled in service plan selected will be enabled compulsorily with tenant creation as well. Need to send those feature attributes in the API. \n  - License Expiry date cannot be greater than 3 years.\n  - Storage Regions once added, will not be removed.\n  - Feature Endpoints do not support business edition.\n  - For Feature M365, business edition, there will be only 1 storage region supported.\n  - Need to provide all details even if they have not changed as per PUT api format.\n  - If a feature is enabled/disabled in service plan it can not be overridden via this API call.\n  - For valid products and their Product Features, see - https://developer.druva.com/docs/msp-product-and-attribute-values\n"
@@ -875,26 +1327,34 @@
     },
     "/msp/v2/customers/{customerID}/tenants/{tenantID}/suspend": {
       "post": {
-        "tags": ["Tenants"],
+        "tags": [
+          "Tenants"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the ID of a customer whose tenant you wish to suspend . Get the ID of a customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           },
           {
             "name": "tenantID",
             "description": "Specify the ID of a tenant which you wish to suspend . Get the ID of a tenant using the 'List all tenants' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -903,22 +1363,32 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TaskCreatedResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreatedResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "SuspendTenant",
         "summary": "Suspend a customer tenant",
         "description": "Suspend a customer's tenant.\n- Note\n    - After the tenant or product is suspended, you cannot access the tenant's console.\n    - After you initiate the operation, it is queued and a task ID is generated. You can get the task ID from the success response. Use this task ID in the 'Get Task Details' API to track the operation's progress.\n"
@@ -926,26 +1396,34 @@
     },
     "/msp/v2/customers/{customerID}/tenants/{tenantID}/unsuspend": {
       "post": {
-        "tags": ["Tenants"],
+        "tags": [
+          "Tenants"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "customerID",
             "description": "Specify the ID of a customer whose tenant you wish to un-suspend . Get the ID of a customer using the 'List all customers' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           },
           {
             "name": "tenantID",
             "description": "Specify the ID of a tenant which you wish to un-suspend . Get the ID of a tenant using the 'List all tenants' API.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -954,22 +1432,32 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/TaskCreatedResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreatedResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "UnsuspendTenant",
         "summary": "Unsuspend a customer tenant",
         "description": "- Unsuspends specified customer's tenant.\n- After you initiate the operation, it is queued and a task ID is generated. You can get the task ID from the success response. Use this task ID in the 'Get Task Details' API to track the operation's progress.\n"
@@ -977,19 +1465,25 @@
     },
     "/msp/v2/tasks/{taskID}": {
       "get": {
-        "tags": ["Tasks"],
+        "tags": [
+          "Tasks"
+        ],
         "parameters": [
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
           {
             "name": "taskID",
             "description": "Specify the unique ID of the task for which you want to know the current status. Task ID is received in response to the API calls made to Create a Customer, Create a Tenant, and so on.",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "path",
             "required": true
           }
@@ -998,22 +1492,32 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/GetTaskResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/GetTaskResponse"
+                }
               }
             },
             "description": "Ok"
           },
-          "400": { "description": "Bad Request" },
+          "400": {
+            "description": "Bad Request"
+          },
           "500": {
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             },
             "description": "The request was not processed due to an internal error in MSP Portal Service."
           }
         },
-        "security": [{ "Bearer": [] }],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "operationId": "GetTask",
         "summary": "Get task details",
         "description": "Returns the status and additional information about a particular task using the Task ID."
@@ -1021,7 +1525,9 @@
     },
     "/msp/v2/reports/usage/summary": {
       "get": {
-        "tags": ["Reports"],
+        "tags": [
+          "Reports"
+        ],
         "summary": "Get global usage report summary",
         "description": "Returns consumption units usage for a defined period.",
         "operationId": "GetGlobalUsageReportSummary",
@@ -1029,7 +1535,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           },
@@ -1037,13 +1545,19 @@
             "name": "startDate",
             "in": "query",
             "description": "Specify the date (YYYY-MM-DD) from which you wish to get global usage report. Default value is 30 days in the past from now.",
-            "schema": { "type": "string", "format": "date-time" }
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
           },
           {
             "name": "endDate",
             "in": "query",
             "description": "Specify the date (YYYY-MM-DD) up to which you wish to get global usage report. Default value is the current date.",
-            "schema": { "type": "string", "format": "date-time" }
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
           }
         ],
         "responses": {
@@ -1057,7 +1571,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "401": {
             "description": "The request did not include an authentication token or an expired authentication token was supplied.",
             "content": {}
@@ -1066,17 +1583,25 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
         },
-        "security": [{ "Bearer": [] }]
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/msp/reporting/v1/reports/consumptionItemized": {
       "post": {
-        "tags": ["Reports"],
+        "tags": [
+          "Reports"
+        ],
         "summary": "Get Itemized Tenant Consumption Report v2.0",
         "description": "Returns a detailed, daily, report on the consumption units consumed by the MSP tenants.",
         "operationId": "GetTenantConsumptionItemizedV2",
@@ -1084,7 +1609,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1110,7 +1637,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "401": {
             "description": "The request did not include an authentication token or an expired authentication token was supplied.",
             "content": {}
@@ -1119,17 +1649,25 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
         },
-        "security": [{ "Bearer": [] }]
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/msp/reporting/v1/reports/quotaItemized": {
       "post": {
-        "tags": ["Reports"],
+        "tags": [
+          "Reports"
+        ],
         "summary": "Get Itemized Tenant Quota Report v2.0",
         "description": "Returns a detailed, daily, report on the quota usage by MSP tenants. It displays consumption based on the currently active quota. \n If there is no active quota defined, the report will show consumption from the last active quota. \n If the quota that needs to be reported is set to 0, it will be excluded from the report.",
         "operationId": "GetTenantQuotaItemizedV2",
@@ -1137,7 +1675,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1163,7 +1703,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "401": {
             "description": "The request did not include an authentication token or an expired authentication token was supplied.",
             "content": {}
@@ -1172,17 +1715,25 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
         },
-        "security": [{ "Bearer": [] }]
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/msp/reporting/v1/reports/mspEWAlertHistory": {
       "post": {
-        "tags": ["Hybrid Workloads Reports"],
+        "tags": [
+          "Hybrid Workloads Reports"
+        ],
         "summary": "View Alert History Report",
         "description": "Provides a view of alerts details of MSP customers as per severity and type. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetAlertHistoryReportDataRequest",
@@ -1190,7 +1741,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1250,17 +1803,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -1293,7 +1856,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -1302,7 +1868,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -1311,7 +1879,9 @@
     },
     "/msp/reporting/v1/reports/mspEWBackupActivity": {
       "post": {
-        "tags": ["Hybrid Workloads Reports"],
+        "tags": [
+          "Hybrid Workloads Reports"
+        ],
         "summary": "View Backup Activity Report",
         "description": "Provides a comprehensive list of all backup operations performed for resources of the workloads configured in the organizations of the MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetBackupActivityReportDataRequest",
@@ -1319,7 +1889,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1392,17 +1964,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "integer", "description": "integer" },
-                                { "type": "string", "description": "string" },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -1435,7 +2017,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -1444,7 +2029,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -1453,7 +2040,9 @@
     },
     "/msp/reporting/v1/reports/mspEWResourceStatus": {
       "post": {
-        "tags": ["Hybrid Workloads Reports"],
+        "tags": [
+          "Hybrid Workloads Reports"
+        ],
         "summary": "View Resource Status Report",
         "description": "Provides a consolidated and point-in-time status and details of all resources and associated backup sets of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetResourceStatusReportDataRequest",
@@ -1461,7 +2050,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1526,17 +2117,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -1569,7 +2170,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -1578,7 +2182,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -1587,7 +2193,9 @@
     },
     "/msp/reporting/v1/reports/mspEWStorageConsumptionbyBackupSets": {
       "post": {
-        "tags": ["Hybrid Workloads Reports"],
+        "tags": [
+          "Hybrid Workloads Reports"
+        ],
         "summary": "View Storage Consumption by BackupSets Report",
         "description": "Lists the Backup Set wise storage consumption details for individual resources in the organization of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetStorageConsumptionbyBackupSetsReportDataRequest",
@@ -1595,7 +2203,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1660,17 +2270,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -1703,7 +2323,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -1712,7 +2335,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -1721,7 +2346,9 @@
     },
     "/msp/reporting/v1/reports/mspEWDisasterRecoveryReplicationActivity": {
       "post": {
-        "tags": ["Hybrid Workloads Reports"],
+        "tags": [
+          "Hybrid Workloads Reports"
+        ],
         "summary": "View Disaster Recovery Replication Activity Report",
         "description": "Provides a consolidated view of  DR restore job completion summary as per status and details of all replications of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetDisasterRecoveryReplicationActivityReportDataRequest",
@@ -1729,7 +2356,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1792,17 +2421,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -1835,7 +2474,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -1844,7 +2486,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -1853,7 +2497,9 @@
     },
     "/msp/reporting/v1/reports/mspEWDisasterRecoveryFailbackActivity": {
       "post": {
-        "tags": ["Hybrid Workloads Reports"],
+        "tags": [
+          "Hybrid Workloads Reports"
+        ],
         "summary": "View Disaster Recovery Failback Activity Report",
         "description": "Provides details of the failback jobs triggered for the failed over EC2 instances in the organization of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetDisasterRecoveryFailbackActivityReportDataRequest",
@@ -1861,7 +2507,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -1921,17 +2569,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "integer", "description": "integer" },
-                                { "type": "string", "description": "string" },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -1964,7 +2622,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -1973,7 +2634,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -1982,7 +2645,9 @@
     },
     "/msp/reporting/v1/reports/mspEWDisasterRecoveryFailoverActivity": {
       "post": {
-        "tags": ["Hybrid Workloads Reports"],
+        "tags": [
+          "Hybrid Workloads Reports"
+        ],
         "summary": "View Disaster Recovery Failover Activity Report",
         "description": "Provides a consolidated view of DR failover job completion summary as per the status and details of all DR failovers of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetDisasterRecoveryFailoverActivityReportDataRequest",
@@ -1990,7 +2655,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2054,17 +2721,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -2097,7 +2774,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -2106,7 +2786,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -2115,7 +2797,9 @@
     },
     "/msp/reporting/v1/reports/mspEPAlert": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View Alert Report",
         "description": "This report provides details about all alerts generated for MSP customers. Specify the status of the alert to narrow down the data in your report. This filter parameter can have one of the following values: \n\n **Yes:** To retrieve data for active alerts only. It lists the currently triggered alerts that require your attention. \n\n **No:** To retrieve data for resolved or deleted alerts only. \n\nThis API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetAlertReportDataRequest",
@@ -2123,7 +2807,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2181,17 +2867,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -2224,7 +2920,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -2233,7 +2932,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -2242,7 +2943,9 @@
     },
     "/msp/reporting/v1/reports/mspEPUsers": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View Users Report",
         "description": "This report provides count of users added, deleted, and preserved for a specified period of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetUsersReportDataRequest",
@@ -2250,7 +2953,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2309,17 +3014,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -2352,7 +3067,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -2361,7 +3079,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -2370,7 +3090,9 @@
     },
     "/msp/reporting/v1/reports/mspEPLicenseUsage": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View License Usage Report",
         "description": "This report provides details of total users added and deleted, total Endpoints active and preserve licenses allocated for MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetLicenseUsageReportDataRequest",
@@ -2378,7 +3100,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2438,17 +3162,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -2481,7 +3215,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -2490,7 +3227,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -2499,7 +3238,9 @@
     },
     "/msp/reporting/v1/reports/mspEPUserProvisioning": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View User Provisioning Report",
         "description": "The User Provisioning report provides information about the users provisioned in Endpoints for MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetUserProvisioningReportDataRequest",
@@ -2507,7 +3248,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2571,17 +3314,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -2614,7 +3367,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -2623,7 +3379,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -2632,7 +3390,9 @@
     },
     "/msp/reporting/v1/reports/mspEPUserRollout": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View User Rollout Report",
         "description": "This report provides user devices, their activation date, and the status of first backup of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetUserRolloutReportDataRequest",
@@ -2640,7 +3400,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2715,17 +3477,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -2758,7 +3530,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -2767,7 +3542,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -2776,7 +3553,9 @@
     },
     "/msp/reporting/v1/reports/mspEPLastBackupStatus": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View Last Backup Status Report data",
         "description": "The Last Backup Status report provides details of the last backup of MSP customers. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetLastBackupStatusReportDataRequest",
@@ -2784,7 +3563,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2853,17 +3634,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -2896,7 +3687,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -2905,7 +3699,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -2914,7 +3710,9 @@
     },
     "/msp/reporting/v1/reports/mspEPStorageStatistics": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View storage statistics of MSP customers",
         "description": "This report provides storage details of customers of MSP. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetStorageStatisticsDataRequest",
@@ -2922,7 +3720,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -2980,17 +3780,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -3023,7 +3833,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -3032,7 +3845,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -3041,7 +3856,9 @@
     },
     "/msp/reporting/v1/reports/mspEPStorageAlert": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View storage alerts of MSP customers",
         "description": "This report provides storage alert details of customers of MSP. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetStorageAlertsDataRequest",
@@ -3049,7 +3866,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -3107,17 +3926,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -3150,7 +3979,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -3159,7 +3991,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -3168,7 +4002,9 @@
     },
     "/msp/reporting/v1/reports/mspEPCloudCacheStatistics": {
       "post": {
-        "tags": ["Endpoints Reports"],
+        "tags": [
+          "Endpoints Reports"
+        ],
         "summary": "View cloud cache statistics of MSP customers",
         "description": "This report provides cloud cache statistics details of customers of MSP. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetCloudCacheDataRequest",
@@ -3176,7 +4012,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -3234,17 +4072,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -3277,7 +4125,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -3286,7 +4137,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -3295,7 +4148,9 @@
     },
     "/msp/reporting/v1/reports/mspDGRollbackActions": {
       "post": {
-        "tags": ["Cyber Resilience Reports"],
+        "tags": [
+          "Cyber Resilience Reports"
+        ],
         "summary": "View Rollback Actions Report",
         "description": "This report provides a consolidated and point-in-time views based on date ranges for all the protected entities that are deleted in your environment. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetRollbackActionsReportDataRequest",
@@ -3303,7 +4158,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -3368,17 +4225,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report.",
@@ -3411,7 +4278,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -3420,7 +4290,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -3429,7 +4301,9 @@
     },
     "/msp/reporting/v1/reports/mspDGDataProtectionRisk": {
       "post": {
-        "tags": ["Cyber Resilience Reports"],
+        "tags": [
+          "Cyber Resilience Reports"
+        ],
         "summary": "View Data Protection Risk Report",
         "description": "This report provides a consolidated view of the connection status of the Enterprise workload agents with the Cloud. This API may be updated without any prior notification. Check the API documentation for the latest updates regularly.",
         "operationId": "GetDataProtectionRiskReportDataRequest",
@@ -3437,7 +4311,9 @@
           {
             "name": "Authorization",
             "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
+            "schema": {
+              "type": "string"
+            },
             "in": "header",
             "required": true
           }
@@ -3497,17 +4373,27 @@
                             },
                             "value": {
                               "oneOf": [
-                                { "type": "string", "description": "string" },
-                                { "type": "integer", "description": "integer" },
+                                {
+                                  "type": "string",
+                                  "description": "string"
+                                },
+                                {
+                                  "type": "integer",
+                                  "description": "integer"
+                                },
                                 {
                                   "type": "array",
                                   "description": "array of strings",
-                                  "items": { "type": "string" }
+                                  "items": {
+                                    "type": "string"
+                                  }
                                 },
                                 {
                                   "type": "array",
                                   "description": "array of integers",
-                                  "items": { "type": "integer" }
+                                  "items": {
+                                    "type": "integer"
+                                  }
                                 }
                               ],
                               "description": "Specify the value of the filter applied to the report..",
@@ -3540,7 +4426,10 @@
               }
             }
           },
-          "400": { "description": "Bad Request", "content": {} },
+          "400": {
+            "description": "Bad Request",
+            "content": {}
+          },
           "404": {
             "description": "The requested resource was not found.",
             "content": {}
@@ -3549,7 +4438,9 @@
             "description": "The request was not processed due to an internal error.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
+                "schema": {
+                  "$ref": "#/components/schemas/APIError"
+                }
               }
             }
           }
@@ -3563,8 +4454,12 @@
         "description": "APIError defines an application error result format",
         "type": "object",
         "properties": {
-          "code": { "type": "string" },
-          "message": { "type": "string" }
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
         }
       },
       "AdminResponse": {
@@ -3604,13 +4499,79 @@
           }
         }
       },
+      "AdminV2Response": {
+        "description": "Contains details about an MSP admin.",
+        "type": "object",
+        "properties": {
+          "email": {
+            "description": "The email of the admin. Example - email@example.com",
+            "type": "string",
+            "example": "email@example.com"
+          },
+          "firstName": {
+            "description": "The first name of the admin. Example - John",
+            "type": "string",
+            "example": "John"
+          },
+          "id": {
+            "format": "int64",
+            "description": "The unique ID of the admin. Example - 1",
+            "type": "integer",
+            "example": 1
+          },
+          "lastName": {
+            "description": "The last name of the admin. Example - 'Smith'",
+            "type": "string",
+            "example": "Smith"
+          },
+          "phone": {
+            "description": "The phone number of the admin. Example - '12345678910'",
+            "type": "string",
+            "example": "12345678910"
+          },
+          "timezone": {
+            "description": "The timezone of the admin. Example - 'Asia/Kolkata'",
+            "type": "string",
+            "example": "Asia/Kolkata"
+          },
+          "status": {
+            "type": "integer",
+            "description": "The current status of the admin.\n  - 0 - Ready\n  - 1 - Updating\n",
+            "example": 1
+          },
+          "role": {
+            "description": "The role ID of the admin.\n  - 2 - MSP Admin\n  - 3 - Tenant Admin\n  - 4 - Read Only Admin\n",
+            "type": "integer",
+            "example": 2
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indicates whether the admin account is currently active or not. Example- true",
+            "example": true
+          },
+          "createdBy": {
+            "type": "integer",
+            "description": "The unique ID of the admin who created this admin account. Example- 1",
+            "format": "int64",
+            "example": 123
+          },
+          "lastLogin": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp of the admin's last successful login. Example - 2024-01-04T09:06:02.191Z",
+            "example": "2024-12-24T10:48:56.361Z"
+          }
+        }
+      },
       "GetTenantsResponse": {
         "type": "object",
         "properties": {
           "tenants": {
             "description": "The list of tenants and their information.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/GetTenantResponse" }
+            "items": {
+              "$ref": "#/components/schemas/GetTenantResponse"
+            }
           },
           "nextPageToken": {
             "description": "The token to access the next page of results. This is empty if there are no more results. Example - 'eyJwYWdlU2l6ZSI6IDEwMH0='",
@@ -3671,15 +4632,24 @@
           "storageRegions": {
             "description": "AWS storage regions where the data is stored for the tenant. Example - 'us-east-1', 'us-east-2'",
             "type": "array",
-            "items": { "type": "string" },
-            "example": ["us-east-1", "us-east-2"]
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "us-east-1",
+              "us-east-2"
+            ]
           },
           "features": {
             "description": "The list of features enabled for the tenant.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/TenantFeatures" }
+            "items": {
+              "$ref": "#/components/schemas/TenantFeatures"
+            }
           },
-          "tenantType": { "$ref": "#/components/schemas/TenantType" },
+          "tenantType": {
+            "$ref": "#/components/schemas/TenantType"
+          },
           "status": {
             "format": "int64",
             "description": "- The current status of the tenant.\n    - 0  Creation Pending - Creation is pending of the tenant.\n    - 1 Ready - The tenant is created and associated with the customer.\n    - 2 Suspended - The tenant is suspended.\n    - 3 Soft deleted - The deletion of the tenant is initiated.\n    - 4 Being migrated - Migration of the tenant is in progress.\n    - 5 Updating - Tenant updation in under progress.\n",
@@ -3751,10 +4721,17 @@
           "storageRegions": {
             "description": "- Specify the AWS storage regions where you want to store the tenant data.\n- Get the list of AWS storage regions configured for your account in the MSC portal. Example - 'us-east-1'\n",
             "type": "array",
-            "items": { "type": "string" },
-            "example": ["us-east-1", "us-east-2"]
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "us-east-1",
+              "us-east-2"
+            ]
           },
-          "tenantType": { "$ref": "#/components/schemas/TenantType" },
+          "tenantType": {
+            "$ref": "#/components/schemas/TenantType"
+          },
           "productID": {
             "format": "int64",
             "description": "Specify the ID of the product for which the tenant is being created.\n - To create the tenant for Hybrid Workloads, specify '1'.\n - To create the tenant for SaaS Apps and Endpoints, specify '2'\n",
@@ -3764,7 +4741,9 @@
           "features": {
             "description": "Specify the list of features that must be enabled for the tenant. It cannot be empty.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/TenantFeatures" }
+            "items": {
+              "$ref": "#/components/schemas/TenantFeatures"
+            }
           }
         }
       },
@@ -3816,17 +4795,26 @@
             "type": "integer",
             "example": 1
           },
-          "tenantType": { "$ref": "#/components/schemas/TenantType" },
+          "tenantType": {
+            "$ref": "#/components/schemas/TenantType"
+          },
           "storageRegions": {
             "description": "- Specify the AWS storage regions where you want to store the tenant data.\n- Get the list of AWS storage regions configured for your account in the MSC portal. Example - 'us-east-1'\n",
             "type": "array",
-            "items": { "type": "string" },
-            "example": ["us-east-1", "us-east-2"]
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "us-east-1",
+              "us-east-2"
+            ]
           },
           "features": {
             "description": "Specify the updated list of features that need to be enabled for the tenant.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/TenantFeatures" }
+            "items": {
+              "$ref": "#/components/schemas/TenantFeatures"
+            }
           }
         }
       },
@@ -3842,7 +4830,9 @@
           "attrs": {
             "description": "- Attributes to be enabled for tenant. \n- Attrs can be empty. Example - []\n- For valid products and their values, see - https://developer.druva.com/docs/msp-product-and-attribute-values\n",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/FeatureAttribute" }
+            "items": {
+              "$ref": "#/components/schemas/FeatureAttribute"
+            }
           }
         }
       },
@@ -3863,7 +4853,12 @@
       },
       "CreateCustomerRequest": {
         "description": "Specify the details for a new customer.",
-        "required": ["accountName", "address", "phone", "customerName"],
+        "required": [
+          "accountName",
+          "address",
+          "phone",
+          "customerName"
+        ],
         "type": "object",
         "properties": {
           "accountName": {
@@ -3889,13 +4884,22 @@
           "tenantAdmins": {
             "description": "Specify the IDs of tenant admins assigned to the customers. You can get tenant admin IDs using 'List admins' API. Example - [1]",
             "type": "array",
-            "items": { "format": "int64", "type": "integer" },
-            "example": [1, 2, 3]
+            "items": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": [
+              1,
+              2,
+              3
+            ]
           },
           "features": {
             "description": "Specify the features supported at Druva MSP customer level.",
             "type": "array",
-            "items": { "type": "object" },
+            "items": {
+              "type": "object"
+            },
             "example": []
           }
         }
@@ -4027,14 +5031,23 @@
           "features": {
             "description": "The features subscribed by the customer. Example - []",
             "type": "array",
-            "items": { "type": "object" },
+            "items": {
+              "type": "object"
+            },
             "example": []
           },
           "tenantAdmins": {
             "description": "The unique IDs of the tenant admins assigned to the customer. Example - [1]",
             "type": "array",
-            "items": { "format": "int64", "type": "integer" },
-            "example": [1, 2, 3]
+            "items": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": [
+              1,
+              2,
+              3
+            ]
           },
           "status": {
             "format": "int64",
@@ -4062,7 +5075,9 @@
           "customers": {
             "description": "The list of returned customers.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/GetCustomerResponse" }
+            "items": {
+              "$ref": "#/components/schemas/GetCustomerResponse"
+            }
           },
           "nextPageToken": {
             "description": "The token to access the next page of results. This is empty if there are no more results. Example - 'eyJwYWdlU2l6ZSI6IDEwMH0='",
@@ -4077,9 +5092,13 @@
           "admins": {
             "description": "The list of admins.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/AdminResponse" }
+            "items": {
+              "$ref": "#/components/schemas/AdminResponse"
+            }
           },
-          "filters": { "$ref": "#/components/schemas/multiselectFilterAdmins" },
+          "filters": {
+            "$ref": "#/components/schemas/multiselectFilterAdmins"
+          },
           "pageNumber": {
             "format": "int64",
             "description": "The current page number of results list. Example - 1",
@@ -4108,12 +5127,29 @@
             "type": "string",
             "example": "id"
           },
-          "sortOrder": { "$ref": "#/components/schemas/SortOrder" },
+          "sortOrder": {
+            "$ref": "#/components/schemas/SortOrder"
+          },
           "totalSize": {
             "format": "int64",
             "description": "The total size of results available. Example - 50",
             "type": "integer",
             "example": 50
+          }
+        }
+      },
+      "ListAdminsV2Response": {
+        "type": "object",
+        "properties": {
+          "admins": {
+            "description": "The list of admins.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminV2Response"
+            }
+          },
+          "nextPageToken": {
+            "type": "string"
           }
         }
       },
@@ -4123,7 +5159,9 @@
           "servicePlans": {
             "description": "The list of service plans.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ServicePlan" }
+            "items": {
+              "$ref": "#/components/schemas/ServicePlan"
+            }
           },
           "nextPageToken": {
             "description": "The token to access the next page of results. This is empty if there are no more results. Example - 'eyJwYWdlU2l6ZSI6IDEwMH0='",
@@ -4157,22 +5195,32 @@
         }
       },
       "ServicePlanProductFeatures": {
-        "required": ["name", "isEnabled"],
+        "required": [
+          "name",
+          "isEnabled"
+        ],
         "type": "object",
         "properties": {
           "name": {
             "description": "Name of the feature as per Service Plan. The feature names can have the following values - \n- 1: Hybrid Workloads\n- 2: M365\n- 3: Endpoints\n- 4: storage\n- 5: sensitiveDataGovernance\n",
             "type": "string"
           },
-          "isEnabled": { "type": "boolean" },
+          "isEnabled": {
+            "type": "boolean"
+          },
           "attrs": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ServicePlanAttrs" }
+            "items": {
+              "$ref": "#/components/schemas/ServicePlanAttrs"
+            }
           }
         }
       },
       "ServicePlanAttrs": {
-        "required": ["name", "value"],
+        "required": [
+          "name",
+          "value"
+        ],
         "type": "object",
         "properties": {
           "name": {
@@ -4226,7 +5274,11 @@
         "example": 2
       },
       "UpdateCustomerRequest": {
-        "required": ["address", "phone", "customerName"],
+        "required": [
+          "address",
+          "phone",
+          "customerName"
+        ],
         "type": "object",
         "properties": {
           "address": {
@@ -4252,13 +5304,22 @@
           "tenantAdmins": {
             "description": "- Specify the unique IDs of tenant administrators who should manage the tenant for the customer. Get the list of tenant administrators IDs using the 'List all administrators' API.\n- If you want to remove a tenant administrator from this customer, simply do not specify the unique ID of the administrator.\n- If tenant admin list is empty then all tenant admins will be removed",
             "type": "array",
-            "items": { "format": "int64", "type": "integer" },
-            "example": [1, 2, 3]
+            "items": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": [
+              1,
+              2,
+              3
+            ]
           },
           "features": {
             "description": "Specify the features supported at Druva MSP customer level.",
             "type": "array",
-            "items": { "type": "object" },
+            "items": {
+              "type": "object"
+            },
             "example": []
           }
         }
@@ -4269,18 +5330,30 @@
         "properties": {
           "adminIDs": {
             "type": "array",
-            "items": { "type": "string" },
-            "example": ["1"]
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "1"
+            ]
           },
           "emails": {
             "type": "array",
-            "items": { "type": "string" },
-            "example": ["email@example.com"]
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "email@example.com"
+            ]
           },
           "roleIDs": {
             "type": "array",
-            "items": { "type": "string" },
-            "example": ["2"]
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "2"
+            ]
           }
         }
       },
@@ -4426,7 +5499,9 @@
             "type": "string",
             "example": "eyJwYWdlTnVtYmVyIjoyLCJwYWdlU2l6ZSI6NTAwLCAiZmlsdGVycyI6bnVsbH0="
           },
-          "filters": { "$ref": "#/components/schemas/FilterType" }
+          "filters": {
+            "$ref": "#/components/schemas/FilterType"
+          }
         }
       },
       "FilterType": {
@@ -4442,7 +5517,9 @@
           "filterBy": {
             "description": "Filters if needs to be applied.",
             "type": "array",
-            "items": { "$ref": "#/components/schemas/FilterAttribute" }
+            "items": {
+              "$ref": "#/components/schemas/FilterAttribute"
+            }
           }
         }
       },
@@ -4472,7 +5549,15 @@
           "operator": {
             "description": "Operator for specified filters.\n All string comparisons will be case sensitive. \nSupported filters are: \n - EQUAL: This will return the data with exact match for given field name.\n - NOTEQUAL: This will return the data not matching with given values.\n - CONTAINS: Value for this operator will be an array. This will return data which matches with any value mentioned in array.\n - LT: This is the 'LESS THAN' comparison operator.\n - LTE: This is the 'LESS THAN OR EQUAL TO' comparison operator.\n - GT: This is the 'GREATER THAN' comparison operator.\n - GTE: This is the 'GREATER THAN OR EQUAL TO' comparison operator. \nFor a particular field name an operator can be used once at max. \nFor columns having string data type 'LT', 'LTE', 'GT', 'GTE' operators will work lexicographically.",
             "type": "string",
-            "enum": ["EQUAL", "NOTEQUAL", "CONTAINS", "LT", "GT", "LTE", "GTE"],
+            "enum": [
+              "EQUAL",
+              "NOTEQUAL",
+              "CONTAINS",
+              "LT",
+              "GT",
+              "LTE",
+              "GTE"
+            ],
             "example": "EQUAL"
           }
         }
@@ -4502,19 +5587,30 @@
           },
           "productId": {
             "type": "integer",
-            "enum": [1, 2],
+            "enum": [
+              1,
+              2
+            ],
             "description": "The ID of the product. 1 - Hybrid Workloads, 2 - SaaS Apps and Endpoints. This field will be updated in the future for addition of new products as and when applicable.\n For valid products and their Product Features, see - https://developer.druva.com/docs/msp-product-and-attribute-values\n",
             "example": 1
           },
           "productName": {
             "type": "string",
-            "enum": ["Hybrid Workloads", "SaaS Apps and Endpoints"],
+            "enum": [
+              "Hybrid Workloads",
+              "SaaS Apps and Endpoints"
+            ],
             "description": "The name of the product. This field will be updated in the future for addition of new products as and when applicable.",
             "example": "Hybrid Workloads"
           },
           "productModuleId": {
             "type": "integer",
-            "enum": [1, 2, 3, 4],
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ],
             "description": "The ID of the product module. This field will be updated in the future for addition of new product modules as and when applicable.\n 1 - Hybrid Workloads, 2 - Microsoft 365, 3 - Endpoints, 4 - Google Workspace",
             "example": 1
           },
@@ -4531,13 +5627,20 @@
           },
           "editionName": {
             "type": "string",
-            "enum": ["Business", "Enterprise", "Elite"],
+            "enum": [
+              "Business",
+              "Enterprise",
+              "Elite"
+            ],
             "description": "The name of the edition.",
             "example": "Business"
           },
           "tenantType": {
             "type": "string",
-            "enum": ["Commercial", "Evaluation"],
+            "enum": [
+              "Commercial",
+              "Evaluation"
+            ],
             "description": "Type of the tenant. Right now stats for only commercial customers are reported.",
             "example": "Commercial"
           },
@@ -4570,7 +5673,10 @@
           },
           "usageUnit": {
             "type": "string",
-            "enum": ["Users", "Bytes"],
+            "enum": [
+              "Users",
+              "Bytes"
+            ],
             "description": "Usage unit defines unit of usage. It will be 'Bytes' for productId 1 and 'Users' for productId 2.",
             "example": "Bytes"
           },
@@ -4627,7 +5733,9 @@
                 "cuConsumed": 94
               }
             ],
-            "items": { "$ref": "#/components/schemas/TenantDataItemized" }
+            "items": {
+              "$ref": "#/components/schemas/TenantDataItemized"
+            }
           },
           "nextPageToken": {
             "type": "string",
@@ -4646,7 +5754,9 @@
               "filterBy": {
                 "description": "Filters applied in the request.",
                 "type": "array",
-                "items": { "$ref": "#/components/schemas/FilterAttribute" }
+                "items": {
+                  "$ref": "#/components/schemas/FilterAttribute"
+                }
               }
             }
           },
@@ -4939,7 +6049,9 @@
                 "type": "JobTriggered"
               }
             ],
-            "items": { "$ref": "#/components/schemas/ListCustomerEvents" }
+            "items": {
+              "$ref": "#/components/schemas/ListCustomerEvents"
+            }
           },
           "nextPageToken": {
             "description": "The token to access the next page of results. Use the received token value in subsequent request's parameter 'pageToken'.\n",
@@ -4955,7 +6067,11 @@
           "category": {
             "description": "The category of the event.",
             "type": "string",
-            "enum": ["EVENT", "AUDIT", "ALERT"]
+            "enum": [
+              "EVENT",
+              "AUDIT",
+              "ALERT"
+            ]
           },
           "customerName": {
             "description": "Name of the customer for whom the event is generated.",
@@ -4969,7 +6085,10 @@
             "description": "Type of the entity for which the event has happened.",
             "type": "string"
           },
-          "globalID": { "description": "Global ID of MSP.", "type": "string" },
+          "globalID": {
+            "description": "Global ID of MSP.",
+            "type": "string"
+          },
           "timeStamp": {
             "description": "The epoch representation of the time at which the event occurred.",
             "type": "integer"
@@ -4994,7 +6113,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/AlertHistoryReportData" }
+            "items": {
+              "$ref": "#/components/schemas/AlertHistoryReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -5082,7 +6203,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/BackupActivityReportData" }
+            "items": {
+              "$ref": "#/components/schemas/BackupActivityReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -5237,7 +6360,9 @@
         "properties": {
           "data::": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ResourceStatusReportData" }
+            "items": {
+              "$ref": "#/components/schemas/ResourceStatusReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -5321,7 +6446,10 @@
             "format": "date-time",
             "example": "2023-06-03T02:22:34.383Z"
           },
-          "timezone": { "type": "string", "example": "Asia/Calcutta" },
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Calcutta"
+          },
           "backupContent": {
             "type": "string",
             "description": "Details of the files included in & excluded from the backup.",
@@ -5461,7 +6589,10 @@
             "description": "Type of storage tier.",
             "example": "None"
           },
-          "warmThreshold": { "type": "string", "example": 15 }
+          "warmThreshold": {
+            "type": "string",
+            "example": 15
+          }
         }
       },
       "GetDisasterRecoveryReplicationActivityReportDataResponse": {
@@ -5781,7 +6912,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/AlertReportData" }
+            "items": {
+              "$ref": "#/components/schemas/AlertReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -5859,7 +6992,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/UsersReportData" },
+            "items": {
+              "$ref": "#/components/schemas/UsersReportData"
+            },
             "x-go-name": "Data"
           },
           "lastSyncTimestamp": {
@@ -5943,7 +7078,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/LicenseUsageReportData" }
+            "items": {
+              "$ref": "#/components/schemas/LicenseUsageReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -6140,7 +7277,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/UserRolloutReportData" }
+            "items": {
+              "$ref": "#/components/schemas/UserRolloutReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -6516,7 +7655,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/StorageAlertReportData" }
+            "items": {
+              "$ref": "#/components/schemas/StorageAlertReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -6595,7 +7736,9 @@
         "properties": {
           "data": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/CloudCacheReportData" }
+            "items": {
+              "$ref": "#/components/schemas/CloudCacheReportData"
+            }
           },
           "lastSyncTimestamp": {
             "type": "string",
@@ -6920,7 +8063,9 @@
                 "type": "TenantDeletionInitiated"
               }
             ],
-            "items": { "$ref": "#/components/schemas/ListMSPEvents" }
+            "items": {
+              "$ref": "#/components/schemas/ListMSPEvents"
+            }
           },
           "nextPageToken": {
             "description": "The token to access the next page of results. Use the received token value in subsequent request's parameter 'pageToken'.\n",
@@ -6936,7 +8081,11 @@
           "category": {
             "description": "The category of the event.",
             "type": "string",
-            "enum": ["EVENT", "AUDIT", "ALERT"]
+            "enum": [
+              "EVENT",
+              "AUDIT",
+              "ALERT"
+            ]
           },
           "details": {
             "description": "All the details of event in JSON schema specific to the eventType. For the JSON schema definition, please refer to <a href=\"https://developer.druva.com/docs/supported-msp-events\">Supported MSP Events</a>",
@@ -6946,7 +8095,10 @@
             "description": "Type of the entity for which the event has happened.",
             "type": "string"
           },
-          "globalID": { "description": "Global ID of MSP.", "type": "string" },
+          "globalID": {
+            "description": "Global ID of MSP.",
+            "type": "string"
+          },
           "timeStamp": {
             "description": "The epoch representation of the time at which the event occurred.",
             "type": "integer"
@@ -6976,7 +8128,11 @@
         },
         "type": "oauth2"
       },
-      "Bearer": { "type": "apiKey", "name": "Authorization", "in": "header" }
+      "Bearer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header"
+      }
     },
     "headers": {},
     "responses": {},
@@ -7025,5 +8181,8 @@
     }
   ],
   "security": [],
-  "x-readme": { "explorer-enabled": true, "proxy-enabled": true }
+  "x-readme": {
+    "explorer-enabled": true,
+    "proxy-enabled": true
+  }
 }

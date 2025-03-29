@@ -1,11 +1,27 @@
 {
   "openapi": "3.1.0",
-  "info": { "title": "MSP Authentication", "version": "3.0" },
-  "servers": [{ "url": "https://apis.druva.com/msp" }],
-  "components": {
-    "securitySchemes": { "sec0": { "type": "http", "scheme": "basic" } }
+  "info": {
+    "title": "MSP Authentication",
+    "version": "3.0"
   },
-  "security": [{ "sec0": [] }],
+  "servers": [
+    {
+      "url": "https://apis.druva.com/msp"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "sec0": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    }
+  },
+  "security": [
+    {
+      "sec0": []
+    }
+  ],
   "paths": {
     "/auth/v1/token": {
       "post": {
@@ -32,8 +48,15 @@
             "description": "200",
             "content": {
               "application/json": {
-                "examples": { "Result": { "value": "{}" } },
-                "schema": { "type": "object", "properties": {} }
+                "examples": {
+                  "Result": {
+                    "value": "{}"
+                  }
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
               }
             }
           },
@@ -41,8 +64,15 @@
             "description": "400",
             "content": {
               "application/json": {
-                "examples": { "Result": { "value": "{}" } },
-                "schema": { "type": "object", "properties": {} }
+                "examples": {
+                  "Result": {
+                    "value": "{}"
+                  }
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
               }
             }
           }
@@ -56,7 +86,9 @@
               "name": "cURL"
             }
           ],
-          "samples-languages": ["curl"]
+          "samples-languages": [
+            "curl"
+          ]
         }
       }
     }

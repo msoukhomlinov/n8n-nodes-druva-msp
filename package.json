@@ -9,14 +9,14 @@
     "msp"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/msoukhomlinov/n8n-nodes-druva-msp",
   "author": {
     "name": "Max Soukhomlinov",
     "email": "maxs@intellectit.com.au"
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/msoukhomlinov/n8n-nodes-druva-msp.git"
   },
   "main": "index.js",
   "scripts": {
