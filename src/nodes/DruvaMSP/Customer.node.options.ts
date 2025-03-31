@@ -26,16 +26,10 @@ export const customerOperations: INodeProperties[] = [
         description: 'Retrieve details for a specific customer',
       },
       {
-        name: 'List',
-        value: 'list',
-        action: 'List customers',
+        name: 'Get Many',
+        value: 'getMany',
+        action: 'Get many customers',
         description: 'Retrieve a list of customers',
-      },
-      {
-        name: 'Update',
-        value: 'update',
-        action: 'Update a customer',
-        description: 'Update details of an existing customer',
       },
       {
         name: 'Get Token',
@@ -44,10 +38,10 @@ export const customerOperations: INodeProperties[] = [
         description: 'Generate a customer-specific API token',
       },
       {
-        name: 'List Admins',
-        value: 'listAdmins',
-        action: 'List customer administrators',
-        description: 'Retrieve a list of administrators for a specific customer',
+        name: 'Update',
+        value: 'update',
+        action: 'Update a customer',
+        description: 'Update details of an existing customer',
       },
     ],
     default: 'list', // Default to a common read operation
@@ -69,38 +63,41 @@ export const customerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['create', 'update'],
+        operation: ['create'],
       },
     },
-    description: 'Name of the customer organization',
+    description: 'Name of the customer organisation',
   },
+  /* -------------------------------------------------------------------------- */
+  /*                                customer:update                             */
+  /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Account Name',
-    name: 'accountName',
+    displayName: 'Customer ID',
+    name: 'customerId',
     type: 'string',
     required: true,
     default: '',
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['create'],
+        operation: ['update'],
       },
     },
-    description: 'Account name for the customer (cannot be changed after creation)',
+    description: 'The unique ID of the customer to update',
   },
   {
-    displayName: 'Admin Email',
-    name: 'adminEmail',
+    displayName: 'Customer Name',
+    name: 'customerName',
     type: 'string',
-    required: false,
+    required: true,
     default: '',
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['create', 'update'],
+        operation: ['update'],
       },
     },
-    description: 'Email address for the primary administrator of the customer account (optional)',
+    description: 'Name of the customer organization',
   },
   {
     displayName: 'Phone Number',
@@ -111,7 +108,7 @@ export const customerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['create', 'update'],
+        operation: ['update'],
       },
     },
     description: 'Contact phone number for the customer (e.g., +1-XXX-XXX-XXXX)',
@@ -119,68 +116,144 @@ export const customerFields: INodeProperties[] = [
   {
     displayName: 'Address',
     name: 'address',
-    type: 'fixedCollection',
+    type: 'string',
     required: true,
-    default: {},
-    placeholder: 'Add Address',
-    typeOptions: {
-      multipleValues: false,
-    },
+    default: '',
+    placeholder: 'e.g. 123 Main St, San Francisco, CA, USA 94105',
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['create', 'update'],
+        operation: ['update'],
       },
     },
-    description: "Customer's physical address",
-    options: [
-      {
-        name: 'addressFields',
-        displayName: 'Address Details',
-        values: [
-          {
-            displayName: 'Street',
-            name: 'street',
-            type: 'string',
-            required: true,
-            default: '',
-            description: 'Street address line',
-          },
-          {
-            displayName: 'City',
-            name: 'city',
-            type: 'string',
-            required: true,
-            default: '',
-            description: 'City name',
-          },
-          {
-            displayName: 'State / Province',
-            name: 'state',
-            type: 'string',
-            required: true,
-            default: '',
-            description: 'State or province',
-          },
-          {
-            displayName: 'Country',
-            name: 'country',
-            type: 'string',
-            required: true,
-            default: '',
-            description: 'Country name (e.g., USA, Canada)',
-          },
-          {
-            displayName: 'Postal Code',
-            name: 'postalCode',
-            type: 'string',
-            required: true,
-            default: '',
-            description: 'Postal or ZIP code',
-          },
-        ],
+    description:
+      "Customer's physical address as a single string (e.g., street, city, state, country, postal code)",
+  },
+  {
+    displayName: 'Tenant Admins',
+    name: 'tenantAdmins',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getAdmins',
+      loadOptionsDependsOn: [],
+    },
+    default: [],
+    noDataExpression: true,
+    description:
+      "Specify the unique IDs of tenant administrators who should manage the tenant for the customer. Get the list of tenant administrators IDs using the 'List all administrators' API. If you want to remove a tenant administrator from this customer, simply do not select that administrator. If no tenant admins are selected, all tenant admins will be removed from this customer.",
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['update'],
       },
-    ],
+    },
+  },
+  {
+    displayName: 'Update Features',
+    name: 'updateFeatures',
+    type: 'boolean',
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['update'],
+      },
+    },
+    description: 'Whether to update the customer features',
+  },
+  {
+    displayName: 'Security Posture and Observability',
+    name: 'securityPostureAndObservability',
+    type: 'boolean',
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['update'],
+        updateFeatures: [true],
+      },
+    },
+    description:
+      'Whether to enable the Security Posture and Observability feature for this customer',
+  },
+  {
+    displayName: 'Hide Customer Name from Druva',
+    name: 'hideDruvaCustomerName',
+    type: 'boolean',
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['create'],
+      },
+    },
+    description:
+      "Whether to keep the real customer name private from Druva's internal systems by using a different internal name",
+  },
+  {
+    displayName: 'Alternative Name for Druva Systems',
+    name: 'accountName',
+    type: 'string',
+    required: true,
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['create'],
+        hideDruvaCustomerName: [true],
+      },
+    },
+    description:
+      "The alternative name that will be shown in Druva's internal systems instead of the real customer name",
+    hint: "This is the name that will appear in Druva's internal systems. Once entered, it cannot be changed after creation",
+  },
+  {
+    displayName: 'Phone Number',
+    name: 'phoneNumber',
+    type: 'string',
+    required: true,
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['create'],
+      },
+    },
+    description: 'Contact phone number for the customer (e.g., +1-XXX-XXX-XXXX)',
+  },
+  {
+    displayName: 'Address',
+    name: 'address',
+    type: 'string',
+    required: true,
+    default: '',
+    placeholder: 'e.g. 123 Main St, San Francisco, CA, USA 94105',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['create'],
+      },
+    },
+    description:
+      "Customer's physical address as a single string (e.g., street, city, state, country, postal code)",
+  },
+  {
+    displayName: 'Tenant Admins',
+    name: 'tenantAdmins',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getAdmins',
+      loadOptionsDependsOn: [],
+    },
+    default: [],
+    noDataExpression: true,
+    description: 'IDs of tenant administrators who should manage the tenant for the customer',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['create'],
+      },
+    },
   },
   /* -------------------------------------------------------------------------- */
   /*                                customer:get                                */
@@ -194,7 +267,7 @@ export const customerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['get', 'update', 'getToken', 'listAdmins'],
+        operation: ['get', 'getToken'],
       },
     },
     description: 'The unique ID of the customer to perform the operation on',
@@ -209,7 +282,7 @@ export const customerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['list'],
+        operation: ['getMany'],
       },
     },
     default: false,
@@ -222,7 +295,7 @@ export const customerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['customer'],
-        operation: ['list'],
+        operation: ['getMany'],
         returnAll: [false],
       },
     },
@@ -232,49 +305,107 @@ export const customerFields: INodeProperties[] = [
     default: 50,
     description: 'Max number of results to return',
   },
-  /* -------------------------------------------------------------------------- */
-  /*                                customer:update                             */
-  /* -------------------------------------------------------------------------- */
-  // Fields for the 'Update' operation will go here...
-  // Need Customer ID (defined above)
-  // Need fields to update (e.g., name, address - similar to create, but optional)
+  {
+    displayName: 'Filter Results',
+    name: 'filterResults',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['getMany'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter the results after retrieval',
+  },
+  {
+    displayName: 'Filters',
+    name: 'filters',
+    type: 'fixedCollection',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['getMany'],
+        filterResults: [true],
+      },
+    },
+    typeOptions: {
+      multipleValues: true,
+      sortable: true,
+    },
+    placeholder: 'Add Filter',
+    default: {},
+    options: [
+      {
+        name: 'filter',
+        displayName: 'Filter',
+        values: [
+          {
+            displayName: 'Field',
+            name: 'field',
+            type: 'options',
+            default: 'customerName',
+            options: [
+              {
+                name: 'Customer Name',
+                value: 'customerName',
+              },
+              {
+                name: 'Account Name',
+                value: 'accountName',
+              },
+            ],
+            description: 'Field to filter by',
+          },
+          {
+            displayName: 'Operator',
+            name: 'operator',
+            type: 'options',
+            default: 'contains',
+            options: [
+              {
+                name: 'Contains',
+                value: 'contains',
+              },
+              {
+                name: 'Not Contains',
+                value: 'notContains',
+              },
+              {
+                name: 'Equals',
+                value: 'equals',
+              },
+              {
+                name: 'Not Equals',
+                value: 'notEquals',
+              },
+              {
+                name: 'Starts With',
+                value: 'startsWith',
+              },
+              {
+                name: 'Ends With',
+                value: 'endsWith',
+              },
+            ],
+            description: 'Filter operator to use',
+          },
+          {
+            displayName: 'Value',
+            name: 'value',
+            type: 'string',
+            default: '',
+            description: 'Value to compare against',
+          },
+        ],
+      },
+    ],
+    description: 'Define filters to apply to results',
+  },
   /* -------------------------------------------------------------------------- */
   /*                                customer:getToken                           */
   /* -------------------------------------------------------------------------- */
   // Fields for the 'Get Token' operation will go here...
   // Need Customer ID (defined above)
   // Need other parameters if required by the API
-  /* -------------------------------------------------------------------------- */
-  /*                                customer:listAdmins                         */
-  /* -------------------------------------------------------------------------- */
-  {
-    displayName: 'Return All',
-    name: 'returnAllAdmins',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['customer'],
-        operation: ['listAdmins'],
-      },
-    },
-    default: false,
-    description: 'Whether to return all administrators or only up to a given limit',
-  },
-  {
-    displayName: 'Limit',
-    name: 'limitAdmins',
-    type: 'number',
-    displayOptions: {
-      show: {
-        resource: ['customer'],
-        operation: ['listAdmins'],
-        returnAllAdmins: [false],
-      },
-    },
-    typeOptions: {
-      minValue: 1,
-    },
-    default: 50,
-    description: 'Max number of administrators to return',
-  },
 ];

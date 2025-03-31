@@ -8,6 +8,7 @@ import type {
   // HttpVerb, // Removed problematic import
   JsonObject,
   IDataObject,
+  ILoadOptionsFunctions,
 } from 'n8n-workflow';
 import { NodeApiError } from 'n8n-workflow';
 
@@ -84,6 +85,9 @@ export async function druvaMspApiRequest(
     console.log('[DEBUG] Druva MSP API - Request body:', body);
   }
 
+  // Check if this is the customer token endpoint which requires form-urlencoded
+  const isCustomerTokenEndpoint = endpoint.includes('/customers/') && endpoint.endsWith('/token');
+
   // For GET requests, ensure body is undefined (not an empty object)
   let options: IHttpRequestOptions;
   if (method.toUpperCase() === 'GET' && (!body || Object.keys(body).length === 0)) {
@@ -99,6 +103,22 @@ export async function druvaMspApiRequest(
       method: method as IHttpRequestOptions['method'],
       qs: qs,
       body: bodyValue,
+      url: `${baseUrl}${endpoint}`,
+      json: true,
+    };
+  } else if (isCustomerTokenEndpoint && method.toUpperCase() === 'POST') {
+    // Special handling for customer token endpoint - use form-urlencoded
+    console.log('[DEBUG] Druva MSP API - Using form-urlencoded for customer token request');
+    options = {
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'n8n-druva-msp-node/1.0',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      method: 'POST',
+      qs: qs,
+      body: 'grant_type=client_credentials',
       url: `${baseUrl}${endpoint}`,
       json: true,
     };
@@ -169,21 +189,66 @@ export async function druvaMspApiRequestAllItems(
   console.log(`[DEBUG] Pagination - Looking for items under key ${itemsKey}`);
 
   const allItems: IDataObject[] = [];
-  let nextPageToken: string | undefined | null = undefined;
-  const pageSize = 1000;
+  // Use pageToken instead of nextPageToken for consistency with the API
+  let pageToken: string | undefined | null = undefined;
+  const pageSize = 500;
   let pageCount = 0;
+  // Keep track of tokens to prevent infinite loops
+  const previousTokens = new Set<string>();
+
+  // Track consecutive small page counts to detect inefficient pagination
+  let consecutiveSingleItemPages = 0;
+  // Increase the tolerance for single-item pages since this seems to be by design
+  const MAX_CONSECUTIVE_SINGLE_ITEM_PAGES = 20;
+  // Increase the maximum pages we're willing to process
+  const MAX_TOTAL_PAGES = 500;
 
   do {
     pageCount++;
     console.log(`[DEBUG] Pagination - Fetching page ${pageCount}`);
 
-    const qs: IDataObject = { ...(initialQs || {}), pageSize: pageSize };
-    if (nextPageToken) {
-      qs.nextPageToken = nextPageToken;
-      console.log(`[DEBUG] Pagination - Using nextPageToken: ${nextPageToken}`);
+    // Safety check - limit total pages to prevent excessive API calls
+    if (pageCount > MAX_TOTAL_PAGES) {
+      console.warn(
+        `[WARN] Pagination - Reached maximum page limit of ${MAX_TOTAL_PAGES}, stopping pagination`,
+      );
+      break;
+    }
+
+    // IMPORTANT: For Druva API, "You can query using the pageToken or filters; you cannot provide both simultaneously."
+    let qs: IDataObject;
+    if (pageToken) {
+      // For subsequent requests, ONLY include pageToken parameter with no other parameters
+      qs = { pageToken };
+      console.log(`[DEBUG] Pagination - Using pageToken: ${pageToken}`);
+      console.log(
+        '[DEBUG] Pagination - IMPORTANT: Using only pageToken with no other parameters as per API requirements',
+      );
+
+      // Check for repeat tokens to prevent infinite loops
+      if (previousTokens.has(pageToken)) {
+        console.warn(
+          `[WARN] Pagination - Detected repeat token "${pageToken}" - stopping pagination to prevent infinite loop`,
+        );
+        break;
+      }
+
+      // Store token for loop detection
+      previousTokens.add(pageToken);
+    } else {
+      // First request, include all initial parameters plus pageSize (if not already specified)
+      qs = { ...initialQs };
+
+      // Only add pageSize if it's not already specified in initialQs
+      if (!qs.pageSize) {
+        qs.pageSize = pageSize;
+      }
+
+      console.log('[DEBUG] Pagination - First request includes initial parameters:', qs);
     }
 
     try {
+      // Pass only the parameters required for this specific request
       const response = (await druvaMspApiRequest.call(
         this,
         method,
@@ -196,16 +261,30 @@ export async function druvaMspApiRequestAllItems(
       console.log('[DEBUG] Pagination - Response keys:', Object.keys(response));
 
       const items = response[itemsKey] as IDataObject[] | undefined;
-      nextPageToken = response.nextPageToken as string | undefined | null;
+      // API returns nextPageToken but expects pageToken in requests
+      pageToken = response.nextPageToken as string | undefined | null;
 
-      if (nextPageToken) {
-        console.log(`[DEBUG] Pagination - Next page token found: ${nextPageToken}`);
-      } else {
-        console.log('[DEBUG] Pagination - No next page token found, this is the last page');
-      }
-
-      if (Array.isArray(items)) {
+      // More detailed debug info about the pagination response
+      if (items && Array.isArray(items)) {
         console.log(`[DEBUG] Pagination - Found ${items.length} items on this page`);
+
+        // Check if we're getting inefficient pagination (single items per page)
+        if (items.length === 1) {
+          consecutiveSingleItemPages++;
+
+          // If we've had too many consecutive single-item pages, warn and consider stopping
+          if (consecutiveSingleItemPages >= MAX_CONSECUTIVE_SINGLE_ITEM_PAGES) {
+            console.warn(
+              `[WARN] Pagination - Received ${consecutiveSingleItemPages} consecutive pages with only 1 item. This appears to be the Druva API's normal behavior for Events, but is inefficient.`,
+            );
+            // We'll continue pagination but log the warning
+          }
+        } else {
+          // Reset the counter if we get a page with more than 1 item
+          consecutiveSingleItemPages = 0;
+        }
+
+        // Add the items to our result set
         allItems.push(...items);
       } else {
         console.warn(
@@ -213,18 +292,24 @@ export async function druvaMspApiRequestAllItems(
           items,
         );
         console.log('[DEBUG] Pagination - Response structure:', response);
-        nextPageToken = null;
+        pageToken = null;
+      }
+
+      if (pageToken) {
+        console.log(`[DEBUG] Pagination - Next page token found: ${pageToken}`);
+      } else {
+        console.log('[DEBUG] Pagination - No next page token found, this is the last page');
       }
 
       if (items === undefined || items.length === 0) {
         console.log('[DEBUG] Pagination - No items found on this page, stopping pagination');
-        nextPageToken = null;
+        pageToken = null;
       }
     } catch (error) {
       console.error(`[ERROR] Pagination - Failed during page ${pageCount}:`, error);
       throw error;
     }
-  } while (nextPageToken);
+  } while (pageToken);
 
   console.log(
     `[DEBUG] Pagination - Complete. Retrieved ${allItems.length} items total across ${pageCount} pages`,
@@ -234,3 +319,190 @@ export async function druvaMspApiRequestAllItems(
 
 // TODO: Add function for handling pagination?
 // async function druvaMspHandlePagination(...) {...}
+
+/**
+ * Handles pagination for list endpoints specifically for options loading.
+ * Designed to work with ILoadOptionsFunctions context.
+ * Similar to druvaMspApiRequestAllItems but adapted for option loading.
+ *
+ * @param {ILoadOptionsFunctions} this The load options context object.
+ * @param {string} method The HTTP method (should be GET or POST for list endpoints).
+ * @param {string} endpoint The API endpoint path.
+ * @param {string} itemsKey The key in the response object that holds the array of items.
+ * @param {IDataObject} [body] The request body (if method is POST).
+ * @param {IDataObject} [initialQs] Initial query string parameters (excluding pagination).
+ * @returns {Promise<IDataObject[]>} An array of all fetched items.
+ */
+export async function druvaMspApiRequestAllItemsForOptions(
+  this: ILoadOptionsFunctions,
+  method: string,
+  endpoint: string,
+  itemsKey: string,
+  body?: IDataObject,
+  initialQs?: IDataObject,
+): Promise<IDataObject[]> {
+  console.log(`[DEBUG] Options Pagination - Starting paginated request to ${endpoint}`);
+  console.log(`[DEBUG] Options Pagination - Looking for items under key ${itemsKey}`);
+
+  // Get credentials for API access
+  const credentials = await this.getCredentials('druvaMspApi');
+  const baseUrl = credentials.baseUrl || 'https://apis.druva.com';
+
+  // Get access token
+  const clientId = credentials.clientId as string;
+  const clientSecret = credentials.clientSecret as string;
+  const authUrl = `${baseUrl}/msp/auth/v1/token`;
+
+  // Encode credentials for Basic Auth
+  const encodedCredentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+  const tokenResponse = await this.helpers.request({
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/x-www-form-urlencoded',
+      Authorization: `Basic ${encodedCredentials}`,
+    },
+    method: 'POST',
+    url: authUrl,
+    body: 'grant_type=client_credentials',
+    json: true,
+  });
+
+  const accessToken = tokenResponse.access_token as string;
+  if (!accessToken) {
+    throw new Error('Failed to obtain access token');
+  }
+
+  const allItems: IDataObject[] = [];
+  let pageToken: string | undefined | null = undefined;
+  const pageSize = 500; // Use a large page size for loading options
+  let pageCount = 0;
+  const previousTokens = new Set<string>(); // Prevent infinite loops
+
+  // Add maximum pages limit
+  const MAX_TOTAL_PAGES = 100;
+  // Track consecutive single-item pages
+  let consecutiveSingleItemPages = 0;
+  const MAX_CONSECUTIVE_SINGLE_ITEM_PAGES = 5;
+
+  do {
+    pageCount++;
+    console.log(`[DEBUG] Options Pagination - Fetching page ${pageCount}`);
+
+    // Safety check - limit total pages to prevent excessive API calls
+    if (pageCount > MAX_TOTAL_PAGES) {
+      console.warn(
+        `[WARN] Options Pagination - Reached maximum page limit of ${MAX_TOTAL_PAGES}, stopping pagination`,
+      );
+      break;
+    }
+
+    // IMPORTANT: For Druva API, "You can query using the pageToken or filters; you cannot provide both simultaneously."
+    let qs: IDataObject;
+    if (pageToken) {
+      // For subsequent requests, ONLY include pageToken parameter with no other parameters
+      qs = { pageToken };
+      console.log(`[DEBUG] Options Pagination - Using pageToken: ${pageToken}`);
+      console.log(
+        '[DEBUG] Options Pagination - IMPORTANT: Using only pageToken with no other parameters as per API requirements',
+      );
+
+      // Check for repeat tokens to prevent infinite loops
+      if (previousTokens.has(pageToken)) {
+        console.warn(
+          `[WARN] Options Pagination - Detected repeat token "${pageToken}" - stopping pagination to prevent infinite loop`,
+        );
+        pageToken = null;
+        break;
+      }
+
+      // Store token for loop detection
+      previousTokens.add(pageToken);
+    } else {
+      // First request, include all initial parameters plus pageSize (if not already specified)
+      qs = { ...initialQs };
+
+      // Only add pageSize if it's not already specified in initialQs
+      if (!qs.pageSize) {
+        qs.pageSize = pageSize;
+      }
+
+      console.log('[DEBUG] Options Pagination - First request includes initial parameters:', qs);
+    }
+
+    try {
+      // Make the API request
+      const url = `${baseUrl}${endpoint}`;
+      console.log(`[DEBUG] Options Pagination - Making request to: ${url}`);
+
+      const response = (await this.helpers.request({
+        method: method as IHttpRequestOptions['method'],
+        url,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        qs,
+        body: method !== 'GET' ? body : undefined,
+        json: true,
+      })) as IDataObject;
+
+      console.log(`[DEBUG] Options Pagination - Response received for page ${pageCount}`);
+      console.log('[DEBUG] Options Pagination - Response keys:', Object.keys(response));
+
+      const items = response[itemsKey] as IDataObject[] | undefined;
+      // API returns nextPageToken but expects pageToken in requests
+      pageToken = response.nextPageToken as string | undefined | null;
+
+      // Process the retrieved items
+      if (Array.isArray(items)) {
+        console.log(`[DEBUG] Options Pagination - Found ${items.length} items on this page`);
+
+        // Check if we're getting inefficient pagination (single items per page)
+        if (items.length === 1) {
+          consecutiveSingleItemPages++;
+
+          // If we've had too many consecutive single-item pages, warn and consider stopping
+          if (consecutiveSingleItemPages >= MAX_CONSECUTIVE_SINGLE_ITEM_PAGES) {
+            console.warn(
+              `[WARN] Options Pagination - Received ${consecutiveSingleItemPages} consecutive pages with only 1 item. This appears to be the Druva API's normal behavior for Events, but is inefficient.`,
+            );
+          }
+        } else {
+          // Reset the counter if we get a page with more than 1 item
+          consecutiveSingleItemPages = 0;
+        }
+
+        allItems.push(...items);
+      } else {
+        console.warn(
+          `[WARN] Options Pagination - Expected an array under key ${itemsKey} but received:`,
+          items,
+        );
+        console.log('[DEBUG] Options Pagination - Response structure:', response);
+        pageToken = null;
+      }
+
+      if (pageToken) {
+        console.log(`[DEBUG] Options Pagination - Next page token found: ${pageToken}`);
+      } else {
+        console.log('[DEBUG] Options Pagination - No next page token found, this is the last page');
+      }
+
+      if (items === undefined || items.length === 0) {
+        console.log(
+          '[DEBUG] Options Pagination - No items found on this page, stopping pagination',
+        );
+        pageToken = null;
+      }
+    } catch (error) {
+      console.error(`[ERROR] Options Pagination - Failed during page ${pageCount}:`, error);
+      throw error;
+    }
+  } while (pageToken);
+
+  console.log(
+    `[DEBUG] Options Pagination - Complete. Retrieved ${allItems.length} items total across ${pageCount} pages`,
+  );
+  return allItems;
+}

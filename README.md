@@ -1,175 +1,99 @@
 # n8n-nodes-druva-msp
 
-This is an n8n community node for interacting with the Druva MSP API. It provides a comprehensive integration with Druva's MSP platform, allowing you to automate various operations including customer management, tenant operations, service plans, admin management, tasks, events, and reporting.
-
-## Prerequisites
-
-- n8n instance (Version 1.0.0 or later)
-- Druva MSP account with API access
-- API credentials (Client ID and Client Secret)
+This package provides n8n nodes to integrate with Druva MSP APIs, allowing Managed Service Providers to automate various operations related to customer management, tenant provisioning, reporting, and more.
 
 ## Installation
 
-Follow these steps to install the node:
+Follow these steps to install this custom node package in your n8n instance:
 
-1. Open your n8n instance
-2. Go to Settings > Community Nodes
-3. Click on "Install Another Node"
-4. Enter `n8n-nodes-druva-msp`
-5. Click "Install"
+1. **Install via npm:**
+   ```
+   npm install n8n-nodes-druva-msp
+   ```
 
-## Authentication
-
-This node uses OAuth2 authentication. You'll need to:
-
-1. Obtain Client ID and Client Secret from Druva MSP
-2. Configure these credentials in n8n's credentials manager
-3. Select "Druva MSP API" when creating a new credential
+2. **Manual installation:**
+   - Clone this repository
+   - Install dependencies with `npm install`
+   - Build the package using `npm run build`
+   - Copy the `dist` folder to your n8n custom nodes directory
 
 ## Features
 
-### Supported Resources
+The Druva MSP integration provides access to the following key resources:
 
-- Customers
-  - List all customers
-  - Create a new customer
-  - Get customer details
-  - Update customer details
-  - Generate API access token
-- Tenants
-  - Create a new tenant
-  - Get tenants list
-  - Get tenant details
-  - Update an existing tenant
-  - Suspend a customer tenant
-  - Unsuspend a customer tenant
-- Service Plans
-  - List all service plans
-  - Get service plan details
-- Admins
-  - List all administrators
-- Tasks
-  - Get task details
-- Events
-  - List customer level events
-  - List MSP level events
-- Reports
-  - Get global usage report summary
-  - Get Itemized Tenant Consumption Report
-  - Get Itemized Tenant Quota Report
-- Hybrid Workloads Reports
-  - Alert History Report
-  - Backup Activity Report
-  - Resource Status Report
-  - Storage Consumption Report
-  - DR Replication Activity Report
-  - DR Failback Activity Report
-  - DR Failover Activity Report
-- Endpoints Reports
-  - Alert Report
-  - Users Report
-  - License Usage Report
-  - User Provisioning Report
-  - User Rollout Report
-  - Last Backup Status Report
-  - Storage Statistics Report
-  - Storage Alerts Report
-  - Cloud Cache Statistics Report
-- Cyber Resilience Reports
-  - Rollback Actions Report
-  - Data Protection Risk Report
+### Production-Ready Resources
 
-### Pagination
+These resources have been fully tested and are ready for production use:
 
-The node handles pagination automatically with two options:
+- **Admin Management**
+  - List, create, retrieve, update, and delete administrators
+  - Manage admin roles and permissions
 
-1. **Retrieve All Records**
-   - Toggle option to retrieve all available records
-   - Automatically handles pagination in the background
-   - Uses maximum page size (500) for efficiency
+- **Customer Management**
+  - Create and manage MSP customers
+  - Update customer details including contact information
+  - Generate customer-specific access tokens for API operations
+  - List and filter customers with client-side filtering capabilities
 
-2. **Maximum Records**
-   - Specify maximum number of records to retrieve
-   - Automatically handles pagination if records > 500
-   - Only visible when "Retrieve All" is disabled
+### Additional Resources (In Development)
+
+The following resources are available but require additional testing before production use:
+
+- **Tenant Management**
+  - Create, retrieve, and update tenants
+  - Suspend and unsuspend tenant operations
+
+- **Service Plan Management**
+  - View available service plans
+  - Retrieve detailed service plan information
+
+- **Task Management**
+  - Track task status and progress
+
+- **Event Monitoring**
+  - Access MSP-level and customer-level events
+
+- **Comprehensive Reporting**
+  - Usage Reports (Global Summary, Tenant Consumption, Tenant Quota)
+  - Cyber Resilience Reports (Rollback Actions, Data Protection Risk)
+  - Endpoint Reports (User metrics, License usage, Backup status, Storage statistics)
+  - Hybrid Workloads Reports (Backup activity, DR operations, Resource status)
+
+## Authentication
+
+This node requires Druva MSP API credentials to authenticate:
+
+1. Sign in to your Druva MSP portal
+2. Navigate to Settings > API Credentials
+3. Create new API credentials (Client ID and Secret Key)
+4. Use these credentials in the Druva MSP API credentials in n8n
 
 ## Usage Examples
 
-### Get All Customers
+### Create a New Customer
 
-```json
-{
-  "node": "Druva MSP",
-  "resource": "customer",
-  "operation": "list",
-  "parameters": {
-    "filters": {
-      "retrieveAll": true
-    }
-  }
-}
-```
+Automate customer onboarding by creating a new customer account:
 
-### Get Limited Number of Customers
+1. Add a Druva MSP node
+2. Select "Customer" as the Resource
+3. Select "Create" as the Operation
+4. Fill required fields: Customer Name, Phone Number, Address
+5. Optionally add Tenant Admins
 
-```json
-{
-  "node": "Druva MSP",
-  "resource": "customer",
-  "operation": "list",
-  "parameters": {
-    "filters": {
-      "retrieveAll": false,
-      "maxRecords": 1000
-    }
-  }
-}
-```
+### Generate Customer Token
 
-### Create a Tenant
+Generate a customer-specific token for delegated API access:
 
-```json
-{
-  "node": "Druva MSP",
-  "resource": "tenant",
-  "operation": "create",
-  "parameters": {
-    "additionalFields": {
-      "name": "New Tenant",
-      "customerId": "customer123",
-      "servicePlanId": "plan456",
-      "region": "us-east-1",
-      "productId": 1
-    }
-  }
-}
-```
+1. Add a Druva MSP node
+2. Select "Customer" as the Resource
+3. Select "Get Token" as the Operation
+4. Provide the Customer ID
+5. Execute to receive a customer-specific access token
 
-## Development
+## Changelog
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the node:
-   ```bash
-   npm run build
-   ```
-4. Link to your n8n installation:
-   ```bash
-   npm link
-   ```
+See [CHANGELOG.md](CHANGELOG.md) for details on all releases and updates.
 
-## Contributing
+## License
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## Resources
-
-- [Druva MSP API Documentation](https://help.druva.com/en/articles/8805729-integration-with-druva-msp-apis)
-- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/creating-nodes/)
+This project is licensed under the [MIT License](LICENSE.md).

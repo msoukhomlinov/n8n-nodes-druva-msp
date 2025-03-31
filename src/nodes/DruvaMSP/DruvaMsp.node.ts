@@ -4,7 +4,6 @@ import type {
   INodeExecutionData,
   INodeType,
   INodeTypeDescription,
-  IDataObject,
   ILoadOptionsFunctions,
   INodePropertyOptions,
 } from 'n8n-workflow';
@@ -16,6 +15,7 @@ import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 // Import Customer resource
 import { customerOperations, customerFields } from './Customer.node.options';
 import { executeCustomerOperation } from './Customer.node.execute';
+import { druvaMspApiRequestAllItemsForOptions } from './GenericFunctions';
 
 // Import Tenant resource
 import { tenantOperations, tenantFields } from './Tenant.node.options';
@@ -33,6 +33,10 @@ import { executeTaskOperation } from './Task.node.execute';
 import { eventOperations, eventFields } from './Event.node.options';
 import { executeEventOperation } from './Event.node.execute';
 
+// Import Admin resource
+import { adminOperations, adminFields } from './Admin.node.options';
+import { executeAdminOperation } from './Admin.node.execute';
+
 // Import Report - Usage resource
 import { reportUsageOperations, reportUsageFields } from './ReportUsage.node.options';
 import { executeReportUsageOperation } from './ReportUsage.node.execute';
@@ -48,9 +52,6 @@ import { executeReportEndpointOperation } from './ReportEndpoint.node.execute';
 // Import report hybrid resource
 import { reportHybridOperations, reportHybridFields } from './ReportHybrid.node.options';
 import { executeReportHybridOperation } from './ReportHybrid.node.execute';
-
-// Import countries data
-import { countries } from './countries';
 
 // TODO: Import for other resources as they are created
 // etc.
@@ -97,28 +98,16 @@ export class DruvaMsp implements INodeType {
         noDataExpression: true,
         options: [
           {
+            name: 'Admin',
+            value: 'admin',
+          },
+          {
             name: 'Customer',
             value: 'customer',
           },
           {
-            name: 'Tenant',
-            value: 'tenant',
-          },
-          {
-            name: 'Service Plan',
-            value: 'servicePlan',
-          },
-          {
-            name: 'Task',
-            value: 'task',
-          },
-          {
             name: 'Event',
             value: 'event',
-          },
-          {
-            name: 'Report - Usage',
-            value: 'reportUsage',
           },
           {
             name: 'Report - Cyber Resilience',
@@ -132,12 +121,29 @@ export class DruvaMsp implements INodeType {
             name: 'Report - Hybrid Workloads',
             value: 'reportHybrid',
           },
+          {
+            name: 'Report - Usage',
+            value: 'reportUsage',
+          },
+          {
+            name: 'Service Plan',
+            value: 'servicePlan',
+          },
+          {
+            name: 'Task',
+            value: 'task',
+          },
+          {
+            name: 'Tenant',
+            value: 'tenant',
+          },
           // TODO: Add other resources (Reports)
         ],
         default: 'customer',
       },
 
       // Operations for each resource
+      ...adminOperations,
       ...customerOperations,
       ...tenantOperations,
       ...servicePlanOperations,
@@ -149,6 +155,7 @@ export class DruvaMsp implements INodeType {
       ...reportHybridOperations,
 
       // Fields for each resource/operation
+      ...adminFields,
       ...customerFields,
       ...tenantFields,
       ...servicePlanFields,
@@ -165,43 +172,44 @@ export class DruvaMsp implements INodeType {
     loadOptions: {
       // Get a list of customers (id/name pairs)
       async getCustomers(this: ILoadOptionsFunctions) {
+        console.log('[DEBUG] getCustomers: Starting customer data retrieval');
         const returnData: INodePropertyOptions[] = [];
         const endpoint = '/msp/v2/customers';
+        const pageSize = 500; // Use larger page size for efficiency
 
         try {
-          // Create a custom wrapper to handle type compatibility
-          const makeRequest = async () => {
-            const response = await this.helpers.request({
-              url: `${this.getNodeParameter('baseUrl', ['https://apis.druva.com'])}${endpoint}`,
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${await this.getCredentials('druvaMspApi')}`,
-              },
-              json: true,
+          // Use the shared helper function for pagination with ILoadOptionsFunctions
+          const customers = await druvaMspApiRequestAllItemsForOptions.call(
+            this,
+            'GET',
+            endpoint,
+            'customers',
+            undefined,
+            { pageSize },
+          );
+
+          console.log(`[DEBUG] getCustomers: Retrieved ${customers.length} customers`);
+
+          // Format the options for the UI
+          for (const customer of customers) {
+            returnData.push({
+              name: customer.customerName as string,
+              value: customer.customerId as string,
             });
-            return response;
-          };
-
-          const response = await makeRequest();
-
-          if (response?.customers?.length && Array.isArray(response.customers)) {
-            for (const customer of response.customers) {
-              returnData.push({
-                name: customer.customerName as string,
-                value: customer.customerId as string,
-              });
-            }
           }
 
           return returnData;
         } catch (error) {
-          return [{ name: 'Error fetching customers', value: '' }];
+          console.error('[ERROR] getCustomers: Error retrieving customers', error);
+          return [{ name: `Error fetching customers: ${(error as Error).message}`, value: '' }];
         }
       },
 
       // Get a list of tenants
       async getTenants(this: ILoadOptionsFunctions) {
+        console.log('[DEBUG] getTenants: Starting tenant data retrieval');
         const returnData: INodePropertyOptions[] = [];
+        const pageSize = 500; // Use larger page size for efficiency
         let customerId: unknown;
 
         try {
@@ -213,127 +221,150 @@ export class DruvaMsp implements INodeType {
         const endpoint = customerId ? `/msp/v2/customers/${customerId}/tenants` : '/msp/v2/tenants';
 
         try {
-          // Create a custom wrapper to handle type compatibility
-          const makeRequest = async () => {
-            const response = await this.helpers.request({
-              url: `${this.getNodeParameter('baseUrl', ['https://apis.druva.com'])}${endpoint}`,
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${await this.getCredentials('druvaMspApi')}`,
-              },
-              json: true,
+          // Use the shared helper function for pagination with ILoadOptionsFunctions
+          const tenants = await druvaMspApiRequestAllItemsForOptions.call(
+            this,
+            'GET',
+            endpoint,
+            'tenants',
+            undefined,
+            { pageSize },
+          );
+
+          console.log(`[DEBUG] getTenants: Retrieved ${tenants.length} tenants`);
+
+          // Format the options for the UI
+          for (const tenant of tenants) {
+            returnData.push({
+              name: tenant.tenantName as string,
+              value: tenant.tenantId as string,
             });
-            return response;
-          };
-
-          const response = await makeRequest();
-
-          if (response?.tenants?.length && Array.isArray(response.tenants)) {
-            for (const tenant of response.tenants) {
-              returnData.push({
-                name: tenant.tenantName as string,
-                value: tenant.tenantId as string,
-              });
-            }
           }
 
           return returnData;
         } catch (error) {
-          return [{ name: 'Error fetching tenants', value: '' }];
+          console.error('[ERROR] getTenants: Error retrieving tenants', error);
+          return [{ name: `Error fetching tenants: ${(error as Error).message}`, value: '' }];
         }
       },
 
-      // Get list of admins for a specific customer
+      // Get a list of admins
       async getAdmins(this: ILoadOptionsFunctions) {
+        console.log('[DEBUG] getAdmins: Starting admin data retrieval');
         const returnData: INodePropertyOptions[] = [];
-        let customerId: unknown;
+        const endpoint = '/msp/v2/admins';
+        console.log(`[DEBUG] getAdmins: Using endpoint ${endpoint}`);
+        const pageSize = 500; // Use larger page size for efficiency
+        console.log(`[DEBUG] getAdmins: Using page size of ${pageSize}`);
 
         try {
-          customerId = this.getCurrentNodeParameter('customerId');
-        } catch (error) {
-          return [{ name: 'Please select a customer first', value: '' }];
-        }
+          // Use the shared helper function for pagination with ILoadOptionsFunctions
+          const admins = await druvaMspApiRequestAllItemsForOptions.call(
+            this,
+            'GET',
+            endpoint,
+            'admins',
+            undefined,
+            { pageSize },
+          );
 
-        if (!customerId) {
-          return [{ name: 'Please select a customer first', value: '' }];
-        }
+          console.log(`[DEBUG] getAdmins: Retrieved ${admins.length} admins`);
 
-        const endpoint = `/msp/v2/customers/${customerId}/admins`;
+          // Format the options for the UI
+          console.log('[DEBUG] getAdmins: Formatting admins for UI display');
+          for (const admin of admins) {
+            try {
+              // Make sure we have valid admin data
+              if (!admin.id && !admin.adminId) {
+                console.warn('[WARN] getAdmins: Admin is missing ID field', admin);
+                continue;
+              }
 
-        try {
-          // Create a custom wrapper to handle type compatibility
-          const makeRequest = async () => {
-            const response = await this.helpers.request({
-              url: `${this.getNodeParameter('baseUrl', ['https://apis.druva.com'])}${endpoint}`,
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${await this.getCredentials('druvaMspApi')}`,
-              },
-              json: true,
-            });
-            return response;
-          };
+              // Ensure we have name components
+              const firstName = admin.firstName || '';
+              const lastName = admin.lastName || '';
+              const email = admin.email || '';
 
-          const response = await makeRequest();
+              // Create a display name with both name parts and email
+              const name = `${firstName} ${lastName} (${email})`;
 
-          if (response?.admins?.length && Array.isArray(response.admins)) {
-            for (const admin of response.admins) {
-              returnData.push({
-                name: `${admin.firstName} ${admin.lastName} (${admin.email})`,
-                value: admin.email as string,
-              });
+              // Ensure ID is a string (n8n requires string values for options)
+              const id = admin.id || admin.adminId;
+              const value = typeof id === 'string' ? id : String(id);
+
+              console.log(
+                `[DEBUG] getAdmins: Adding admin option: ${name} with ID ${value} (type: ${typeof value})`,
+              );
+              returnData.push({ name, value });
+            } catch (error) {
+              console.error('[ERROR] getAdmins: Error formatting admin', admin, error);
             }
           }
 
+          console.log(`[DEBUG] getAdmins: Returning ${returnData.length} formatted admin options`);
+          console.log(
+            '[DEBUG] getAdmins: Sample of formatted admin options:',
+            returnData.slice(0, 3),
+          );
+          console.log(
+            `[DEBUG] getAdmins: First option type check - name: ${typeof returnData[0]?.name}, value: ${typeof returnData[0]?.value}`,
+          );
           return returnData;
         } catch (error) {
-          return [{ name: 'Error fetching admins', value: '' }];
+          console.error('[ERROR] getAdmins: Error retrieving admins', error);
+          return [{ name: `Error fetching admins: ${(error as Error).message}`, value: '' }];
         }
       },
 
       // Get service plans
       async getServicePlans(this: ILoadOptionsFunctions) {
+        console.log('[DEBUG] getServicePlans: Starting service plan data retrieval');
         const returnData: INodePropertyOptions[] = [];
         const endpoint = '/msp/v2/servicePlans';
+        const pageSize = 500; // Use larger page size for efficiency
 
         try {
-          // Create a custom wrapper to handle type compatibility
-          const makeRequest = async () => {
-            const response = await this.helpers.request({
-              url: `${this.getNodeParameter('baseUrl', ['https://apis.druva.com'])}${endpoint}`,
-              method: 'GET',
-              headers: {
-                Authorization: `Bearer ${await this.getCredentials('druvaMspApi')}`,
-              },
-              json: true,
+          // Use the shared helper function for pagination with ILoadOptionsFunctions
+          const servicePlans = await druvaMspApiRequestAllItemsForOptions.call(
+            this,
+            'GET',
+            endpoint,
+            'servicePlans',
+            undefined,
+            { pageSize },
+          );
+
+          console.log(`[DEBUG] getServicePlans: Retrieved ${servicePlans.length} service plans`);
+
+          // Format the options for the UI
+          for (const plan of servicePlans) {
+            returnData.push({
+              name: plan.name as string,
+              value: plan.id as string,
             });
-            return response;
-          };
-
-          const response = await makeRequest();
-
-          if (response?.servicePlans?.length && Array.isArray(response.servicePlans)) {
-            for (const plan of response.servicePlans) {
-              returnData.push({
-                name: plan.name as string,
-                value: plan.id as string,
-              });
-            }
           }
 
           return returnData;
         } catch (error) {
-          return [{ name: 'Error fetching service plans', value: '' }];
+          console.error('[ERROR] getServicePlans: Error retrieving service plans', error);
+          return [{ name: `Error fetching service plans: ${(error as Error).message}`, value: '' }];
         }
       },
 
-      // Get predefined admin roles
+      // Get predefined admin roles (based on API documentation)
       async getAdminRoles(this: ILoadOptionsFunctions) {
         return [
-          { name: 'Administrator', value: 'ADMINISTRATOR' },
-          { name: 'Operator', value: 'OPERATOR' },
-          { name: 'Billing Admin', value: 'BILLING_ADMIN' },
-          { name: 'Read Only', value: 'READ_ONLY' },
+          { name: 'MSP Admin', value: '2' },
+          { name: 'Tenant Admin', value: '3' },
+          { name: 'Read Only Admin', value: '4' },
+        ];
+      },
+
+      // Get predefined admin statuses (based on API documentation)
+      async getAdminStatuses(this: ILoadOptionsFunctions) {
+        return [
+          { name: 'Ready', value: '0' },
+          { name: 'Updating', value: '1' },
         ];
       },
 
@@ -454,30 +485,6 @@ export class DruvaMsp implements INodeType {
           { name: 'Debug (7)', value: '7' },
         ];
       },
-
-      // Get list of countries using our local data based on countries-list package
-      async getCountries(this: ILoadOptionsFunctions) {
-        const returnData: INodePropertyOptions[] = [];
-
-        // Convert the countries object to array for sorting
-        const countriesArray = Object.entries(countries).map(([code, data]) => ({
-          code,
-          name: data.name,
-        }));
-
-        // Sort countries alphabetically by name
-        countriesArray.sort((a, b) => a.name.localeCompare(b.name));
-
-        // Add to return data
-        for (const country of countriesArray) {
-          returnData.push({
-            name: country.name,
-            value: country.code,
-          });
-        }
-
-        return returnData;
-      },
     },
   };
 
@@ -489,7 +496,9 @@ export class DruvaMsp implements INodeType {
     for (let i = 0; i < items.length; i++) {
       try {
         let resultData: INodeExecutionData[] = [];
-        if (resource === 'customer') {
+        if (resource === 'admin') {
+          resultData = await executeAdminOperation.call(this, i);
+        } else if (resource === 'customer') {
           resultData = await executeCustomerOperation.call(this, i);
         } else if (resource === 'tenant') {
           resultData = await executeTenantOperation.call(this, i);
@@ -523,16 +532,14 @@ export class DruvaMsp implements INodeType {
         returnData.push(...executionData);
       } catch (error) {
         if (this.continueOnFail()) {
-          // Push error data
-          const errorData = this.helpers.constructExecutionMetaData(
-            this.helpers.returnJsonArray([{ error: (error as Error).message } as IDataObject]),
+          const executionErrorData = this.helpers.constructExecutionMetaData(
+            this.helpers.returnJsonArray({ error: error.message }),
             { itemData: { item: i } },
           );
-          returnData.push(...errorData);
-        } else {
-          // Throw error if not continuing on fail
-          throw error;
+          returnData.push(...executionErrorData);
+          continue;
         }
+        throw error;
       }
     }
 
