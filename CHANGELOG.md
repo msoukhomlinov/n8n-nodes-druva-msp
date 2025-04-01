@@ -28,21 +28,19 @@ The following resources have been fully implemented, tested, and are ready for p
   - Get Many MSP Events - Retrieve events at the MSP level
   - Get Many Customer Events - Retrieve events for a specific customer
 
-#### In Development Resources
-
-The following resources are implemented but require additional testing:
-
 - **Tenant Resource**
-  - Create - Create a new tenant for a customer
   - Get - Retrieve details for a specific tenant
   - Get Many - Retrieve a list of tenants
-  - Update - Update details of an existing tenant
   - Suspend - Suspend a tenant
   - Unsuspend - Unsuspend a tenant
 
 - **Service Plan Resource**
   - Get - Retrieve details for a specific service plan
-  - Get Many - Retrieve a list of service plans
+  - Get Many - Retrieve a list of service plans with filtering by status, name, editions, and features
+
+#### In Development Resources
+
+The following resources are implemented but require additional testing:
 
 - **Task Resource**
   - Get - Retrieve details for a specific task
@@ -88,6 +86,7 @@ The following resources are implemented but require additional testing:
   - Improving cursor-based pagination implementation to respect API design
 - Updated Tenant filtering to use a single Customer ID as per API documentation, which only supports filtering by one customer at a time
 - Fixed Tenant filtering query parameter name from 'customerId' to 'customerIds' to match the API's expected parameter name
+- Fixed Tenant suspend and unsuspend operations to correctly use the customer ID in the API endpoint path, resolving authentication issues when performing these operations
 
 ### Changed
 
@@ -105,6 +104,16 @@ The following resources are implemented but require additional testing:
   - Product ID codes (1-2) are now displayed with descriptive names (e.g., "Hybrid Workloads")
   - API responses are automatically enriched with human-readable labels while preserving original values
 - Added post-processing filter options for Tenant status and Tenant type in the Get Many operation, allowing users to filter results by these fields using friendly picklists
+- Removed complex Tenant operations (Create, Update) due to API complexity and undocumented requirements, focusing on stable read operations (Get, Get Many) and basic write operations (Suspend, Unsuspend) instead
+- Next focus area: Implementation and testing of the various Reporting resources
+- Renamed Service Plan operation from 'List' to 'Get Many' for consistency with n8n naming conventions
+- Enhanced Service Plan responses with human-readable status labels, converting numeric status codes to descriptive text (e.g., 0 → "Updating", 1 → "Ready")
+- Added post-API filtering options to Service Plan Get Many operation, allowing users to filter results by editions (Business, Enterprise, Elite) and features (Hybrid Workloads, Microsoft 365, etc.)
+- Extended Service Plan filtering capabilities with Status filter (Ready, Updating) and Name contains filter (case-insensitive text search)
+- Improved consistency by using shared constants for all status options throughout the codebase
+- Applied alphabetical sorting to Service Plan filter options for better usability
+- Completed full implementation and testing of the Service Plan resource, including advanced filtering options
+- Next focus area: Implementation and testing of the Report Resources for usage tracking, cyber resilience, endpoints, and hybrid workloads
 
 ## Notes
 
