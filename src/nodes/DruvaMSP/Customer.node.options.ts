@@ -261,7 +261,10 @@ export const customerFields: INodeProperties[] = [
   {
     displayName: 'Customer ID',
     name: 'customerId',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCustomers',
+    },
     required: true,
     default: '',
     displayOptions: {

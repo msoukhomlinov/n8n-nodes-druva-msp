@@ -53,6 +53,13 @@ import { executeReportEndpointOperation } from './ReportEndpoint.node.execute';
 import { reportHybridOperations, reportHybridFields } from './ReportHybrid.node.options';
 import { executeReportHybridOperation } from './ReportHybrid.node.execute';
 
+// Import the value converters at the top of the file
+import {
+  getTenantStatusOptions,
+  getTenantTypeOptions,
+  getProductIdOptions,
+} from './ApiValueConverters';
+
 // TODO: Import for other resources as they are created
 // etc.
 
@@ -172,7 +179,6 @@ export class DruvaMsp implements INodeType {
     loadOptions: {
       // Get a list of customers (id/name pairs)
       async getCustomers(this: ILoadOptionsFunctions) {
-        console.log('[DEBUG] getCustomers: Starting customer data retrieval');
         const returnData: INodePropertyOptions[] = [];
         const endpoint = '/msp/v2/customers';
         const pageSize = 500; // Use larger page size for efficiency
@@ -188,26 +194,47 @@ export class DruvaMsp implements INodeType {
             { pageSize },
           );
 
-          console.log(`[DEBUG] getCustomers: Retrieved ${customers.length} customers`);
-
           // Format the options for the UI
           for (const customer of customers) {
-            returnData.push({
-              name: customer.customerName as string,
-              value: customer.customerId as string,
-            });
+            try {
+              const customerId = (customer.id) as string;
+
+              // Check if we have required data
+              if (!customerId) {
+                continue;
+              }
+
+              // Safely extract accountName and customerName
+              const accountName = (customer.accountName as string) || 'Unknown Account';
+              const customerName = (customer.customerName as string) || 'Unknown Customer';
+
+              // Display accountName with customerName in brackets if they differ
+              let displayName = accountName;
+              if (customerName && accountName !== customerName) {
+                displayName = `${accountName} (${customerName})`;
+              }
+
+              returnData.push({
+                name: displayName,
+                value: customerId,
+              });
+            } catch (error) {
+              console.error('[ERROR] Error processing customer:', error);
+            }
           }
+
+          // Sort the options alphabetically by display name
+          returnData.sort((a, b) => a.name.localeCompare(b.name));
 
           return returnData;
         } catch (error) {
-          console.error('[ERROR] getCustomers: Error retrieving customers', error);
+          console.error('[ERROR] Error retrieving customers:', error);
           return [{ name: `Error fetching customers: ${(error as Error).message}`, value: '' }];
         }
       },
 
       // Get a list of tenants
       async getTenants(this: ILoadOptionsFunctions) {
-        console.log('[DEBUG] getTenants: Starting tenant data retrieval');
         const returnData: INodePropertyOptions[] = [];
         const pageSize = 500; // Use larger page size for efficiency
         let customerId: unknown;
@@ -231,8 +258,6 @@ export class DruvaMsp implements INodeType {
             { pageSize },
           );
 
-          console.log(`[DEBUG] getTenants: Retrieved ${tenants.length} tenants`);
-
           // Format the options for the UI
           for (const tenant of tenants) {
             returnData.push({
@@ -241,21 +266,21 @@ export class DruvaMsp implements INodeType {
             });
           }
 
+          // Sort the tenants alphabetically by name
+          returnData.sort((a, b) => a.name.localeCompare(b.name));
+
           return returnData;
         } catch (error) {
-          console.error('[ERROR] getTenants: Error retrieving tenants', error);
+          console.error('[ERROR] Error retrieving tenants:', error);
           return [{ name: `Error fetching tenants: ${(error as Error).message}`, value: '' }];
         }
       },
 
       // Get a list of admins
       async getAdmins(this: ILoadOptionsFunctions) {
-        console.log('[DEBUG] getAdmins: Starting admin data retrieval');
         const returnData: INodePropertyOptions[] = [];
         const endpoint = '/msp/v2/admins';
-        console.log(`[DEBUG] getAdmins: Using endpoint ${endpoint}`);
         const pageSize = 500; // Use larger page size for efficiency
-        console.log(`[DEBUG] getAdmins: Using page size of ${pageSize}`);
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
@@ -268,15 +293,11 @@ export class DruvaMsp implements INodeType {
             { pageSize },
           );
 
-          console.log(`[DEBUG] getAdmins: Retrieved ${admins.length} admins`);
-
           // Format the options for the UI
-          console.log('[DEBUG] getAdmins: Formatting admins for UI display');
           for (const admin of admins) {
             try {
               // Make sure we have valid admin data
               if (!admin.id && !admin.adminId) {
-                console.warn('[WARN] getAdmins: Admin is missing ID field', admin);
                 continue;
               }
 
@@ -292,33 +313,24 @@ export class DruvaMsp implements INodeType {
               const id = admin.id || admin.adminId;
               const value = typeof id === 'string' ? id : String(id);
 
-              console.log(
-                `[DEBUG] getAdmins: Adding admin option: ${name} with ID ${value} (type: ${typeof value})`,
-              );
               returnData.push({ name, value });
             } catch (error) {
-              console.error('[ERROR] getAdmins: Error formatting admin', admin, error);
+              console.error('[ERROR] Error formatting admin:', error);
             }
           }
 
-          console.log(`[DEBUG] getAdmins: Returning ${returnData.length} formatted admin options`);
-          console.log(
-            '[DEBUG] getAdmins: Sample of formatted admin options:',
-            returnData.slice(0, 3),
-          );
-          console.log(
-            `[DEBUG] getAdmins: First option type check - name: ${typeof returnData[0]?.name}, value: ${typeof returnData[0]?.value}`,
-          );
+          // Sort the admins alphabetically by name
+          returnData.sort((a, b) => a.name.localeCompare(b.name));
+
           return returnData;
         } catch (error) {
-          console.error('[ERROR] getAdmins: Error retrieving admins', error);
+          console.error('[ERROR] Error retrieving admins:', error);
           return [{ name: `Error fetching admins: ${(error as Error).message}`, value: '' }];
         }
       },
 
       // Get service plans
       async getServicePlans(this: ILoadOptionsFunctions) {
-        console.log('[DEBUG] getServicePlans: Starting service plan data retrieval');
         const returnData: INodePropertyOptions[] = [];
         const endpoint = '/msp/v2/servicePlans';
         const pageSize = 500; // Use larger page size for efficiency
@@ -334,8 +346,6 @@ export class DruvaMsp implements INodeType {
             { pageSize },
           );
 
-          console.log(`[DEBUG] getServicePlans: Retrieved ${servicePlans.length} service plans`);
-
           // Format the options for the UI
           for (const plan of servicePlans) {
             returnData.push({
@@ -344,9 +354,12 @@ export class DruvaMsp implements INodeType {
             });
           }
 
+          // Sort the service plans alphabetically by name
+          returnData.sort((a, b) => a.name.localeCompare(b.name));
+
           return returnData;
         } catch (error) {
-          console.error('[ERROR] getServicePlans: Error retrieving service plans', error);
+          console.error('[ERROR] Error retrieving service plans:', error);
           return [{ name: `Error fetching service plans: ${(error as Error).message}`, value: '' }];
         }
       },
@@ -484,6 +497,21 @@ export class DruvaMsp implements INodeType {
           { name: 'Informational (6)', value: '6' },
           { name: 'Debug (7)', value: '7' },
         ];
+      },
+
+      // Get tenant status options
+      async getTenantStatusOptions(this: ILoadOptionsFunctions) {
+        return getTenantStatusOptions();
+      },
+
+      // Get tenant type options
+      async getTenantTypeOptions(this: ILoadOptionsFunctions) {
+        return getTenantTypeOptions();
+      },
+
+      // Get product ID options
+      async getProductIdOptions(this: ILoadOptionsFunctions) {
+        return getProductIdOptions();
       },
     },
   };

@@ -24,9 +24,9 @@ export const tenantOperations: INodeProperties[] = [
         action: 'Get a tenant by ID',
       },
       {
-        name: 'List',
-        value: 'list',
-        action: 'List tenants',
+        name: 'Get Many',
+        value: 'getMany',
+        action: 'Get many tenants',
       },
       {
         name: 'Suspend',
@@ -44,7 +44,7 @@ export const tenantOperations: INodeProperties[] = [
         action: 'Update a tenant by ID',
       },
     ],
-    default: 'list',
+    default: 'getMany',
   },
 ];
 
@@ -112,7 +112,7 @@ export const tenantFields: INodeProperties[] = [
       alwaysOpenEditWindow: true,
     },
     description:
-      'JSON array specifying the products and their attributes to be assigned to the tenant. Refer to documentation for product and attribute IDs.',
+      'JSON array specifying the products and their attributes to be assigned to the tenant. ProductId: 1 = Hybrid Workloads, 2 = SaaS Apps and Endpoints',
   },
   {
     displayName: 'Storage Regions',
@@ -279,7 +279,7 @@ export const tenantFields: INodeProperties[] = [
   },
 
   /* -------------------------------------------------------------------------- */
-  /*                                 tenant:list                                */
+  /*                                tenant:getMany                              */
   /* -------------------------------------------------------------------------- */
   {
     displayName: 'Return All',
@@ -288,7 +288,7 @@ export const tenantFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['tenant'],
-        operation: ['list'],
+        operation: ['getMany'],
       },
     },
     default: false,
@@ -304,7 +304,7 @@ export const tenantFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['tenant'],
-        operation: ['list'],
+        operation: ['getMany'],
         returnAll: [false],
       },
     },
@@ -312,49 +312,94 @@ export const tenantFields: INodeProperties[] = [
     description: 'Max number of results to return.',
   },
   {
-    displayName: 'Filters',
-    name: 'filters',
-    type: 'fixedCollection',
+    displayName: 'Filter by Customer',
+    name: 'filterByCustomer',
+    type: 'boolean',
     displayOptions: {
       show: {
         resource: ['tenant'],
-        operation: ['list'],
+        operation: ['getMany'],
       },
     },
-    placeholder: 'Add Filter',
-    default: {},
+    default: false,
+    description: 'Whether to filter tenants by customer ID',
+  },
+  {
+    displayName: 'Customer ID',
+    name: 'customerId',
+    type: 'options',
     typeOptions: {
-      multipleValues: false,
+      loadOptionsMethod: 'getCustomers',
     },
-    options: [
-      {
-        name: 'filterFields',
-        displayName: 'Filter Fields',
-        values: [
-          {
-            displayName: 'Customer ID',
-            name: 'customerId',
-            type: 'string',
-            default: '',
-            description: 'Filter tenants by customer ID.',
-          },
-          {
-            displayName: 'Tenant Status',
-            name: 'tenantStatus',
-            type: 'options',
-            default: 'Active',
-            options: [
-              { name: 'Active', value: 'Active' },
-              { name: 'Suspended', value: 'Suspended' },
-              { name: 'Pending', value: 'Pending' },
-              { name: 'Failed', value: 'Failed' },
-              { name: 'Deleted', value: 'Deleted' },
-            ],
-            description: 'Filter tenants by status.',
-          },
-        ],
+    displayOptions: {
+      show: {
+        resource: ['tenant'],
+        operation: ['getMany'],
+        filterByCustomer: [true],
       },
-    ],
+    },
+    default: '',
+    description: 'Filter tenants by customer ID',
+  },
+  {
+    displayName: 'Filter by Tenant Status',
+    name: 'filterByStatus',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['tenant'],
+        operation: ['getMany'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter results by tenant status',
+  },
+  {
+    displayName: 'Tenant Status',
+    name: 'statusFilter',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getTenantStatusOptions',
+    },
+    displayOptions: {
+      show: {
+        resource: ['tenant'],
+        operation: ['getMany'],
+        filterByStatus: [true],
+      },
+    },
+    default: 1, // 'Ready' status
+    description: 'Status of the tenant to filter by',
+  },
+  {
+    displayName: 'Filter by Tenant Type',
+    name: 'filterByType',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['tenant'],
+        operation: ['getMany'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter results by tenant type',
+  },
+  {
+    displayName: 'Tenant Type',
+    name: 'typeFilter',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getTenantTypeOptions',
+    },
+    displayOptions: {
+      show: {
+        resource: ['tenant'],
+        operation: ['getMany'],
+        filterByType: [true],
+      },
+    },
+    default: 3, // 'Commercial' type
+    description: 'Type of tenant to filter by',
   },
 
   /* -------------------------------------------------------------------------- */
@@ -385,7 +430,7 @@ export const tenantFields: INodeProperties[] = [
         operation: ['update'],
       },
     },
-    placeholder: 'Update Address',
+    placeholder: 'Add Address',
     default: {},
     typeOptions: {
       multipleValues: false,

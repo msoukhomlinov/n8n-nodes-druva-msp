@@ -437,36 +437,39 @@ export const eventOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: 'List MSP Events',
-        value: 'listMsp',
-        action: 'List MSP events',
+        name: 'Get Many MSP Events',
+        value: 'getManyMspEvents',
+        action: 'Get many MSP events',
         description: 'Retrieve all events at the MSP level',
       },
       {
-        name: 'List Customer Events',
-        value: 'listCustomer',
-        action: 'List customer events',
+        name: 'Get Many Customer Events',
+        value: 'getManyCustomerEvents',
+        action: 'Get many customer events',
         description: 'Retrieve all events for a specific customer',
       },
     ],
-    default: 'listMsp',
+    default: 'getManyMspEvents',
   },
 ];
 
 // Define the fields for the Event resource operations
 export const eventFields: INodeProperties[] = [
   /* -------------------------------------------------------------------------- */
-  /*                             event:listCustomer                             */
+  /*                             event:getManyCustomerEvents                    */
   /* -------------------------------------------------------------------------- */
   {
     displayName: 'Customer ID',
     name: 'customerId',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCustomers',
+    },
     required: true,
     displayOptions: {
       show: {
         resource: ['event'],
-        operation: ['listCustomer'],
+        operation: ['getManyCustomerEvents'],
       },
     },
     default: '',
@@ -483,7 +486,7 @@ export const eventFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['event'],
-        operation: ['listMsp', 'listCustomer'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
       },
     },
     default: false,
@@ -499,7 +502,7 @@ export const eventFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['event'],
-        operation: ['listMsp', 'listCustomer'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
         returnAll: [false],
       },
     },
@@ -519,7 +522,7 @@ export const eventFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['event'],
-        operation: ['listMsp', 'listCustomer'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
       },
     },
     options: [
@@ -607,7 +610,7 @@ export const eventFields: INodeProperties[] = [
         name: 'initiatedBy',
         type: 'string',
         default: '',
-        description: 'Filter events by who initiated them (email or ID)',
+        description: 'Filter events by who initiated them - applies to AUDIT category events. Searches in the initiatorName and initiatorId fields in event details.',
       },
     ],
   },
@@ -624,7 +627,7 @@ export const eventFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['event'],
-        operation: ['listMsp', 'listCustomer'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
       },
     },
     options: [

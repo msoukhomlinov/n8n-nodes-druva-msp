@@ -168,6 +168,9 @@ export async function druvaMspApiRequest(
 /**
  * Handles pagination for list endpoints.
  * Assumes the API uses 'nextPageToken' for pagination and returns items under a specific key.
+ * The Druva MSP API uses cursor-based pagination where each token contains the ID of the last event retrieved.
+ * Note: First page may return many items, while subsequent pages may return only 1 item. This is normal behavior
+ * for cursor-based pagination especially with real-time data.
  *
  * @param {IExecuteFunctions} this The context object.
  * @param {string} method The HTTP method (should be GET or POST for list endpoints).
@@ -186,22 +189,15 @@ export async function druvaMspApiRequestAllItems(
   initialQs?: IDataObject,
 ): Promise<IDataObject[]> {
   console.log(`[DEBUG] Pagination - Starting paginated request to ${endpoint}`);
-  console.log(`[DEBUG] Pagination - Looking for items under key ${itemsKey}`);
 
   const allItems: IDataObject[] = [];
-  // Use pageToken instead of nextPageToken for consistency with the API
   let pageToken: string | undefined | null = undefined;
-  const pageSize = 500;
+  const pageSize = initialQs?.pageSize as number || 500;
   let pageCount = 0;
-  // Keep track of tokens to prevent infinite loops
   const previousTokens = new Set<string>();
-
-  // Track consecutive small page counts to detect inefficient pagination
-  let consecutiveSingleItemPages = 0;
-  // Increase the tolerance for single-item pages since this seems to be by design
-  const MAX_CONSECUTIVE_SINGLE_ITEM_PAGES = 20;
-  // Increase the maximum pages we're willing to process
   const MAX_TOTAL_PAGES = 500;
+  let isFirstPage = true;
+  let isSecondPage = false;
 
   do {
     pageCount++;
@@ -220,10 +216,15 @@ export async function druvaMspApiRequestAllItems(
     if (pageToken) {
       // For subsequent requests, ONLY include pageToken parameter with no other parameters
       qs = { pageToken };
-      console.log(`[DEBUG] Pagination - Using pageToken: ${pageToken}`);
-      console.log(
-        '[DEBUG] Pagination - IMPORTANT: Using only pageToken with no other parameters as per API requirements',
-      );
+
+      // Decode and log token contents for debugging
+      try {
+        const decodedToken = Buffer.from(pageToken, 'base64').toString();
+        const parsedToken = JSON.parse(decodedToken);
+        console.log('[DEBUG] Pagination - Decoded token:', parsedToken);
+      } catch (error) {
+        // Token might not be decodable, ignore error
+      }
 
       // Check for repeat tokens to prevent infinite loops
       if (previousTokens.has(pageToken)) {
@@ -243,8 +244,6 @@ export async function druvaMspApiRequestAllItems(
       if (!qs.pageSize) {
         qs.pageSize = pageSize;
       }
-
-      console.log('[DEBUG] Pagination - First request includes initial parameters:', qs);
     }
 
     try {
@@ -257,53 +256,54 @@ export async function druvaMspApiRequestAllItems(
         qs,
       )) as IDataObject;
 
-      console.log(`[DEBUG] Pagination - Response received for page ${pageCount}`);
-      console.log('[DEBUG] Pagination - Response keys:', Object.keys(response));
-
       const items = response[itemsKey] as IDataObject[] | undefined;
       // API returns nextPageToken but expects pageToken in requests
       pageToken = response.nextPageToken as string | undefined | null;
 
-      // More detailed debug info about the pagination response
       if (items && Array.isArray(items)) {
-        console.log(`[DEBUG] Pagination - Found ${items.length} items on this page`);
-
-        // Check if we're getting inefficient pagination (single items per page)
-        if (items.length === 1) {
-          consecutiveSingleItemPages++;
-
-          // If we've had too many consecutive single-item pages, warn and consider stopping
-          if (consecutiveSingleItemPages >= MAX_CONSECUTIVE_SINGLE_ITEM_PAGES) {
-            console.warn(
-              `[WARN] Pagination - Received ${consecutiveSingleItemPages} consecutive pages with only 1 item. This appears to be the Druva API's normal behavior for Events, but is inefficient.`,
-            );
-            // We'll continue pagination but log the warning
-          }
-        } else {
-          // Reset the counter if we get a page with more than 1 item
-          consecutiveSingleItemPages = 0;
-        }
+        console.log(`[DEBUG] Pagination - Found ${items.length} items on page ${pageCount}`);
 
         // Add the items to our result set
         allItems.push(...items);
+
+        // If this is the first page and we got fewer items than requested,
+        // we know there are no more pages to fetch
+        if (isFirstPage && items.length < pageSize) {
+          console.log('[DEBUG] Pagination - First page returned fewer items than requested, no more pages needed');
+          break;
+        }
+
+        // If this is the second page and we got fewer items than requested,
+        // stop pagination as requested
+        if (isSecondPage && items.length < pageSize) {
+          console.log('[DEBUG] Pagination - Second page returned fewer items than requested, stopping pagination');
+          break;
+        }
       } else {
         console.warn(
           `[WARN] Pagination - Expected an array under key ${itemsKey} but received:`,
-          items,
+          typeof items,
         );
-        console.log('[DEBUG] Pagination - Response structure:', response);
         pageToken = null;
       }
 
-      if (pageToken) {
-        console.log(`[DEBUG] Pagination - Next page token found: ${pageToken}`);
-      } else {
+      // Track page transitions
+      if (isFirstPage) {
+        isFirstPage = false;
+        isSecondPage = true;
+      } else if (isSecondPage) {
+        isSecondPage = false;
+      }
+
+      // Check if we should continue pagination
+      if (!pageToken) {
         console.log('[DEBUG] Pagination - No next page token found, this is the last page');
+        break;
       }
 
       if (items === undefined || items.length === 0) {
         console.log('[DEBUG] Pagination - No items found on this page, stopping pagination');
-        pageToken = null;
+        break;
       }
     } catch (error) {
       console.error(`[ERROR] Pagination - Failed during page ${pageCount}:`, error);
@@ -505,4 +505,50 @@ export async function druvaMspApiRequestAllItemsForOptions(
     `[DEBUG] Options Pagination - Complete. Retrieved ${allItems.length} items total across ${pageCount} pages`,
   );
   return allItems;
+}
+
+/**
+ * Retrieves the customer ID for a specific tenant.
+ * Looks up a tenant by ID and extracts its associated customer ID.
+ *
+ * @param {IExecuteFunctions} this The context object.
+ * @param {string} tenantId The tenant ID to look up.
+ * @returns {Promise<string>} The customer ID associated with the specified tenant.
+ */
+export async function getTenantCustomerId(
+  this: IExecuteFunctions,
+  tenantId: string,
+): Promise<string> {
+  console.log(`[DEBUG] Looking up customer ID for tenant: ${tenantId}`);
+
+  // Get all tenants and find the matching one
+  try {
+    const endpoint = '/msp/v2/tenants';
+    const qs = { pageSize: 500 };
+
+    const response = await druvaMspApiRequest.call(
+      this,
+      'GET',
+      endpoint,
+      undefined,
+      qs,
+    ) as IDataObject;
+
+    if (response.tenants && Array.isArray(response.tenants)) {
+      const tenants = response.tenants as IDataObject[];
+      console.log(`[DEBUG] Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`);
+
+      const targetTenant = tenants.find(tenant => tenant.id === tenantId);
+
+      if (targetTenant && targetTenant.customerID) {
+        const customerId = targetTenant.customerID as string;
+        console.log(`[DEBUG] Found customer ID ${customerId} for tenant ${tenantId}`);
+        return customerId;
+      }
+    }
+
+    throw new Error(`Tenant with ID ${tenantId} not found or missing customer ID`);
+  } catch (error) {
+    throw new Error(`Failed to retrieve customer ID for tenant ${tenantId}: ${(error as Error).message}`);
+  }
 }

@@ -24,13 +24,13 @@ The following resources have been fully implemented, tested, and are ready for p
   - Get Token - Generate a customer-specific API token
   - Update - Update details of an existing customer
 
+- **Event Resource**
+  - Get Many MSP Events - Retrieve events at the MSP level
+  - Get Many Customer Events - Retrieve events for a specific customer
+
 #### In Development Resources
 
 The following resources are implemented but require additional testing:
-
-- **Event Resource**
-  - List MSP Events - Retrieve events at the MSP level
-  - List Customer Events - Retrieve events for a specific customer
 
 - **Tenant Resource**
   - Create - Create a new tenant for a customer
@@ -85,13 +85,27 @@ The following resources are implemented but require additional testing:
   - Implementing the API's requirement that when using `pageToken`, no other query parameters should be present
   - Adding safeguards against infinite loops by tracking previously seen page tokens
   - Adding detailed logging to monitor pagination behavior
-  - Increasing tolerance for consecutive single-item pages
+  - Improving cursor-based pagination implementation to respect API design
+- Updated Tenant filtering to use a single Customer ID as per API documentation, which only supports filtering by one customer at a time
+- Fixed Tenant filtering query parameter name from 'customerId' to 'customerIds' to match the API's expected parameter name
 
 ### Changed
 
 - Implemented proper pagination handling for all list endpoints
 - Added consistent error handling and logging across all API calls
+- Renamed Events operations from 'listMsp' and 'listCustomer' to 'getManyMspEvents' and 'getManyCustomerEvents' for consistency with n8n naming conventions
+- Enhanced Customer picklist implementation with alphabetical sorting and improved display names
+- Improved error handling and removed excessive debug logging across option loaders
+- Next focus area: Complete implementation and testing of the Tenant resource
+- Renamed Tenant operation from 'list' to 'getMany' for consistency with n8n naming conventions
+- Updated Tenant filtering to use a single customer ID dropdown with dynamic loading of customer options
+- Added ApiValueConverters utility with functions to convert numeric API values to human-readable labels:
+  - Tenant status codes (0-5) are now displayed with descriptive names (e.g., "Ready", "Suspended")
+  - Tenant type codes (1-3) are now displayed with descriptive names (e.g., "Sandbox", "Commercial")
+  - Product ID codes (1-2) are now displayed with descriptive names (e.g., "Hybrid Workloads")
+  - API responses are automatically enriched with human-readable labels while preserving original values
+- Added post-processing filter options for Tenant status and Tenant type in the Get Many operation, allowing users to filter results by these fields using friendly picklists
 
 ## Notes
 
-This initial release focuses on establishing the core infrastructure for Druva MSP API integration. Only the Admin and Customer resources have been thoroughly tested and are considered production-ready. The remaining resources require additional testing before being used in production environments. 
+This initial release focuses on establishing the core infrastructure for Druva MSP API integration. The Admin, Customer, and Event resources have been thoroughly tested and are considered production-ready. The remaining resources require additional testing before being used in production environments. 
