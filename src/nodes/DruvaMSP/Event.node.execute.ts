@@ -7,6 +7,7 @@ import type {
 
 // Import the helper functions for API requests and pagination
 import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
+import { getSyslogSeverityLabel } from './helpers/ValueConverters';
 
 /**
  * Filter events based on provided filters that cannot be handled by the API
@@ -155,35 +156,6 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
 }
 
 /**
- * Maps syslogSeverity codes to human-readable severity names
- */
-function getSeverityName(severityCode: string | number): string {
-  // Convert to string if it's a number
-  const code = typeof severityCode === 'number' ? severityCode.toString() : severityCode;
-
-  switch (code) {
-    case '0':
-      return 'Emergency';
-    case '1':
-      return 'Alert';
-    case '2':
-      return 'Critical';
-    case '3':
-      return 'Error';
-    case '4':
-      return 'Warning';
-    case '5':
-      return 'Notice';
-    case '6':
-      return 'Informational';
-    case '7':
-      return 'Debug';
-    default:
-      return `Unknown (${code})`;
-  }
-}
-
-/**
  * Formats timestamps in event data to a more readable format if requested.
  * @param events The events to process.
  * @param options The processing options.
@@ -235,9 +207,13 @@ function processEvents(events: IDataObject[], options: IDataObject): IDataObject
 
     // Add human-readable severity name if syslogSeverity is present
     if (processedEvent.syslogSeverity !== undefined) {
-      processedEvent.severityName = getSeverityName(
-        processedEvent.syslogSeverity as string | number,
-      );
+      // Convert to number if it's a string
+      const severityCode =
+        typeof processedEvent.syslogSeverity === 'string'
+          ? Number(processedEvent.syslogSeverity)
+          : (processedEvent.syslogSeverity as number);
+
+      processedEvent.severityName = getSyslogSeverityLabel(severityCode);
     }
 
     // Remove details if not requested
@@ -293,7 +269,7 @@ async function fetchEvents(
   if (filters.severity && Array.isArray(filters.severity) && filters.severity.length > 0) {
     // Use first severity for server-side filtering, convert to number if needed
     const severityValue = filters.severity[0] as string;
-    queryParams.syslogSeverity = parseInt(severityValue, 10);
+    queryParams.syslogSeverity = Number.parseInt(severityValue, 10);
   }
 
   try {
@@ -318,13 +294,16 @@ async function fetchEvents(
 
   // Apply remaining client-side filtering for parameters not supported by the API
   // or for additional filter values beyond the first one used server-side
-  const hasRemainingFilters = Object.keys(filters).some(key => {
+  const hasRemainingFilters = Object.keys(filters).some((key) => {
     if (key === 'dateRange' || key === 'feature' || key === 'initiatedBy') {
       return true;
     }
     // Check if we have multiple values for category, eventType, or severity
-    if ((key === 'category' || key === 'eventType' || key === 'severity') &&
-        Array.isArray(filters[key]) && filters[key].length > 1) {
+    if (
+      (key === 'category' || key === 'eventType' || key === 'severity') &&
+      Array.isArray(filters[key]) &&
+      filters[key].length > 1
+    ) {
       return true;
     }
     return false;
@@ -333,6 +312,7 @@ async function fetchEvents(
   if (hasRemainingFilters) {
     const originalCount = events.length;
     events = applyRemainingFilters(events, filters);
+    console.log(`[DEBUG] Events filtered: ${originalCount} -> ${events.length}`);
   }
 
   // Process events (format timestamps, etc.)
@@ -363,14 +343,7 @@ export async function executeEventOperation(
       const options = this.getNodeParameter('options', i, {}) as IDataObject;
       const endpoint = '/msp/v2/events';
 
-      const events = await fetchEvents.call(
-        this,
-        endpoint,
-        returnAll,
-        limit,
-        filters,
-        options,
-      );
+      const events = await fetchEvents.call(this, endpoint, returnAll, limit, filters, options);
 
       responseData = this.helpers.returnJsonArray(events);
     } else if (operation === 'getManyCustomerEvents') {
@@ -382,14 +355,7 @@ export async function executeEventOperation(
       const options = this.getNodeParameter('options', i, {}) as IDataObject;
       const endpoint = `/msp/v3/customers/${customerId}/events`;
 
-      const events = await fetchEvents.call(
-        this,
-        endpoint,
-        returnAll,
-        limit,
-        filters,
-        options,
-      );
+      const events = await fetchEvents.call(this, endpoint, returnAll, limit, filters, options);
 
       responseData = this.helpers.returnJsonArray(events);
     }

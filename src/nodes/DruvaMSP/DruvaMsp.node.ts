@@ -58,7 +58,15 @@ import {
   getTenantStatusOptions,
   getTenantTypeOptions,
   getProductIdOptions,
-} from './ApiValueConverters';
+  getAdminRoleOptions,
+  getAdminStatusOptions,
+  getEventCategoryOptions,
+  getSyslogSeverityOptions,
+  getServicePlanEditionOptions,
+  getServicePlanFeatureOptions,
+  getServicePlanStatusOptions,
+  getTaskStatusOptions,
+} from './helpers/ValueConverters';
 
 // TODO: Import for other resources as they are created
 // etc.
@@ -197,7 +205,7 @@ export class DruvaMsp implements INodeType {
           // Format the options for the UI
           for (const customer of customers) {
             try {
-              const customerId = (customer.id) as string;
+              const customerId = customer.id as string;
 
               // Check if we have required data
               if (!customerId) {
@@ -346,17 +354,40 @@ export class DruvaMsp implements INodeType {
             { pageSize },
           );
 
+          // Log the service plans response for debugging
+          console.log(
+            '[DEBUG] Service Plans Response:',
+            JSON.stringify(servicePlans).substring(0, 500),
+          );
+
+          if (servicePlans.length > 0) {
+            // Log the first service plan to see its structure
+            console.log('[DEBUG] First Service Plan:', JSON.stringify(servicePlans[0]));
+          }
+
           // Format the options for the UI
           for (const plan of servicePlans) {
-            returnData.push({
-              name: plan.name as string,
-              value: plan.id as string,
-            });
+            // Check for differently named ID keys
+            const planId = plan.id || plan.servicePlanId || plan.servicePlanID;
+            const planName = plan.name || plan.servicePlanName;
+
+            if (planId && planName) {
+              returnData.push({
+                name: planName as string,
+                value: planId.toString(),
+              });
+            } else {
+              console.log(
+                '[DEBUG] Skipping service plan missing id or name:',
+                JSON.stringify(plan),
+              );
+            }
           }
 
           // Sort the service plans alphabetically by name
           returnData.sort((a, b) => a.name.localeCompare(b.name));
 
+          console.log('[DEBUG] Returning service plan options:', JSON.stringify(returnData));
           return returnData;
         } catch (error) {
           console.error('[ERROR] Error retrieving service plans:', error);
@@ -366,137 +397,22 @@ export class DruvaMsp implements INodeType {
 
       // Get predefined admin roles (based on API documentation)
       async getAdminRoles(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'MSP Admin', value: '2' },
-          { name: 'Tenant Admin', value: '3' },
-          { name: 'Read Only Admin', value: '4' },
-        ];
+        return getAdminRoleOptions();
       },
 
       // Get predefined admin statuses (based on API documentation)
       async getAdminStatuses(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Ready', value: '0' },
-          { name: 'Updating', value: '1' },
-        ];
-      },
-
-      // Get predefined workload types
-      async getWorkloadTypes(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'VM', value: 'VM' },
-          { name: 'Physical Server', value: 'PHYSICAL_SERVER' },
-          { name: 'AWS', value: 'AWS' },
-          { name: 'Azure', value: 'AZURE' },
-          { name: 'GCP', value: 'GCP' },
-          { name: 'Database', value: 'DATABASE' },
-          { name: 'NAS Share', value: 'NAS_SHARE' },
-        ];
-      },
-
-      // Get predefined backup statuses
-      async getBackupStatuses(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Success', value: 'SUCCESS' },
-          { name: 'Failed', value: 'FAILED' },
-          { name: 'Partial Success', value: 'PARTIAL_SUCCESS' },
-          { name: 'Aborted', value: 'ABORTED' },
-          { name: 'In Progress', value: 'IN_PROGRESS' },
-        ];
-      },
-
-      // Get predefined connection statuses
-      async getConnectionStatuses(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Connected', value: 'CONNECTED' },
-          { name: 'Disconnected', value: 'DISCONNECTED' },
-          { name: 'Intermittent', value: 'INTERMITTENT' },
-        ];
-      },
-
-      // Get predefined risk levels
-      async getRiskLevels(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Critical', value: 'CRITICAL' },
-          { name: 'High', value: 'HIGH' },
-          { name: 'Medium', value: 'MEDIUM' },
-          { name: 'Low', value: 'LOW' },
-        ];
-      },
-
-      // Get predefined protection statuses
-      async getProtectionStatuses(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Protected', value: 'PROTECTED' },
-          { name: 'Unprotected', value: 'UNPROTECTED' },
-          { name: 'Partially Protected', value: 'PARTIALLY_PROTECTED' },
-        ];
-      },
-
-      // Get predefined resource statuses
-      async getResourceStatuses(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Active', value: 'ACTIVE' },
-          { name: 'Inactive', value: 'INACTIVE' },
-        ];
-      },
-
-      // Get predefined resource types
-      async getResourceTypes(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'VM', value: 'VM' },
-          { name: 'Database', value: 'DATABASE' },
-          { name: 'File System', value: 'FILESYSTEM' },
-        ];
-      },
-
-      // Get predefined backup types
-      async getBackupTypes(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Full', value: 'FULL' },
-          { name: 'Incremental', value: 'INCREMENTAL' },
-          { name: 'Differential', value: 'DIFFERENTIAL' },
-        ];
-      },
-
-      // Get predefined agent health statuses
-      async getAgentHealthStatuses(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Healthy', value: 'HEALTHY' },
-          { name: 'Warning', value: 'WARNING' },
-          { name: 'Critical', value: 'CRITICAL' },
-        ];
-      },
-
-      // Get predefined product IDs
-      async getProductIds(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Hybrid Workloads', value: '1' },
-          { name: 'SaaS Apps and Endpoints', value: '2' },
-        ];
+        return getAdminStatusOptions();
       },
 
       // Get predefined event categories
       async getEventCategories(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Event', value: 'EVENT' },
-          { name: 'Audit', value: 'AUDIT' },
-          { name: 'Alert', value: 'ALERT' },
-        ];
+        return getEventCategoryOptions();
       },
 
       // Get predefined syslog severities
       async getSyslogSeverities(this: ILoadOptionsFunctions) {
-        return [
-          { name: 'Emergency (0)', value: '0' },
-          { name: 'Alert (1)', value: '1' },
-          { name: 'Critical (2)', value: '2' },
-          { name: 'Error (3)', value: '3' },
-          { name: 'Warning (4)', value: '4' },
-          { name: 'Notice (5)', value: '5' },
-          { name: 'Informational (6)', value: '6' },
-          { name: 'Debug (7)', value: '7' },
-        ];
+        return getSyslogSeverityOptions();
       },
 
       // Get tenant status options
@@ -510,8 +426,34 @@ export class DruvaMsp implements INodeType {
       },
 
       // Get product ID options
-      async getProductIdOptions(this: ILoadOptionsFunctions) {
+      async getProductIds(this: ILoadOptionsFunctions) {
         return getProductIdOptions();
+      },
+
+      // Get service plan edition options (Business, Enterprise, Elite)
+      async getServicePlanEditionOptions(
+        this: ILoadOptionsFunctions,
+      ): Promise<INodePropertyOptions[]> {
+        return Promise.resolve(getServicePlanEditionOptions());
+      },
+
+      // Get service plan feature options (Hybrid Workloads, M365, etc.)
+      async getServicePlanFeatureOptions(
+        this: ILoadOptionsFunctions,
+      ): Promise<INodePropertyOptions[]> {
+        return Promise.resolve(getServicePlanFeatureOptions());
+      },
+
+      // Get service plan status options (Ready, Updating)
+      async getServicePlanStatusOptions(
+        this: ILoadOptionsFunctions,
+      ): Promise<INodePropertyOptions[]> {
+        return Promise.resolve(getServicePlanStatusOptions());
+      },
+
+      // Get task status options
+      async getTaskStatusOptions(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+        return getTaskStatusOptions();
       },
     },
   };

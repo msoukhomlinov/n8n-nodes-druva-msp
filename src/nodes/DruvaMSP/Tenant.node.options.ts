@@ -14,11 +14,6 @@ export const tenantOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: 'Create',
-        value: 'create',
-        action: 'Create a tenant',
-      },
-      {
         name: 'Get',
         value: 'get',
         action: 'Get a tenant by ID',
@@ -38,11 +33,6 @@ export const tenantOperations: INodeProperties[] = [
         value: 'unsuspend',
         action: 'Unsuspend a tenant by ID',
       },
-      {
-        name: 'Update',
-        value: 'update',
-        action: 'Update a tenant by ID',
-      },
     ],
     default: 'getMany',
   },
@@ -50,216 +40,6 @@ export const tenantOperations: INodeProperties[] = [
 
 // Define the fields for the Tenant resource operations
 export const tenantFields: INodeProperties[] = [
-  /* -------------------------------------------------------------------------- */
-  /*                                tenant:create                               */
-  /* -------------------------------------------------------------------------- */
-  {
-    displayName: 'Customer ID',
-    name: 'customerId',
-    type: 'string',
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    default: '',
-    description: 'Unique identifier of the customer under which the tenant will be created.',
-  },
-  {
-    displayName: 'Tenant Name',
-    name: 'tenantName',
-    type: 'string',
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    default: '',
-    description: 'Name of the tenant to be created.',
-  },
-  {
-    displayName: 'Service Plan ID',
-    name: 'servicePlanId',
-    type: 'string',
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    default: '',
-    description: 'Unique identifier of the service plan to be assigned to the tenant.',
-  },
-  {
-    displayName: 'Products',
-    name: 'products',
-    type: 'json',
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    default:
-      '[{\n  "productId": 1,\n  "attributes": [\n    {\n      "attributeId": 1,\n      "attributeValue": 1\n    }\n  ]\n}]',
-    typeOptions: {
-      alwaysOpenEditWindow: true,
-    },
-    description:
-      'JSON array specifying the products and their attributes to be assigned to the tenant. ProductId: 1 = Hybrid Workloads, 2 = SaaS Apps and Endpoints',
-  },
-  {
-    displayName: 'Storage Regions',
-    name: 'storageRegions',
-    type: 'json',
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    default: '[{\n  "storageRegionId": "1",\n  "isPrimary": true\n}]',
-    typeOptions: {
-      alwaysOpenEditWindow: true,
-    },
-    description:
-      'JSON array specifying the storage region details for the tenant. At least one primary region is required.',
-  },
-  {
-    displayName: 'Account Information',
-    name: 'accountInfo',
-    type: 'fixedCollection',
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    placeholder: 'Add Account Info',
-    default: {},
-    typeOptions: {
-      multipleValues: false,
-    },
-    options: [
-      {
-        name: 'accountInfoFields',
-        displayName: 'Account Information Fields',
-        values: [
-          {
-            displayName: 'Admin First Name',
-            name: 'firstName',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'Admin Last Name',
-            name: 'lastName',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'Admin Email',
-            name: 'email',
-            type: 'string',
-            required: true,
-            default: '',
-            description: 'Email address of the tenant administrator.',
-          },
-          {
-            displayName: 'Contact Number',
-            name: 'contactNumber',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'Additional Emails',
-            name: 'additionalEmails',
-            type: 'string',
-            required: false,
-            default: '',
-            description: 'Comma-separated list of additional email addresses.',
-          },
-          {
-            displayName: 'Designation',
-            name: 'designation',
-            type: 'string',
-            required: false,
-            default: '',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    displayName: 'Address Details',
-    name: 'address',
-    type: 'fixedCollection',
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    placeholder: 'Add Address',
-    default: {},
-    typeOptions: {
-      multipleValues: false,
-    },
-    options: [
-      {
-        name: 'addressFields',
-        displayName: 'Address Fields',
-        values: [
-          {
-            displayName: 'Street',
-            name: 'street',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'City',
-            name: 'city',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'State',
-            name: 'state',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'Country',
-            name: 'country',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'Postal Code',
-            name: 'postalCode',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-        ],
-      },
-    ],
-  },
-
   /* -------------------------------------------------------------------------- */
   /*                                 tenant:get                                 */
   /* -------------------------------------------------------------------------- */
@@ -271,7 +51,7 @@ export const tenantFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['tenant'],
-        operation: ['get', 'update', 'suspend', 'unsuspend'],
+        operation: ['get', 'suspend', 'unsuspend'],
       },
     },
     default: '',
@@ -368,7 +148,7 @@ export const tenantFields: INodeProperties[] = [
         filterByStatus: [true],
       },
     },
-    default: 1, // 'Ready' status
+    default: '',
     description: 'Status of the tenant to filter by',
   },
   {
@@ -398,95 +178,17 @@ export const tenantFields: INodeProperties[] = [
         filterByType: [true],
       },
     },
-    default: 3, // 'Commercial' type
-    description: 'Type of tenant to filter by',
-  },
-
-  /* -------------------------------------------------------------------------- */
-  /*                                tenant:update                               */
-  /* -------------------------------------------------------------------------- */
-  // Note: Update uses the same Tenant ID field as Get/Suspend/Unsuspend
-  {
-    displayName: 'Tenant Name',
-    name: 'tenantName',
-    type: 'string',
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['update'],
-      },
-    },
     default: '',
-    description: 'New name for the tenant.',
-  },
-  {
-    displayName: 'Address Details',
-    name: 'address',
-    type: 'fixedCollection',
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['update'],
-      },
-    },
-    placeholder: 'Add Address',
-    default: {},
-    typeOptions: {
-      multipleValues: false,
-    },
-    options: [
-      {
-        name: 'addressFields',
-        displayName: 'Address Fields',
-        values: [
-          {
-            displayName: 'Street',
-            name: 'street',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'City',
-            name: 'city',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'State',
-            name: 'state',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'Country',
-            name: 'country',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-          {
-            displayName: 'Postal Code',
-            name: 'postalCode',
-            type: 'string',
-            required: true,
-            default: '',
-          },
-        ],
-      },
-    ],
+    description: 'Type of tenant to filter by',
   },
 
   /* -------------------------------------------------------------------------- */
   /*                             tenant:suspend                               */
   /* -------------------------------------------------------------------------- */
-  // Suspend uses only the Tenant ID field, already defined for Get/Update
+  // Suspend uses only the Tenant ID field, already defined above
 
   /* -------------------------------------------------------------------------- */
   /*                            tenant:unsuspend                              */
   /* -------------------------------------------------------------------------- */
-  // Unsuspend uses only the Tenant ID field, already defined for Get/Update
+  // Unsuspend uses only the Tenant ID field, already defined above
 ];

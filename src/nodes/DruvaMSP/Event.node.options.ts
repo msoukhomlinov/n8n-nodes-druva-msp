@@ -610,7 +610,8 @@ export const eventFields: INodeProperties[] = [
         name: 'initiatedBy',
         type: 'string',
         default: '',
-        description: 'Filter events by who initiated them - applies to AUDIT category events. Searches in the initiatorName and initiatorId fields in event details.',
+        description:
+          'Filter events by who initiated them - applies to AUDIT category events. Searches in the initiatorName and initiatorId fields in event details.',
       },
     ],
   },

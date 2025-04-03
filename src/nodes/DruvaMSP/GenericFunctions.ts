@@ -192,7 +192,7 @@ export async function druvaMspApiRequestAllItems(
 
   const allItems: IDataObject[] = [];
   let pageToken: string | undefined | null = undefined;
-  const pageSize = initialQs?.pageSize as number || 500;
+  const pageSize = (initialQs?.pageSize as number) || 500;
   let pageCount = 0;
   const previousTokens = new Set<string>();
   const MAX_TOTAL_PAGES = 500;
@@ -269,14 +269,18 @@ export async function druvaMspApiRequestAllItems(
         // If this is the first page and we got fewer items than requested,
         // we know there are no more pages to fetch
         if (isFirstPage && items.length < pageSize) {
-          console.log('[DEBUG] Pagination - First page returned fewer items than requested, no more pages needed');
+          console.log(
+            '[DEBUG] Pagination - First page returned fewer items than requested, no more pages needed',
+          );
           break;
         }
 
         // If this is the second page and we got fewer items than requested,
         // stop pagination as requested
         if (isSecondPage && items.length < pageSize) {
-          console.log('[DEBUG] Pagination - Second page returned fewer items than requested, stopping pagination');
+          console.log(
+            '[DEBUG] Pagination - Second page returned fewer items than requested, stopping pagination',
+          );
           break;
         }
       } else {
@@ -526,19 +530,21 @@ export async function getTenantCustomerId(
     const endpoint = '/msp/v2/tenants';
     const qs = { pageSize: 500 };
 
-    const response = await druvaMspApiRequest.call(
+    const response = (await druvaMspApiRequest.call(
       this,
       'GET',
       endpoint,
       undefined,
       qs,
-    ) as IDataObject;
+    )) as IDataObject;
 
     if (response.tenants && Array.isArray(response.tenants)) {
       const tenants = response.tenants as IDataObject[];
-      console.log(`[DEBUG] Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`);
+      console.log(
+        `[DEBUG] Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`,
+      );
 
-      const targetTenant = tenants.find(tenant => tenant.id === tenantId);
+      const targetTenant = tenants.find((tenant) => tenant.id === tenantId);
 
       if (targetTenant && targetTenant.customerID) {
         const customerId = targetTenant.customerID as string;
@@ -549,6 +555,8 @@ export async function getTenantCustomerId(
 
     throw new Error(`Tenant with ID ${tenantId} not found or missing customer ID`);
   } catch (error) {
-    throw new Error(`Failed to retrieve customer ID for tenant ${tenantId}: ${(error as Error).message}`);
+    throw new Error(
+      `Failed to retrieve customer ID for tenant ${tenantId}: ${(error as Error).message}`,
+    );
   }
 }

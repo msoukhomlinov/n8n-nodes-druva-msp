@@ -3,35 +3,7 @@
 import type { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
 
 import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
-
-/**
- * Helper function to convert numeric status codes to human-readable labels
- * based on the official Druva MSP API documentation
- *
- * Status codes from the official Druva MSP API documentation:
- * - 0: Creation pending
- * - 1: Ready
- * - 2: Tenant processing
- *
- * @param status The numeric status code or string status from the API
- * @returns A human-readable status label
- */
-function getStatusLabel(status: string | number): string {
-  // Convert to string to handle both string and number inputs
-  const statusStr = String(status).toLowerCase();
-
-  // Handle cases where the API returns a numeric status
-  switch (statusStr) {
-    case '0':
-      return 'Creation Pending';
-    case '1':
-      return 'Ready';
-    case '2':
-      return 'Tenant Processing';
-    default:
-      return `Unknown (${status})`;
-  }
-}
+import { getCustomerStatusLabel } from './helpers/ValueConverters';
 
 /**
  * Processes the customer data to add derived fields
@@ -49,7 +21,10 @@ function processCustomerData(customer: IDataObject): IDataObject {
 
     // If this is the status field, add the status_label immediately after
     if (key === 'status' && customer.status !== undefined) {
-      processedCustomer.status_label = getStatusLabel(customer.status as string | number);
+      // Convert to number if it's a string
+      const statusCode =
+        typeof customer.status === 'string' ? Number(customer.status) : (customer.status as number);
+      processedCustomer.status_label = getCustomerStatusLabel(statusCode);
     }
   }
 

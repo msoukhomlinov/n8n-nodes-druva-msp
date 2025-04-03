@@ -3,60 +3,7 @@
 import type { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
 
 import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
-
-/**
- * Helper function to convert numeric role codes to human-readable labels
- * based on the official Druva MSP API documentation
- *
- * Role codes from the official Druva MSP API documentation:
- * - 2: MSP Admin
- * - 3: Tenant Admin
- * - 4: Read Only Admin
- *
- * @param role The role code from the API
- * @returns A human-readable role label
- */
-function getRoleLabel(role: string | number): string {
-  // Convert to string to handle both string and number inputs
-  const roleStr = String(role);
-
-  // Handle numeric codes
-  switch (roleStr) {
-    case '2':
-      return 'MSP Admin';
-    case '3':
-      return 'Tenant Admin';
-    case '4':
-      return 'Read Only Admin';
-    default:
-      return `Unknown Role (${role})`;
-  }
-}
-
-/**
- * Helper function to convert numeric status codes to human-readable labels
- * based on the official Druva MSP API documentation
- *
- * Status codes from the official Druva MSP API documentation:
- * - 0: Ready
- * - 1: Updating
- *
- * @param status The numeric status code from the API
- * @returns A human-readable status label
- */
-function getStatusLabel(status: string | number): string {
-  // Convert to string to handle both string and number inputs
-  const statusStr = String(status);
-
-  switch (statusStr) {
-    case '0':
-      return 'Ready';
-    case '1':
-      return 'Updating';
-    default:
-      return `Unknown Status (${status})`;
-  }
-}
+import { getAdminRoleLabel, getAdminStatusLabel } from './helpers/ValueConverters';
 
 /**
  * Processes the admin data to add derived fields
@@ -73,12 +20,17 @@ function processAdminData(admin: IDataObject): IDataObject {
 
     // Add role_label after role field
     if (key === 'role' && admin.role !== undefined) {
-      processedAdmin.role_label = getRoleLabel(admin.role as string | number);
+      // Convert to number if it's a string
+      const roleCode = typeof admin.role === 'string' ? Number(admin.role) : (admin.role as number);
+      processedAdmin.role_label = getAdminRoleLabel(roleCode);
     }
 
     // Add status_label after status field
     if (key === 'status' && admin.status !== undefined) {
-      processedAdmin.status_label = getStatusLabel(admin.status as string | number);
+      // Convert to number if it's a string
+      const statusCode =
+        typeof admin.status === 'string' ? Number(admin.status) : (admin.status as number);
+      processedAdmin.status_label = getAdminStatusLabel(statusCode);
     }
   }
 
@@ -137,11 +89,11 @@ export async function executeAdminOperation(
     } else {
       // Get limited number of admins
       const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, qs);
-      admins = (response as IDataObject)?.admins as IDataObject[] || [];
+      admins = ((response as IDataObject)?.admins as IDataObject[]) || [];
     }
 
     // Process each admin to add the derived fields
-    admins = admins.map(admin => processAdminData(admin));
+    admins = admins.map((admin) => processAdminData(admin));
 
     responseData = this.helpers.returnJsonArray(admins);
   }
