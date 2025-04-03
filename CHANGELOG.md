@@ -38,12 +38,12 @@ The following resources have been fully implemented, tested, and are ready for p
   - Get - Retrieve details for a specific service plan
   - Get Many - Retrieve a list of service plans with filtering by status, name, editions, and features
 
+- **Task Resource**
+  - Get - Retrieve details for a specific task
+
 #### In Development Resources
 
 The following resources are implemented but require additional testing:
-
-- **Task Resource**
-  - Get - Retrieve details for a specific task
 
 - **Report Resources**
   - **Usage Reports**

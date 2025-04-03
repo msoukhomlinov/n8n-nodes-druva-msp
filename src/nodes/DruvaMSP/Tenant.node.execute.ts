@@ -9,7 +9,8 @@ import {
   druvaMspApiRequest,
   druvaMspApiRequestAllItems,
   getTenantCustomerId,
-} from './GenericFunctions'; // Assuming helper functions are in GenericFunctions.ts
+  waitForTaskCompletion,
+} from './GenericFunctions'; // Added import for waitForTaskCompletion
 import {
   enrichApiResponse,
   enrichApiResponseArray,
@@ -195,6 +196,9 @@ export async function executeTenantOperation(
         throw new Error('Tenant ID is required for the suspend operation.');
       }
 
+      // Check if we should wait for task completion
+      const waitForCompletion = this.getNodeParameter('waitForCompletion', i, false) as boolean;
+
       // Get the customer ID for this tenant
       try {
         const customerId = await getTenantCustomerId.call(this, tenantId);
@@ -207,7 +211,24 @@ export async function executeTenantOperation(
         console.log(`[DEBUG] Druva MSP API - Suspending tenant at endpoint: ${endpoint}`);
 
         // POST request with no body
-        responseData = (await druvaMspApiRequest.call(this, 'POST', endpoint)) as IDataObject;
+        const suspendResponse = (await druvaMspApiRequest.call(
+          this,
+          'POST',
+          endpoint,
+        )) as IDataObject;
+
+        // If we should wait for task completion
+        if (waitForCompletion && suspendResponse.task && (suspendResponse.task as IDataObject).id) {
+          const taskId = (suspendResponse.task as IDataObject).id as string;
+          console.log(`[DEBUG] Druva MSP API - Waiting for task ${taskId} to complete`);
+
+          // Wait for the task to complete
+          const taskResponse = await waitForTaskCompletion.call(this, taskId);
+          responseData = taskResponse;
+        } else {
+          // Just return the initial response
+          responseData = suspendResponse;
+        }
       } catch (error) {
         throw new Error(`Failed to suspend tenant: ${(error as Error).message}`);
       }
@@ -217,6 +238,9 @@ export async function executeTenantOperation(
       if (!tenantId) {
         throw new Error('Tenant ID is required for the unsuspend operation.');
       }
+
+      // Check if we should wait for task completion
+      const waitForCompletion = this.getNodeParameter('waitForCompletion', i, false) as boolean;
 
       // Get the customer ID for this tenant
       try {
@@ -230,7 +254,28 @@ export async function executeTenantOperation(
         console.log(`[DEBUG] Druva MSP API - Unsuspending tenant at endpoint: ${endpoint}`);
 
         // POST request with no body
-        responseData = (await druvaMspApiRequest.call(this, 'POST', endpoint)) as IDataObject;
+        const unsuspendResponse = (await druvaMspApiRequest.call(
+          this,
+          'POST',
+          endpoint,
+        )) as IDataObject;
+
+        // If we should wait for task completion
+        if (
+          waitForCompletion &&
+          unsuspendResponse.task &&
+          (unsuspendResponse.task as IDataObject).id
+        ) {
+          const taskId = (unsuspendResponse.task as IDataObject).id as string;
+          console.log(`[DEBUG] Druva MSP API - Waiting for task ${taskId} to complete`);
+
+          // Wait for the task to complete
+          const taskResponse = await waitForTaskCompletion.call(this, taskId);
+          responseData = taskResponse;
+        } else {
+          // Just return the initial response
+          responseData = unsuspendResponse;
+        }
       } catch (error) {
         throw new Error(`Failed to unsuspend tenant: ${(error as Error).message}`);
       }

@@ -341,3 +341,77 @@ export function getTaskStatusOptions(): INodePropertyOptions[] {
     value: Number.parseInt(key, 10),
   }));
 }
+
+/**
+ * Convert Unix epoch timestamp to JavaScript Date
+ * Druva API returns Unix epoch timestamps in milliseconds
+ *
+ * @param timestamp Unix epoch timestamp (in milliseconds)
+ * @returns JavaScript Date object
+ */
+export function convertUnixTimestampToDate(timestamp: number): Date {
+  // Check if timestamp is already in milliseconds or needs conversion
+  // Unix timestamps in seconds have ~10 digits, milliseconds have ~13 digits
+  if (timestamp < 10000000000) {
+    // Convert from seconds to milliseconds
+    return new Date(timestamp * 1000);
+  }
+  // Already in milliseconds
+  return new Date(timestamp);
+}
+
+/**
+ * Enriches API response objects with JavaScript Date objects for timestamp fields
+ * @param data The data object to enrich
+ * @param timestampFields Array of field names containing Unix timestamps
+ * @returns The enriched data object with additional Date fields
+ */
+export function enrichApiResponseWithDates(
+  data: IDataObject,
+  timestampFields: string[],
+): IDataObject {
+  // Create a new result object
+  let result = { ...data };
+
+  // Process each timestamp field
+  for (const field of timestampFields) {
+    const timestamp = data[field];
+
+    // Only process if the field exists and is a number
+    if (timestamp !== undefined && typeof timestamp === 'number') {
+      // Create a Date object and add as a new field with the "At" suffix
+      const dateObject = convertUnixTimestampToDate(timestamp);
+      const dateField = `${field}At`;
+
+      // Add the date object immediately after the timestamp field
+      const keys = Object.keys(result);
+      const fieldIndex = keys.indexOf(field);
+
+      if (fieldIndex !== -1) {
+        // Create a new object with the date field inserted at the right position
+        const newResult: IDataObject = {};
+
+        keys.forEach((key, index) => {
+          newResult[key] = result[key];
+          // Add the date field immediately after the timestamp field
+          if (index === fieldIndex) {
+            newResult[dateField] = dateObject;
+          }
+        });
+
+        // If the field was the last one, add the date field at the end
+        if (fieldIndex === keys.length - 1 && !newResult[dateField]) {
+          newResult[dateField] = dateObject;
+        }
+
+        // Update the result for the next iteration
+        result = newResult;
+      } else {
+        // Just add at the end if we can't find the field (should not happen)
+        result[dateField] = dateObject;
+      }
+    }
+  }
+
+  return result;
+}
