@@ -53,20 +53,27 @@ export async function executeAdminOperation(
   if (operation === 'getMany') {
     const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
     const limit = this.getNodeParameter('limit', i, 50) as number;
-    const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
     const endpoint = '/msp/v2/admins';
 
     // Prepare query parameters
     const qs: IDataObject = {};
 
-    // Add email filter if specified
-    if (filters.email) {
-      qs.email = filters.email;
+    // Check for email filter
+    const filterByEmail = this.getNodeParameter('filterByEmail', i, false) as boolean;
+    if (filterByEmail) {
+      const email = this.getNodeParameter('email', i, '') as string;
+      if (email) {
+        qs.email = email;
+      }
     }
 
-    // Add role filter if specified
-    if (filters.role && Array.isArray(filters.role) && filters.role.length > 0) {
-      qs.role = filters.role.join(',');
+    // Check for role filter
+    const filterByRole = this.getNodeParameter('filterByRole', i, false) as boolean;
+    if (filterByRole) {
+      const role = this.getNodeParameter('role', i, []) as string[];
+      if (role.length > 0) {
+        qs.role = role.join(',');
+      }
     }
 
     // Add page size limit if not returning all results
@@ -78,14 +85,14 @@ export async function executeAdminOperation(
 
     if (returnAll) {
       // Get all admins with pagination
-      admins = await druvaMspApiRequestAllItems.call(
+      admins = (await druvaMspApiRequestAllItems.call(
         this,
         'GET',
         endpoint,
         'admins',
         undefined,
         qs,
-      );
+      )) as IDataObject[];
     } else {
       // Get limited number of admins
       const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, qs);

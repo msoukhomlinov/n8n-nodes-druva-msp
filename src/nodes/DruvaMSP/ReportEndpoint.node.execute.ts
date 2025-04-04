@@ -5,44 +5,9 @@ import type {
   NodeApiError,
 } from 'n8n-workflow';
 
-import { druvaMspApiRequest } from './GenericFunctions';
-
-/**
- * Custom function to fetch all items for report endpoints that use POST with nextToken in the body
- */
-async function fetchAllReportItems(
-  this: IExecuteFunctions,
-  endpoint: string,
-  initialBody: IDataObject,
-): Promise<IDataObject[]> {
-  const allItems: IDataObject[] = [];
-  let nextToken: string | null | undefined = undefined;
-  const body = { ...initialBody };
-
-  do {
-    // If we have a next token, add it to the body
-    if (nextToken) {
-      body.nextToken = nextToken;
-    }
-
-    // Make the request
-    const response = (await druvaMspApiRequest.call(this, 'POST', endpoint, body)) as IDataObject;
-
-    // Get items from the response
-    const items = response.items as IDataObject[] | undefined;
-    nextToken = response.nextToken as string | null | undefined;
-
-    // Add items to our result array
-    if (Array.isArray(items) && items.length > 0) {
-      allItems.push(...items);
-    } else {
-      // No more items, exit the loop
-      nextToken = null;
-    }
-  } while (nextToken);
-
-  return allItems;
-}
+import { druvaMspApiRequest, druvaMspApiRequestAllReportItems } from './GenericFunctions';
+import { createReportFilter, createReportFilters } from './helpers/ReportHelpers';
+import { REPORT_FIELD_NAMES, REPORT_OPERATORS } from './helpers/Constants';
 
 /**
  * Executes the selected Report - Endpoint operation.
@@ -81,11 +46,6 @@ export async function executeReportEndpointOperation(
       }
     }
 
-    // Set pagination parameters if not returning all
-    if (!returnAll) {
-      body.pageSize = limit;
-    }
-
     // Execute the specific operation
     if (operation === 'getUsers') {
       // Get Users Report
@@ -100,9 +60,23 @@ export async function executeReportEndpointOperation(
       }
 
       if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
+        // Create proper filter structure for non-returnAll requests
+        const filterBy = [];
+        if (body.customerIds) {
+          filterBy.push(
+            createReportFilter(
+              REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID,
+              REPORT_OPERATORS.CONTAINS,
+              body.customerIds as string[],
+            ),
+          );
+        }
+        // Add other specialized filters
+        body.filters = createReportFilters(limit, filterBy);
+
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
         const items = (response as IDataObject)?.items ?? [];
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
@@ -124,7 +98,7 @@ export async function executeReportEndpointOperation(
       }
 
       if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
@@ -148,7 +122,7 @@ export async function executeReportEndpointOperation(
       }
 
       if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
@@ -163,7 +137,7 @@ export async function executeReportEndpointOperation(
       body.period = this.getNodeParameter('period', i, 'WEEKLY') as string;
 
       if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
@@ -207,7 +181,7 @@ export async function executeReportEndpointOperation(
       }
 
       if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
@@ -218,28 +192,44 @@ export async function executeReportEndpointOperation(
       // Get Alerts Report
       const endpoint = '/msp/reporting/v1/reports/mspEPAlerts';
 
-      const filterByAlertTypes = this.getNodeParameter('filterByAlertTypes', i, false) as boolean;
-      if (filterByAlertTypes) {
-        const alertTypes = this.getNodeParameter('alertTypes', i, []) as string[];
-        if (alertTypes.length > 0) {
-          body.alertTypes = alertTypes;
-        }
-      }
-
-      const filterByAlertSeverity = this.getNodeParameter(
-        'filterByAlertSeverity',
+      const filterByAlertCategories = this.getNodeParameter(
+        'filterByAlertCategories',
         i,
         false,
       ) as boolean;
-      if (filterByAlertSeverity) {
-        const alertSeverity = this.getNodeParameter('alertSeverity', i, []) as string[];
-        if (alertSeverity.length > 0) {
-          body.alertSeverity = alertSeverity;
+      if (filterByAlertCategories) {
+        const alertCategories = this.getNodeParameter('alertCategories', i, []) as string[];
+        if (alertCategories.length > 0) {
+          body.alertCategories = alertCategories;
+        }
+      }
+
+      const filterByAlertSeverities = this.getNodeParameter(
+        'filterByAlertSeverities',
+        i,
+        false,
+      ) as boolean;
+      if (filterByAlertSeverities) {
+        const alertSeverities = this.getNodeParameter('alertSeverities', i, []) as string[];
+        if (alertSeverities.length > 0) {
+          body.alertSeverities = alertSeverities;
+        }
+      }
+
+      const filterByAlertStatuses = this.getNodeParameter(
+        'filterByAlertStatuses',
+        i,
+        false,
+      ) as boolean;
+      if (filterByAlertStatuses) {
+        const alertStatuses = this.getNodeParameter('alertStatuses', i, []) as string[];
+        if (alertStatuses.length > 0) {
+          body.alertStatuses = alertStatuses;
         }
       }
 
       if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
@@ -250,58 +240,16 @@ export async function executeReportEndpointOperation(
       // Get Storage Statistics Report
       const endpoint = '/msp/reporting/v1/reports/mspEPStorageStatistics';
 
-      // Add period parameter
-      body.period = this.getNodeParameter('storagePeriod', i, 'DAILY') as string;
-
-      if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
-        responseData = this.helpers.returnJsonArray(allItems);
-      } else {
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
-        const items = (response as IDataObject)?.items ?? [];
-        responseData = this.helpers.returnJsonArray(items as IDataObject[]);
-      }
-    } else if (operation === 'getStorageAlert') {
-      // Get Storage Alert Report
-      const endpoint = '/msp/reporting/v1/reports/mspEPStorageAlert';
-
-      const filterByStorageAlertTypes = this.getNodeParameter(
-        'filterByStorageAlertTypes',
-        i,
-        false,
-      ) as boolean;
-      if (filterByStorageAlertTypes) {
-        const storageAlertTypes = this.getNodeParameter('storageAlertTypes', i, []) as string[];
-        if (storageAlertTypes.length > 0) {
-          body.storageAlertTypes = storageAlertTypes;
+      const filterByAgentStatus = this.getNodeParameter('filterByAgentStatus', i, false) as boolean;
+      if (filterByAgentStatus) {
+        const agentStatus = this.getNodeParameter('agentStatus', i, []) as string[];
+        if (agentStatus.length > 0) {
+          body.agentStatus = agentStatus;
         }
       }
 
       if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
-        responseData = this.helpers.returnJsonArray(allItems);
-      } else {
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
-        const items = (response as IDataObject)?.items ?? [];
-        responseData = this.helpers.returnJsonArray(items as IDataObject[]);
-      }
-    } else if (operation === 'getCloudCacheStatistics') {
-      // Get Cloud Cache Statistics Report
-      const endpoint = '/msp/reporting/v1/reports/mspEPCloudCacheStatistics';
-
-      // Add period parameter
-      body.period = this.getNodeParameter('cloudCachePeriod', i, 'DAILY') as string;
-
-      const filterByCacheStatus = this.getNodeParameter('filterByCacheStatus', i, false) as boolean;
-      if (filterByCacheStatus) {
-        const cacheStatus = this.getNodeParameter('cacheStatus', i, []) as string[];
-        if (cacheStatus.length > 0) {
-          body.cacheStatus = cacheStatus;
-        }
-      }
-
-      if (returnAll) {
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);

@@ -66,7 +66,11 @@ import {
   getServicePlanFeatureOptions,
   getServicePlanStatusOptions,
   getTaskStatusOptions,
+  getProductModuleIdOptions,
 } from './helpers/ValueConverters';
+
+// Import report helpers for loadOptions methods
+import { getReportFieldNameOptions, getReportOperatorOptions } from './helpers/ReportHelpers';
 
 // TODO: Import for other resources as they are created
 // etc.
@@ -430,6 +434,11 @@ export class DruvaMsp implements INodeType {
         return getProductIdOptions();
       },
 
+      // Get product module ID options
+      async getProductModuleIds(this: ILoadOptionsFunctions) {
+        return getProductModuleIdOptions();
+      },
+
       // Get service plan edition options (Business, Enterprise, Elite)
       async getServicePlanEditionOptions(
         this: ILoadOptionsFunctions,
@@ -454,6 +463,16 @@ export class DruvaMsp implements INodeType {
       // Get task status options
       async getTaskStatusOptions(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
         return getTaskStatusOptions();
+      },
+
+      // Get report field name options for filtering
+      getReportFieldNames(this: ILoadOptionsFunctions) {
+        return getReportFieldNameOptions();
+      },
+
+      // Get report operator options for filtering
+      getReportOperators(this: ILoadOptionsFunctions) {
+        return getReportOperatorOptions();
       },
     },
   };

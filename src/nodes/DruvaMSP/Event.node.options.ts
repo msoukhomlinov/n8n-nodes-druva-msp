@@ -511,109 +511,253 @@ export const eventFields: INodeProperties[] = [
   },
 
   /* -------------------------------------------------------------------------- */
-  /*                     Filtering Options (both operations)                    */
+  /*                     Date Selection (at top of filtering options)           */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Filters',
-    name: 'filters',
-    type: 'collection',
-    placeholder: 'Add Filter',
-    default: {},
+    displayName: 'Date Selection Method',
+    name: 'dateSelectionMethod',
+    type: 'options',
+    options: [
+      {
+        name: 'All Dates',
+        value: 'allDates',
+      },
+      {
+        name: 'Specific Dates',
+        value: 'specificDates',
+      },
+      {
+        name: 'Relative Date Range',
+        value: 'relativeDates',
+      },
+    ],
+    default: 'relativeDates',
     displayOptions: {
       show: {
         resource: ['event'],
         operation: ['getManyMspEvents', 'getManyCustomerEvents'],
       },
     },
+    description:
+      'Choose whether to use specific dates, relative date ranges, or include all dates (no date filter)',
+  },
+  {
+    displayName: 'Start Date',
+    name: 'startDate',
+    type: 'dateTime',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        dateSelectionMethod: ['specificDates'],
+      },
+    },
+    default: '',
+    description: 'Start date for filtering events (inclusive)',
+  },
+  {
+    displayName: 'End Date',
+    name: 'endDate',
+    type: 'dateTime',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        dateSelectionMethod: ['specificDates'],
+      },
+    },
+    default: '',
+    description: 'End date for filtering events (inclusive)',
+  },
+  {
+    displayName: 'Date Range',
+    name: 'relativeDateRange',
+    type: 'options',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        dateSelectionMethod: ['relativeDates'],
+      },
+    },
     options: [
-      {
-        displayName: 'Category',
-        name: 'category',
-        type: 'multiOptions',
-        default: [],
-        description: 'The categories of events to return',
-        options: EVENT_CATEGORIES,
-      },
-      {
-        displayName: 'Date Range',
-        name: 'dateRange',
-        type: 'fixedCollection',
-        placeholder: 'Add Date Range',
-        default: {},
-        options: [
-          {
-            name: 'dateRangeValues',
-            displayName: 'Date Range Values',
-            values: [
-              {
-                displayName: 'Start Date',
-                name: 'startDate',
-                type: 'dateTime',
-                default: '',
-                description: 'Start date for filtering events (inclusive)',
-              },
-              {
-                displayName: 'End Date',
-                name: 'endDate',
-                type: 'dateTime',
-                default: '',
-                description: 'End date for filtering events (inclusive)',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        displayName: 'Event Type',
-        name: 'eventType',
-        type: 'multiOptions',
-        default: [],
-        description: 'The specific types of events to return',
-        options: EVENT_TYPES,
-      },
-      {
-        displayName: 'Feature',
-        name: 'feature',
-        type: 'multiOptions',
-        default: [],
-        description: 'The features or components the events are related to',
-        options: [
-          { name: 'Admin', value: 'Admin' },
-          { name: 'Client', value: 'Client' },
-          { name: 'Customer', value: 'Customer' },
-          { name: 'Customer Contact', value: 'CustomerContact' },
-          { name: 'Service Plan', value: 'ServicePlan' },
-          { name: 'Settings', value: 'Settings' },
-          { name: 'Tenant', value: 'Tenant' },
-          { name: 'MSP', value: 'MSP' },
-        ],
-      },
-      {
-        displayName: 'Severity',
-        name: 'severity',
-        type: 'multiOptions',
-        default: [],
-        description: 'The severity levels of events to return',
-        options: [
-          { name: 'Emergency (0)', value: '0' },
-          { name: 'Alert (1)', value: '1' },
-          { name: 'Critical (2)', value: '2' },
-          { name: 'Error (3)', value: '3' },
-          { name: 'Warning (4)', value: '4' },
-          { name: 'Notice (5)', value: '5' },
-          { name: 'Informational (6)', value: '6' },
-          { name: 'Debug (7)', value: '7' },
-        ],
-      },
-      {
-        displayName: 'Initiated By',
-        name: 'initiatedBy',
-        type: 'string',
-        default: '',
-        description:
-          'Filter events by who initiated them - applies to AUDIT category events. Searches in the initiatorName and initiatorId fields in event details.',
-      },
+      { name: 'Current Month', value: 'currentMonth' },
+      { name: 'Previous Month', value: 'previousMonth' },
+      { name: 'Current Quarter', value: 'currentQuarter' },
+      { name: 'Previous Quarter', value: 'previousQuarter' },
+      { name: 'Current Year', value: 'currentYear' },
+      { name: 'Previous Year', value: 'previousYear' },
+      { name: 'Last 30 Days', value: 'last30Days' },
+      { name: 'Last 60 Days', value: 'last60Days' },
+      { name: 'Last 90 Days', value: 'last90Days' },
+      { name: 'Last 6 Months', value: 'last6Months' },
+      { name: 'Last 12 Months', value: 'last12Months' },
+      { name: 'Year To Date', value: 'yearToDate' },
     ],
+    default: 'currentMonth',
+    description: 'Select a predefined date range for filtering events',
+  },
+
+  /* -------------------------------------------------------------------------- */
+  /*                     Filtering Options (both operations)                    */
+  /* -------------------------------------------------------------------------- */
+  {
+    displayName: 'Filter by Category',
+    name: 'filterByCategory',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter events by category',
+  },
+  {
+    displayName: 'Category',
+    name: 'category',
+    type: 'multiOptions',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        filterByCategory: [true],
+      },
+    },
+    default: [],
+    description: 'The categories of events to return',
+    options: EVENT_CATEGORIES,
+  },
+  {
+    displayName: 'Filter by Event Type',
+    name: 'filterByEventType',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter events by event type',
+  },
+  {
+    displayName: 'Event Type',
+    name: 'eventType',
+    type: 'multiOptions',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        filterByEventType: [true],
+      },
+    },
+    default: [],
+    description: 'The specific types of events to return',
+    options: EVENT_TYPES,
+  },
+  {
+    displayName: 'Filter by Feature',
+    name: 'filterByFeature',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter events by feature',
+  },
+  {
+    displayName: 'Feature',
+    name: 'feature',
+    type: 'multiOptions',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        filterByFeature: [true],
+      },
+    },
+    default: [],
+    description: 'The features or components the events are related to',
+    options: [
+      { name: 'Admin', value: 'Admin' },
+      { name: 'Client', value: 'Client' },
+      { name: 'Customer', value: 'Customer' },
+      { name: 'Customer Contact', value: 'CustomerContact' },
+      { name: 'Service Plan', value: 'ServicePlan' },
+      { name: 'Settings', value: 'Settings' },
+      { name: 'Tenant', value: 'Tenant' },
+      { name: 'MSP', value: 'MSP' },
+    ],
+  },
+  {
+    displayName: 'Filter by Severity',
+    name: 'filterBySeverity',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter events by severity level',
+  },
+  {
+    displayName: 'Severity',
+    name: 'severity',
+    type: 'multiOptions',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        filterBySeverity: [true],
+      },
+    },
+    default: [],
+    description: 'The severity levels of events to return',
+    options: [
+      { name: 'Emergency (0)', value: '0' },
+      { name: 'Alert (1)', value: '1' },
+      { name: 'Critical (2)', value: '2' },
+      { name: 'Error (3)', value: '3' },
+      { name: 'Warning (4)', value: '4' },
+      { name: 'Notice (5)', value: '5' },
+      { name: 'Informational (6)', value: '6' },
+      { name: 'Debug (7)', value: '7' },
+    ],
+  },
+  {
+    displayName: 'Filter by Initiator',
+    name: 'filterByInitiator',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter events by who initiated them',
+  },
+  {
+    displayName: 'Initiated By',
+    name: 'initiatedBy',
+    type: 'string',
+    displayOptions: {
+      show: {
+        resource: ['event'],
+        operation: ['getManyMspEvents', 'getManyCustomerEvents'],
+        filterByInitiator: [true],
+      },
+    },
+    default: '',
+    description:
+      'Filter events by who initiated them - applies to AUDIT category events. Searches in the initiatorName and initiatorId fields in event details.',
   },
 
   /* -------------------------------------------------------------------------- */

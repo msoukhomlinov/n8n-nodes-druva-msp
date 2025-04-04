@@ -309,8 +309,8 @@ export const customerFields: INodeProperties[] = [
     description: 'Max number of results to return',
   },
   {
-    displayName: 'Filter Results',
-    name: 'filterResults',
+    displayName: 'Filter by Customer Name',
+    name: 'filterByCustomerName',
     type: 'boolean',
     displayOptions: {
       show: {
@@ -319,91 +319,128 @@ export const customerFields: INodeProperties[] = [
       },
     },
     default: false,
-    description: 'Whether to filter the results after retrieval',
+    description: 'Whether to filter results by customer name',
   },
   {
-    displayName: 'Filters',
-    name: 'filters',
-    type: 'fixedCollection',
+    displayName: 'Customer Name Operator',
+    name: 'customerNameOperator',
+    type: 'options',
     displayOptions: {
       show: {
         resource: ['customer'],
         operation: ['getMany'],
-        filterResults: [true],
+        filterByCustomerName: [true],
       },
     },
-    typeOptions: {
-      multipleValues: true,
-      sortable: true,
-    },
-    placeholder: 'Add Filter',
-    default: {},
     options: [
       {
-        name: 'filter',
-        displayName: 'Filter',
-        values: [
-          {
-            displayName: 'Field',
-            name: 'field',
-            type: 'options',
-            default: 'customerName',
-            options: [
-              {
-                name: 'Customer Name',
-                value: 'customerName',
-              },
-              {
-                name: 'Account Name',
-                value: 'accountName',
-              },
-            ],
-            description: 'Field to filter by',
-          },
-          {
-            displayName: 'Operator',
-            name: 'operator',
-            type: 'options',
-            default: 'contains',
-            options: [
-              {
-                name: 'Contains',
-                value: 'contains',
-              },
-              {
-                name: 'Not Contains',
-                value: 'notContains',
-              },
-              {
-                name: 'Equals',
-                value: 'equals',
-              },
-              {
-                name: 'Not Equals',
-                value: 'notEquals',
-              },
-              {
-                name: 'Starts With',
-                value: 'startsWith',
-              },
-              {
-                name: 'Ends With',
-                value: 'endsWith',
-              },
-            ],
-            description: 'Filter operator to use',
-          },
-          {
-            displayName: 'Value',
-            name: 'value',
-            type: 'string',
-            default: '',
-            description: 'Value to compare against',
-          },
-        ],
+        name: 'Contains',
+        value: 'contains',
+      },
+      {
+        name: 'Not Contains',
+        value: 'notContains',
+      },
+      {
+        name: 'Equals',
+        value: 'equals',
+      },
+      {
+        name: 'Not Equals',
+        value: 'notEquals',
+      },
+      {
+        name: 'Starts With',
+        value: 'startsWith',
+      },
+      {
+        name: 'Ends With',
+        value: 'endsWith',
       },
     ],
-    description: 'Define filters to apply to results',
+    default: 'contains',
+    description: 'Operation to perform when comparing Customer Name values',
+  },
+  {
+    displayName: 'Customer Name Value',
+    name: 'customerNameValue',
+    type: 'string',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['getMany'],
+        filterByCustomerName: [true],
+      },
+    },
+    default: '',
+    description: 'The value to compare against the customer name',
+  },
+  {
+    displayName: 'Filter by Account Name',
+    name: 'filterByAccountName',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['getMany'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter results by account name',
+  },
+  {
+    displayName: 'Account Name Operator',
+    name: 'accountNameOperator',
+    type: 'options',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['getMany'],
+        filterByAccountName: [true],
+      },
+    },
+    options: [
+      {
+        name: 'Contains',
+        value: 'contains',
+      },
+      {
+        name: 'Not Contains',
+        value: 'notContains',
+      },
+      {
+        name: 'Equals',
+        value: 'equals',
+      },
+      {
+        name: 'Not Equals',
+        value: 'notEquals',
+      },
+      {
+        name: 'Starts With',
+        value: 'startsWith',
+      },
+      {
+        name: 'Ends With',
+        value: 'endsWith',
+      },
+    ],
+    default: 'contains',
+    description: 'Operation to perform when comparing Account Name values',
+  },
+  {
+    displayName: 'Account Name Value',
+    name: 'accountNameValue',
+    type: 'string',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['getMany'],
+        filterByAccountName: [true],
+      },
+    },
+    default: '',
+    description: 'The value to compare against the account name',
   },
   /* -------------------------------------------------------------------------- */
   /*                                customer:getToken                           */

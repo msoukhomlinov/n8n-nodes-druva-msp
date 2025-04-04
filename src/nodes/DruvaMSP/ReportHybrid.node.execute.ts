@@ -1,10 +1,12 @@
 import type { IExecuteFunctions, IDataObject, INodeExecutionData } from 'n8n-workflow';
 
-import { druvaMspApiRequest } from './GenericFunctions';
+import { druvaMspApiRequest, druvaMspApiRequestAllPagedItems } from './GenericFunctions';
 
 /**
  * Common function for fetching report items with pagination handling
+ * @deprecated Use druvaMspApiRequestAllPagedItems from GenericFunctions.ts instead
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function fetchAllReportItems(
   this: IExecuteFunctions,
   endpoint: string,
@@ -15,13 +17,13 @@ async function fetchAllReportItems(
 ) {
   const returnData: IDataObject[] = [];
   let responseData: IDataObject;
-  let nextToken: string | undefined;
+  let nextPageToken: string | undefined;
 
   do {
     // Add next token to request if it exists
     const paginatedRequestBody = { ...requestBody };
-    if (nextToken) {
-      paginatedRequestBody.nextToken = nextToken;
+    if (nextPageToken) {
+      paginatedRequestBody.pageToken = nextPageToken;
     }
 
     // Make the API request
@@ -37,14 +39,14 @@ async function fetchAllReportItems(
       returnData.push(...(responseData.items as IDataObject[]));
     }
 
-    // Update nextToken for pagination
-    nextToken = responseData.nextToken as string | undefined;
+    // Update nextPageToken for pagination
+    nextPageToken = responseData.nextPageToken as string | undefined;
 
     // Break if we've reached the limit
     if (!returnAll && limit && returnData.length >= limit) {
       return returnData.slice(0, limit);
     }
-  } while (returnAll && nextToken);
+  } while (returnAll && nextPageToken);
 
   return returnData;
 }
@@ -112,7 +114,7 @@ export async function executeReportHybridOperation(
       // Base request body with pagination
       const requestBody: IDataObject = {
         page: 1,
-        pageSize: 100,
+        pageSize: limit || 500,
       };
 
       // Add common filters to request body if they exist
@@ -203,34 +205,10 @@ export async function executeReportHybridOperation(
             requestBody.drPlanIds = drPlanIds;
           }
         }
-
-        const filterByReplicationStatus = this.getNodeParameter(
-          'filterByReplicationStatus',
-          0,
-          false,
-        ) as boolean;
-        if (filterByReplicationStatus) {
-          const replicationStatus = this.getNodeParameter('replicationStatus', 0, []) as string[];
-          if (replicationStatus.length > 0) {
-            requestBody.replicationStatus = replicationStatus;
-          }
-        }
       } else if (operation === 'getResourceStatusReport') {
         endpoint = '/msp/reporting/v1/reports/mspEWResourceStatus';
 
         // Add additional filters specific to this operation
-        const filterByWorkloadTypes = this.getNodeParameter(
-          'filterByWorkloadTypes',
-          0,
-          false,
-        ) as boolean;
-        if (filterByWorkloadTypes) {
-          const workloadTypes = this.getNodeParameter('workloadTypes', 0, []) as string[];
-          if (workloadTypes.length > 0) {
-            requestBody.workloadTypes = workloadTypes;
-          }
-        }
-
         const filterByResourceStatus = this.getNodeParameter(
           'filterByResourceStatus',
           0,
@@ -243,12 +221,12 @@ export async function executeReportHybridOperation(
           }
         }
 
-        const filterByResourceTypes = this.getNodeParameter(
-          'filterByResourceTypes',
+        const filterByResourceType = this.getNodeParameter(
+          'filterByResourceType',
           0,
           false,
         ) as boolean;
-        if (filterByResourceTypes) {
+        if (filterByResourceType) {
           const resourceType = this.getNodeParameter('resourceType', 0, []) as string[];
           if (resourceType.length > 0) {
             requestBody.resourceType = resourceType;
@@ -258,18 +236,6 @@ export async function executeReportHybridOperation(
         endpoint = '/msp/reporting/v1/reports/mspEWAlertHistory';
 
         // Add additional filters specific to this operation
-        const filterByWorkloadTypes = this.getNodeParameter(
-          'filterByWorkloadTypes',
-          0,
-          false,
-        ) as boolean;
-        if (filterByWorkloadTypes) {
-          const workloadTypes = this.getNodeParameter('workloadTypes', 0, []) as string[];
-          if (workloadTypes.length > 0) {
-            requestBody.workloadTypes = workloadTypes;
-          }
-        }
-
         const filterByAlertSeverity = this.getNodeParameter(
           'filterByAlertSeverity',
           0,
@@ -284,28 +250,30 @@ export async function executeReportHybridOperation(
       }
 
       // Fetch data with pagination handling
-      responseData = await fetchAllReportItems.call(
-        this,
-        endpoint,
-        requestBody,
-        'items',
-        returnAll,
-        limit,
-      );
+      if (returnAll) {
+        responseData = await druvaMspApiRequestAllPagedItems.call(
+          this,
+          'POST',
+          endpoint,
+          requestBody,
+          'items',
+        );
+      } else {
+        // For limit requests, we can just use druvaMspApiRequest directly
+        const response = (await druvaMspApiRequest.call(
+          this,
+          'POST',
+          endpoint,
+          requestBody,
+        )) as IDataObject;
+        responseData = (response.items as IDataObject[]) || [];
+      }
 
-      const executionData = this.helpers.constructExecutionMetaData(
-        this.helpers.returnJsonArray(responseData),
-        { itemData: { item: i } },
-      );
-
-      returnData.push(...executionData);
+      // Return the data
+      returnData.push(...this.helpers.returnJsonArray(responseData));
     } catch (error) {
       if (this.continueOnFail()) {
-        const executionErrorData = this.helpers.constructExecutionMetaData(
-          this.helpers.returnJsonArray({ error: error.message }),
-          { itemData: { item: i } },
-        );
-        returnData.push(...executionErrorData);
+        returnData.push({ json: { error: error.message } });
         continue;
       }
       throw error;

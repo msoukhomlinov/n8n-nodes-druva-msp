@@ -6,8 +6,9 @@ import type {
 } from 'n8n-workflow';
 
 // Import the helper functions for API requests and pagination
-import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
+import { druvaMspApiRequest, PaginationHelper } from './GenericFunctions';
 import { getSyslogSeverityLabel } from './helpers/ValueConverters';
+import { getRelativeDateRange } from './helpers/DateHelpers';
 
 /**
  * Filter events based on provided filters that cannot be handled by the API
@@ -229,14 +230,29 @@ function processEvents(events: IDataObject[], options: IDataObject): IDataObject
 }
 
 /**
- * A helper function to fetch events with consistent logic for both MSP and Customer events
+ * A helper function to fetch events with consistent logic for both MSP and Customer events.
+ *
+ * IMPORTANT PAGINATION NOTES:
+ * - This implementation uses direct token-based pagination with PaginationHelper to handle large event sets (>1000 events)
+ * - We use a high loop count limit (10000) to allow fetching up to ~5 million events while maintaining loop protection
+ * - The Druva MSP API has a specific requirement: You cannot use pageToken and filters simultaneously
+ * - For subsequent requests after the first page, we must use ONLY the pageToken parameter
+ * - The pageSize is set to 500 (API maximum) to minimize the number of requests needed
+ *
+ * @param this The context object.
+ * @param endpoint The API endpoint to call.
+ * @param returnAll Whether to return all results or limit them.
+ * @param limit The maximum number of results to return if returnAll is false.
+ * @param i The index of the current item.
+ * @param options Additional options for processing the events.
+ * @returns A promise resolving to an array of event objects.
  */
 async function fetchEvents(
   this: IExecuteFunctions,
   endpoint: string,
   returnAll: boolean,
   limit: number,
-  filters: IDataObject,
+  i: number,
   options: IDataObject,
 ): Promise<IDataObject[]> {
   let events: IDataObject[] = [];
@@ -251,38 +267,159 @@ async function fetchEvents(
     queryParams.pageSize = Math.min(limit, 500);
   }
 
-  // Apply server-side filtering for supported parameters
+  // Handle date selection based on method
+  const dateSelectionMethod = this.getNodeParameter(
+    'dateSelectionMethod',
+    i,
+    'relativeDates',
+  ) as string;
+  let startDate = '';
+  let endDate = '';
+
+  // Skip date filter initialization if "All Dates" is selected
+  if (dateSelectionMethod !== 'allDates') {
+    if (dateSelectionMethod === 'specificDates') {
+      // Use specific dates provided by user
+      startDate = this.getNodeParameter('startDate', i, '') as string;
+      endDate = this.getNodeParameter('endDate', i, '') as string;
+    } else {
+      // Use relative date range
+      const relativeDateRange = this.getNodeParameter(
+        'relativeDateRange',
+        i,
+        'currentMonth',
+      ) as string;
+      const dateRange = getRelativeDateRange(relativeDateRange);
+      startDate = dateRange.startDate;
+      endDate = dateRange.endDate;
+    }
+  }
+
+  // Check each filter toggle and apply server-side filtering for supported parameters
 
   // Category filtering (API supports single value)
-  if (filters.category && Array.isArray(filters.category) && filters.category.length > 0) {
-    // Use first category for server-side filtering
-    queryParams.category = filters.category[0] as string;
+  const filterByCategory = this.getNodeParameter('filterByCategory', i, false) as boolean;
+  let categoryValues: string[] = [];
+  if (filterByCategory) {
+    categoryValues = this.getNodeParameter('category', i, []) as string[];
+    if (categoryValues.length > 0) {
+      // Use first category for server-side filtering
+      queryParams.category = categoryValues[0];
+    }
   }
 
   // Event type filtering (API parameter is 'type')
-  if (filters.eventType && Array.isArray(filters.eventType) && filters.eventType.length > 0) {
-    // Use first event type for server-side filtering
-    queryParams.type = filters.eventType[0] as string;
+  const filterByEventType = this.getNodeParameter('filterByEventType', i, false) as boolean;
+  let eventTypeValues: string[] = [];
+  if (filterByEventType) {
+    eventTypeValues = this.getNodeParameter('eventType', i, []) as string[];
+    if (eventTypeValues.length > 0) {
+      // Use first event type for server-side filtering
+      queryParams.type = eventTypeValues[0];
+    }
   }
 
   // Severity filtering (API parameter is 'syslogSeverity')
-  if (filters.severity && Array.isArray(filters.severity) && filters.severity.length > 0) {
-    // Use first severity for server-side filtering, convert to number if needed
-    const severityValue = filters.severity[0] as string;
-    queryParams.syslogSeverity = Number.parseInt(severityValue, 10);
+  const filterBySeverity = this.getNodeParameter('filterBySeverity', i, false) as boolean;
+  let severityValues: string[] = [];
+  if (filterBySeverity) {
+    severityValues = this.getNodeParameter('severity', i, []) as string[];
+    if (severityValues.length > 0) {
+      // Use first severity for server-side filtering, convert to number if needed
+      const severityValue = severityValues[0];
+      queryParams.syslogSeverity = Number.parseInt(severityValue, 10);
+    }
   }
 
   try {
     if (returnAll) {
-      // Use pagination with maximum pageSize of 500 (API limit)
-      events = await druvaMspApiRequestAllItems.call(
-        this,
-        'GET',
-        endpoint,
-        'events',
-        undefined,
-        queryParams,
-      );
+      // Use PaginationHelper with a much higher loop count limit (10000 instead of 100)
+      // This allows for retrieving up to ~5 million events (assuming 500 events per page)
+      const paginationHelper = new PaginationHelper(10000);
+      events = [];
+
+      let nextPageToken: string | undefined = undefined;
+      let responseData: IDataObject;
+      // Track consecutive pages with very few events (indicating we're near the end)
+      let consecutiveLowCountPages = 0;
+      const LOW_EVENT_THRESHOLD = 0.1; // 10% of requested page size
+      const MAX_CONSECUTIVE_LOW_COUNT = 3; // Stop after 3 consecutive low count pages
+
+      do {
+        // If we have a nextPageToken, use only that parameter without any filters
+        // This is a requirement of the Druva MSP API
+        const requestParams = nextPageToken ? { pageToken: nextPageToken } : { ...queryParams };
+
+        // Make the API request
+        responseData = (await druvaMspApiRequest.call(
+          this,
+          'GET',
+          endpoint,
+          undefined,
+          requestParams,
+        )) as IDataObject;
+
+        // Extract events from the response
+        const pageEvents = (responseData.events as IDataObject[]) || [];
+
+        // Check if we received substantially fewer events than requested
+        // This is a strong indicator that we've reached or are near the end of available data
+        let requestedPageSize = 500; // Default value
+        if ('pageToken' in requestParams) {
+          // If using page token, get the page size from the original query params
+          requestedPageSize = Number(queryParams.pageSize) || 500;
+        } else {
+          // Otherwise get it from the current request params
+          requestedPageSize = Number(requestParams.pageSize) || 500;
+        }
+        const lowEventThreshold = Math.floor(requestedPageSize * LOW_EVENT_THRESHOLD);
+
+        if (pageEvents.length > 0 && pageEvents.length < lowEventThreshold) {
+          consecutiveLowCountPages++;
+          console.log(
+            `[DEBUG] Received only ${pageEvents.length} events (less than ${lowEventThreshold}). This may indicate we're near the end of available data.`,
+          );
+
+          // If we've had multiple consecutive pages with very few events, assume we've got all meaningful data
+          if (consecutiveLowCountPages >= MAX_CONSECUTIVE_LOW_COUNT) {
+            console.log(
+              `[DEBUG] Received ${MAX_CONSECUTIVE_LOW_COUNT} consecutive pages with very few events. Assuming all meaningful data retrieved.`,
+            );
+            break;
+          }
+        } else {
+          // Reset the counter if we receive a substantial number of events
+          consecutiveLowCountPages = 0;
+        }
+
+        // Add events to our collection
+        events.push(...pageEvents);
+
+        // Get the next page token
+        nextPageToken = responseData.nextPageToken as string;
+
+        // Log progress for debugging
+        console.log(
+          `[DEBUG] Retrieved ${pageEvents.length} events. Total so far: ${events.length}. Next token: ${nextPageToken || 'none'}`,
+        );
+
+        // Track the token and check for loops or max count
+        if (!paginationHelper.trackToken(nextPageToken)) {
+          console.log('[DEBUG] Pagination stopped due to loop detection or max count reached.');
+          break;
+        }
+
+        // Special case: If we got exactly 0 events but have a next token, this is likely an API quirk
+        // In this case, we should stop pagination to avoid unnecessary requests
+        if (pageEvents.length === 0 && nextPageToken) {
+          console.log(
+            '[DEBUG] Received 0 events but have a next token. Stopping pagination to avoid unnecessary requests.',
+          );
+          break;
+        }
+      } while (nextPageToken);
+
+      console.log(`[DEBUG] Retrieved a total of ${events.length} events.`);
     } else {
       const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, queryParams);
       events = ((response as IDataObject)?.events as IDataObject[]) || [];
@@ -292,25 +429,62 @@ async function fetchEvents(
     throw error;
   }
 
-  // Apply remaining client-side filtering for parameters not supported by the API
-  // or for additional filter values beyond the first one used server-side
-  const hasRemainingFilters = Object.keys(filters).some((key) => {
-    if (key === 'dateRange' || key === 'feature' || key === 'initiatedBy') {
-      return true;
-    }
-    // Check if we have multiple values for category, eventType, or severity
-    if (
-      (key === 'category' || key === 'eventType' || key === 'severity') &&
-      Array.isArray(filters[key]) &&
-      filters[key].length > 1
-    ) {
-      return true;
-    }
-    return false;
-  });
+  // Check if we need to apply client-side filtering
+  const filterByFeature = this.getNodeParameter('filterByFeature', i, false) as boolean;
+  const filterByInitiator = this.getNodeParameter('filterByInitiator', i, false) as boolean;
+
+  const hasDateFilter = dateSelectionMethod !== 'allDates' && (startDate || endDate);
+
+  const hasRemainingFilters =
+    hasDateFilter ||
+    filterByFeature ||
+    filterByInitiator ||
+    (filterByCategory && categoryValues.length > 1) ||
+    (filterByEventType && eventTypeValues.length > 1) ||
+    (filterBySeverity && severityValues.length > 1);
 
   if (hasRemainingFilters) {
     const originalCount = events.length;
+
+    // Build filters object for applyRemainingFilters function
+    const filters: IDataObject = {};
+
+    // Add date range filter if enabled
+    if (hasDateFilter) {
+      // Create nested structure as expected by applyRemainingFilters
+      filters.dateRange = {
+        dateRangeValues: {
+          startDate,
+          endDate,
+        },
+      };
+    }
+
+    // Add category filter if multiple values are selected
+    if (filterByCategory && categoryValues.length > 1) {
+      filters.category = categoryValues;
+    }
+
+    // Add event type filter if multiple values are selected
+    if (filterByEventType && eventTypeValues.length > 1) {
+      filters.eventType = eventTypeValues;
+    }
+
+    // Add severity filter if multiple values are selected
+    if (filterBySeverity && severityValues.length > 1) {
+      filters.severity = severityValues;
+    }
+
+    // Add feature filter if enabled
+    if (filterByFeature) {
+      filters.feature = this.getNodeParameter('feature', i, []) as string[];
+    }
+
+    // Add initiator filter if enabled
+    if (filterByInitiator) {
+      filters.initiatedBy = this.getNodeParameter('initiatedBy', i, '') as string;
+    }
+
     events = applyRemainingFilters(events, filters);
     console.log(`[DEBUG] Events filtered: ${originalCount} -> ${events.length}`);
   }
@@ -339,11 +513,10 @@ export async function executeEventOperation(
       // Implement Get Many MSP Events logic
       const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
       const limit = this.getNodeParameter('limit', i, 50) as number;
-      const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
       const options = this.getNodeParameter('options', i, {}) as IDataObject;
       const endpoint = '/msp/v2/events';
 
-      const events = await fetchEvents.call(this, endpoint, returnAll, limit, filters, options);
+      const events = await fetchEvents.call(this, endpoint, returnAll, limit, i, options);
 
       responseData = this.helpers.returnJsonArray(events);
     } else if (operation === 'getManyCustomerEvents') {
@@ -351,11 +524,10 @@ export async function executeEventOperation(
       const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
       const limit = this.getNodeParameter('limit', i, 50) as number;
       const customerId = this.getNodeParameter('customerId', i) as string;
-      const filters = this.getNodeParameter('filters', i, {}) as IDataObject;
       const options = this.getNodeParameter('options', i, {}) as IDataObject;
       const endpoint = `/msp/v3/customers/${customerId}/events`;
 
-      const events = await fetchEvents.call(this, endpoint, returnAll, limit, filters, options);
+      const events = await fetchEvents.call(this, endpoint, returnAll, limit, i, options);
 
       responseData = this.helpers.returnJsonArray(events);
     }

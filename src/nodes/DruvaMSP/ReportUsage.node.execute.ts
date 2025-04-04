@@ -1,70 +1,22 @@
-import type {
-  IExecuteFunctions,
-  INodeExecutionData,
-  IDataObject,
-  NodeApiError,
-} from 'n8n-workflow';
+import { druvaMspApiRequest, druvaMspApiRequestAllReportV2Items } from './GenericFunctions';
+import { REPORT_FIELD_NAMES, REPORT_OPERATORS, type IReportFilter } from './helpers/Constants';
+import {
+  formatDate,
+  getDefaultStartDate,
+  getDefaultEndDate,
+  getRelativeDateRange,
+} from './helpers/DateHelpers';
+import {
+  createCustomerFilter,
+  createDateRangeFilter,
+  createProductFilter,
+  createReportFilter,
+  createReportFilters,
+  createUsageDescriptionFilter,
+} from './helpers/ReportHelpers';
 
-// Import the helper functions for API requests and pagination
-import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
-
-/**
- * Formats a date for the API in the correct format.
- * For usage query parameters: ISO format (YYYY-MM-DDTHH:mm:ssZ)
- * For itemized reports body: YYYY-MM-DD format
- *
- * @param dateTime Date string from n8n
- * @param isForBody Whether the date is for a request body (true) or query param (false)
- * @returns Formatted date string
- */
-function formatDate(dateTime: string, isForBody = false): string {
-  const date = new Date(dateTime);
-
-  if (isForBody) {
-    // Format as YYYY-MM-DD for request body
-    return date.toISOString().split('T')[0];
-  }
-
-  // Format as ISO for query parameters
-  return date.toISOString();
-}
-
-/**
- * Custom function to fetch all items for report endpoints that use POST with nextToken in the body
- */
-async function fetchAllReportItems(
-  this: IExecuteFunctions,
-  endpoint: string,
-  initialBody: IDataObject,
-): Promise<IDataObject[]> {
-  const allItems: IDataObject[] = [];
-  let nextToken: string | null | undefined = undefined;
-  const body = { ...initialBody };
-
-  do {
-    // If we have a next token, add it to the body
-    if (nextToken) {
-      body.nextToken = nextToken;
-    }
-
-    // Make the request
-    const response = (await druvaMspApiRequest.call(this, 'POST', endpoint, body)) as IDataObject;
-
-    // Get items from the response
-    const items = response.items as IDataObject[] | undefined;
-    nextToken = response.nextToken as string | null | undefined;
-
-    // Add items to our result array
-    if (Array.isArray(items) && items.length > 0) {
-      allItems.push(...items);
-    } else {
-      // No more items, exit the loop
-      nextToken = null;
-    }
-  } while (nextToken);
-
-  return allItems;
-}
+import type { IExecuteFunctions } from 'n8n-workflow';
+import type { IDataObject, INodeExecutionData, NodeApiError } from 'n8n-workflow';
 
 /**
  * Executes the selected Report - Usage operation.
@@ -80,112 +32,201 @@ export async function executeReportUsageOperation(
   let responseData: INodeExecutionData[] = [];
 
   try {
-    if (operation === 'getGlobalSummary') {
-      // Implement Get Global Usage Summary logic
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
-      const startDate = this.getNodeParameter('startDate', i, '') as string;
-      const endDate = this.getNodeParameter('endDate', i, '') as string;
-      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
+    // Get date parameters based on selection method
+    const dateSelectionMethod = this.getNodeParameter(
+      'dateSelectionMethod',
+      i,
+      'relativeDates',
+    ) as string;
+    let startDate = '';
+    let endDate = '';
+    let useDefaultDates = false;
 
+    // Skip date filter initialization if "All Dates" is selected
+    if (dateSelectionMethod !== 'allDates') {
+      if (dateSelectionMethod === 'specificDates') {
+        // Use specific dates provided by user
+        startDate = this.getNodeParameter('startDate', i, '') as string;
+        endDate = this.getNodeParameter('endDate', i, '') as string;
+      } else {
+        // Use relative date range
+        const relativeDateRange = this.getNodeParameter(
+          'relativeDateRange',
+          i,
+          'currentMonth',
+        ) as string;
+        const dateRange = getRelativeDateRange(relativeDateRange);
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
+      }
+    } else {
+      // For Global Summary, we still need to use default dates if "All Dates" is selected
+      // This ensures the API still returns the full range of data
+      useDefaultDates = operation === 'getGlobalSummary';
+    }
+
+    if (operation === 'getGlobalSummary') {
+      // Get Global Usage Summary implementation
+      // This endpoint returns a single object, not a paginated list
       const endpoint = '/msp/v2/reports/usage/summary';
       const qs: IDataObject = {};
 
+      // Handle start date (defaults to 30 days ago if not provided or using all dates)
       if (startDate) {
         qs.startDate = formatDate(startDate);
+      } else if (useDefaultDates) {
+        qs.startDate = getDefaultStartDate();
       }
+
+      // Handle end date (defaults to current date if not provided or using all dates)
       if (endDate) {
         qs.endDate = formatDate(endDate);
+      } else if (useDefaultDates) {
+        qs.endDate = getDefaultEndDate();
       }
+
+      // Make the API request - this returns a single object, not a paginated list
+      const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, qs);
+
+      // Add synthetic fields for balance and commit differences
+      const responseObj = response as IDataObject;
+
+      // Calculate balance difference
+      const startBalance = responseObj.startConsumptionUnitsBalance as number;
+      const endBalance = responseObj.endConsumptionUnitsBalance as number;
+      if (typeof startBalance === 'number' && typeof endBalance === 'number') {
+        responseObj.balanceDifference = endBalance - startBalance;
+      }
+
+      // Calculate commit difference
+      const startCommit = responseObj.startConsumptionUnitsCommit as number;
+      const endCommit = responseObj.endConsumptionUnitsCommit as number;
+      if (typeof startCommit === 'number' && typeof endCommit === 'number') {
+        responseObj.commitDifference = endCommit - startCommit;
+      }
+
+      // Return the response with added synthetic fields
+      responseData = this.helpers.returnJsonArray([responseObj]);
+    } else if (operation === 'getItemizedConsumption' || operation === 'getItemizedQuota') {
+      // Common logic for both itemized report types
+      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
+      const limit = this.getNodeParameter('limit', i, 50) as number;
+
+      // Set endpoint based on operation
+      const endpoint =
+        operation === 'getItemizedConsumption'
+          ? '/msp/reporting/v1/reports/consumptionItemized'
+          : '/msp/reporting/v1/reports/quotaItemized';
+
+      // Create filters array for all filters
+      const filterBy: IReportFilter[] = [];
+
+      // Add date range filter if not using "All Dates"
+      if (dateSelectionMethod !== 'allDates' && startDate && endDate) {
+        filterBy.push(...createDateRangeFilter(startDate, endDate));
+      }
+
+      // Add customer filter if specified
+      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
       if (filterByCustomers) {
         const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
         if (customerIds.length > 0) {
-          qs.customerIds = customerIds.join(',');
+          filterBy.push(createCustomerFilter(customerIds));
         }
       }
 
+      // Add product filter if specified
+      const filterByProducts = this.getNodeParameter('filterByProducts', i, false) as boolean;
+      if (filterByProducts) {
+        const productIds = this.getNodeParameter('productIds', i, []) as string[];
+        if (productIds.length > 0) {
+          filterBy.push(createProductFilter(productIds));
+        }
+      }
+
+      // Add product module filter if specified
+      const filterByProductModules = this.getNodeParameter(
+        'filterByProductModules',
+        i,
+        false,
+      ) as boolean;
+      if (filterByProductModules) {
+        const productModuleIds = this.getNodeParameter('productModuleIds', i, []) as number[];
+        if (productModuleIds.length > 0) {
+          filterBy.push(
+            createReportFilter(
+              REPORT_FIELD_NAMES.PRODUCT_MODULE_ID,
+              REPORT_OPERATORS.CONTAINS,
+              productModuleIds,
+            ),
+          );
+        }
+      }
+
+      // Add usage description filter if specified
+      const filterByUsageDescriptions = this.getNodeParameter(
+        'filterByUsageDescriptions',
+        i,
+        false,
+      ) as boolean;
+      if (filterByUsageDescriptions) {
+        const usageDescriptions = this.getNodeParameter('usageDescriptions', i, []) as string[];
+        if (usageDescriptions.length > 0) {
+          filterBy.push(createUsageDescriptionFilter(usageDescriptions));
+        }
+      }
+
+      // Add edition name filter if specified
+      const filterByEditionNames = this.getNodeParameter(
+        'filterByEditionNames',
+        i,
+        false,
+      ) as boolean;
+      if (filterByEditionNames) {
+        const editionNames = this.getNodeParameter('editionNames', i, []) as string[];
+        if (editionNames.length > 0) {
+          filterBy.push(
+            createReportFilter(
+              REPORT_FIELD_NAMES.EDITION_NAME,
+              REPORT_OPERATORS.CONTAINS,
+              editionNames,
+            ),
+          );
+        }
+      }
+
+      // Prepare request body with the correct structure using helper function
+      const body: IDataObject = {
+        filters: createReportFilters(returnAll ? 500 : limit, filterBy),
+      };
+
+      // Debug logging to show request details
+      console.log('[DEBUG] Druva MSP API Request:');
+      console.log(`[DEBUG] Endpoint: ${endpoint}`);
+      console.log(`[DEBUG] Request Body: ${JSON.stringify(body, null, 2)}`);
+
       if (returnAll) {
-        // For GET requests, we can use the existing helper with nextToken parameter
-        // Note: the API might use nextToken instead of nextPageToken according to docs
-        const allItems = await druvaMspApiRequestAllItems.call(
+        // For POST requests with pagination in the body, use our centralized function
+        const allItems = await druvaMspApiRequestAllReportV2Items.call(
           this,
-          'GET',
           endpoint,
-          'items',
-          undefined,
-          qs,
+          body,
+          'data',
         );
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
-        qs.pageSize = limit;
-        const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, qs);
-        const items = (response as IDataObject)?.items ?? [];
-        responseData = this.helpers.returnJsonArray(items as IDataObject[]);
-      }
-    } else if (operation === 'getItemizedConsumption') {
-      // Implement Get Itemized Tenant Consumption logic
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
-      const startDate = this.getNodeParameter('startDate', i, '') as string;
-      const endDate = this.getNodeParameter('endDate', i, '') as string;
-      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
-
-      const endpoint = '/msp/reporting/v1/reports/consumptionItemized';
-
-      // Prepare request body
-      const body: IDataObject = {
-        startDate: formatDate(startDate, true),
-        endDate: formatDate(endDate, true),
-      };
-
-      if (filterByCustomers) {
-        const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
-        if (customerIds.length > 0) {
-          body.customerIds = customerIds;
-        }
-      }
-
-      if (returnAll) {
-        // For POST requests with pagination in the body, use our custom function
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
-        responseData = this.helpers.returnJsonArray(allItems);
-      } else {
-        body.pageSize = limit;
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
-        const items = (response as IDataObject)?.items ?? [];
-        responseData = this.helpers.returnJsonArray(items as IDataObject[]);
-      }
-    } else if (operation === 'getItemizedQuota') {
-      // Implement Get Itemized Tenant Quota logic
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
-      const startDate = this.getNodeParameter('startDate', i, '') as string;
-      const endDate = this.getNodeParameter('endDate', i, '') as string;
-      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
-
-      const endpoint = '/msp/reporting/v1/reports/quotaItemized';
-
-      // Prepare request body
-      const body: IDataObject = {
-        startDate: formatDate(startDate, true),
-        endDate: formatDate(endDate, true),
-      };
-
-      if (filterByCustomers) {
-        const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
-        if (customerIds.length > 0) {
-          body.customerIds = customerIds;
+        console.log('[DEBUG] API Response Status:', response ? 'Success' : 'Empty');
+        if (response) {
+          console.log(
+            `[DEBUG] Response Data Count: ${
+              (response as IDataObject)?.data
+                ? ((response as IDataObject).data as IDataObject[]).length
+                : 0
+            }`,
+          );
         }
-      }
-
-      if (returnAll) {
-        // For POST requests with pagination in the body, use our custom function
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
-        responseData = this.helpers.returnJsonArray(allItems);
-      } else {
-        body.pageSize = limit;
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
-        const items = (response as IDataObject)?.items ?? [];
+        const items = (response as IDataObject)?.data ?? [];
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
     }

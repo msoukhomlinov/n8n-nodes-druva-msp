@@ -41,14 +41,17 @@ The following resources have been fully implemented, tested, and are ready for p
 - **Task Resource**
   - Get - Retrieve details for a specific task
 
+- **Report Resources**
+  - **Usage Reports**
+    - Global Usage Summary - Retrieve global usage data across all customers
+    - Tenant Consumption - Retrieve tenant consumption data
+
 #### In Development Resources
 
 The following resources are implemented but require additional testing:
 
 - **Report Resources**
   - **Usage Reports**
-    - Global Usage Summary - Retrieve global usage data across all customers
-    - Tenant Consumption - Retrieve tenant consumption data
     - Tenant Quota - Retrieve tenant quota information
 
   - **Cyber Resilience Reports**

@@ -90,7 +90,7 @@ export async function executeServicePlanOperation(
         );
 
         // Enrich the response array with human-readable labels
-        servicePlans = enrichApiResponseArray(allServicePlans, {
+        servicePlans = enrichApiResponseArray(allServicePlans as IDataObject[], {
           status: getServicePlanStatusLabel,
         });
       } else {

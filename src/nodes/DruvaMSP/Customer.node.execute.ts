@@ -129,7 +129,12 @@ export async function executeCustomerOperation(
 
     // Retrieve customers from API
     if (returnAll) {
-      customers = await druvaMspApiRequestAllItems.call(this, 'GET', endpoint, 'customers');
+      customers = (await druvaMspApiRequestAllItems.call(
+        this,
+        'GET',
+        endpoint,
+        'customers',
+      )) as IDataObject[];
     } else {
       const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, {
         pageSize: limit,
@@ -140,48 +145,90 @@ export async function executeCustomerOperation(
     // Process each customer to add derived fields
     customers = customers.map((customer) => processCustomerData(customer));
 
-    // Apply post-processing filters if enabled
-    const filterResults = this.getNodeParameter('filterResults', i, false) as boolean;
+    // Check if any filters are enabled
+    const filterByCustomerName = this.getNodeParameter('filterByCustomerName', i, false) as boolean;
+    const filterByAccountName = this.getNodeParameter('filterByAccountName', i, false) as boolean;
 
-    if (filterResults) {
-      const filterDefinitions = this.getNodeParameter('filters.filter', i, []) as IDataObject[];
+    // Apply client-side filtering if any filters are enabled
+    if (filterByCustomerName || filterByAccountName) {
+      // Apply each enabled filter
+      customers = customers.filter((customer: IDataObject) => {
+        let matchesCustomerName = true;
+        let matchesAccountName = true;
 
-      if (filterDefinitions && filterDefinitions.length > 0) {
-        // Apply all defined filters
-        // Note: Since the Druva MSP API doesn't support filtering, we do it client-side
-        customers = customers.filter((customer: IDataObject) => {
-          // Check if customer matches all filter conditions (AND logic)
-          return filterDefinitions.every((filterDef: IDataObject) => {
-            const field = filterDef.field as string;
-            const operator = filterDef.operator as string;
-            const value = filterDef.value as string;
-            const customerValue = customer[field] as string;
+        // Filter by customer name if enabled
+        if (filterByCustomerName) {
+          const operator = this.getNodeParameter('customerNameOperator', i, 'contains') as string;
+          const value = this.getNodeParameter('customerNameValue', i, '') as string;
+          const customerValue = customer.customerName as string;
 
-            // Case-insensitive comparison for string values
-            // This ensures better user experience when filtering
-            const customerStringValue = String(customerValue || '').toLowerCase();
-            const compareValue = String(value).toLowerCase();
+          // Case-insensitive comparison
+          const customerStringValue = String(customerValue || '').toLowerCase();
+          const compareValue = String(value).toLowerCase();
 
-            // Apply the correct operator
-            switch (operator) {
-              case 'contains':
-                return customerStringValue.includes(compareValue);
-              case 'notContains':
-                return !customerStringValue.includes(compareValue);
-              case 'equals':
-                return customerStringValue === compareValue;
-              case 'notEquals':
-                return customerStringValue !== compareValue;
-              case 'startsWith':
-                return customerStringValue.startsWith(compareValue);
-              case 'endsWith':
-                return customerStringValue.endsWith(compareValue);
-              default:
-                return true;
-            }
-          });
-        });
-      }
+          // Apply the correct operator
+          switch (operator) {
+            case 'contains':
+              matchesCustomerName = customerStringValue.includes(compareValue);
+              break;
+            case 'notContains':
+              matchesCustomerName = !customerStringValue.includes(compareValue);
+              break;
+            case 'equals':
+              matchesCustomerName = customerStringValue === compareValue;
+              break;
+            case 'notEquals':
+              matchesCustomerName = customerStringValue !== compareValue;
+              break;
+            case 'startsWith':
+              matchesCustomerName = customerStringValue.startsWith(compareValue);
+              break;
+            case 'endsWith':
+              matchesCustomerName = customerStringValue.endsWith(compareValue);
+              break;
+            default:
+              matchesCustomerName = true;
+          }
+        }
+
+        // Filter by account name if enabled
+        if (filterByAccountName) {
+          const operator = this.getNodeParameter('accountNameOperator', i, 'contains') as string;
+          const value = this.getNodeParameter('accountNameValue', i, '') as string;
+          const customerValue = customer.accountName as string;
+
+          // Case-insensitive comparison
+          const customerStringValue = String(customerValue || '').toLowerCase();
+          const compareValue = String(value).toLowerCase();
+
+          // Apply the correct operator
+          switch (operator) {
+            case 'contains':
+              matchesAccountName = customerStringValue.includes(compareValue);
+              break;
+            case 'notContains':
+              matchesAccountName = !customerStringValue.includes(compareValue);
+              break;
+            case 'equals':
+              matchesAccountName = customerStringValue === compareValue;
+              break;
+            case 'notEquals':
+              matchesAccountName = customerStringValue !== compareValue;
+              break;
+            case 'startsWith':
+              matchesAccountName = customerStringValue.startsWith(compareValue);
+              break;
+            case 'endsWith':
+              matchesAccountName = customerStringValue.endsWith(compareValue);
+              break;
+            default:
+              matchesAccountName = true;
+          }
+        }
+
+        // Customer must match all enabled filters (AND logic)
+        return matchesCustomerName && matchesAccountName;
+      });
 
       // Apply limit after filtering if not returning all results
       if (!returnAll && customers.length > limit) {

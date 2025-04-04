@@ -5,44 +5,9 @@ import type {
   NodeApiError,
 } from 'n8n-workflow';
 
-import { druvaMspApiRequest } from './GenericFunctions';
-
-/**
- * Custom function to fetch all items for report endpoints that use POST with nextToken in the body
- */
-async function fetchAllReportItems(
-  this: IExecuteFunctions,
-  endpoint: string,
-  initialBody: IDataObject,
-): Promise<IDataObject[]> {
-  const allItems: IDataObject[] = [];
-  let nextToken: string | null | undefined = undefined;
-  const body = { ...initialBody };
-
-  do {
-    // If we have a next token, add it to the body
-    if (nextToken) {
-      body.nextToken = nextToken;
-    }
-
-    // Make the request
-    const response = (await druvaMspApiRequest.call(this, 'POST', endpoint, body)) as IDataObject;
-
-    // Get items from the response
-    const items = response.items as IDataObject[] | undefined;
-    nextToken = response.nextToken as string | null | undefined;
-
-    // Add items to our result array
-    if (Array.isArray(items) && items.length > 0) {
-      allItems.push(...items);
-    } else {
-      // No more items, exit the loop
-      nextToken = null;
-    }
-  } while (nextToken);
-
-  return allItems;
-}
+import { druvaMspApiRequest, druvaMspApiRequestAllReportItems } from './GenericFunctions';
+import { createReportFilter, createReportFilters } from './helpers/ReportHelpers';
+import { REPORT_FIELD_NAMES, REPORT_OPERATORS } from './helpers/Constants';
 
 /**
  * Executes the selected Report - Cyber Resilience operation.
@@ -98,12 +63,29 @@ export async function executeReportCyberOperation(
       }
 
       if (returnAll) {
-        // For POST requests with pagination in the body, use our custom function
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        // For POST requests with pagination in the body, use our centralized function
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
-        body.pageSize = limit;
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
+        // Use createReportFilters to create a properly structured request with filters
+        const filterBy = [];
+        const customerIds = body.customerIds as string[] | undefined;
+        if (customerIds && customerIds.length > 0) {
+          filterBy.push(createReportFilter(REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID, REPORT_OPERATORS.CONTAINS, customerIds));
+        }
+
+        // Create a new body without customerIds to avoid duplication
+        const requestBody: IDataObject = {
+          startTime: body.startTime,
+          endTime: body.endTime,
+          // Copy any other fields except customerIds
+          ...(body.entityTypes ? { entityTypes: body.entityTypes } : {}),
+          ...(body.actionTypes ? { actionTypes: body.actionTypes } : {}),
+          // Add filters object
+          filters: createReportFilters(limit, filterBy)
+        };
+
+        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
@@ -163,12 +145,30 @@ export async function executeReportCyberOperation(
       }
 
       if (returnAll) {
-        // For POST requests with pagination in the body, use our custom function
-        const allItems = await fetchAllReportItems.call(this, endpoint, body);
+        // For POST requests with pagination in the body, use our centralized function
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
-        body.pageSize = limit;
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
+        // Use createReportFilters to create a properly structured request with filters
+        const filterBy = [];
+        const customerIds = body.customerIds as string[] | undefined;
+        if (customerIds && customerIds.length > 0) {
+          filterBy.push(createReportFilter(REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID, REPORT_OPERATORS.CONTAINS, customerIds));
+        }
+
+        // Create a new body without customerIds to avoid duplication
+        const requestBody: IDataObject = {
+          startTime: body.startTime,
+          endTime: body.endTime,
+          // Copy any other fields except customerIds
+          ...(body.workloadTypes ? { workloadTypes: body.workloadTypes } : {}),
+          ...(body.connectionStatus ? { connectionStatus: body.connectionStatus } : {}),
+          ...(body.riskLevels ? { riskLevels: body.riskLevels } : {}),
+          // Add filters object
+          filters: createReportFilters(limit, filterBy)
+        };
+
+        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }

@@ -44,6 +44,20 @@ export type ProductIdCode = keyof typeof PRODUCT_ID;
 export type ProductIdLabel = (typeof PRODUCT_ID)[ProductIdCode];
 
 /**
+ * Constants for product module ID values
+ */
+export const PRODUCT_MODULE_ID = {
+  1: 'Hybrid Workloads',
+  2: 'Microsoft 365',
+  3: 'Endpoints',
+  4: 'Google Workspace',
+} as const;
+
+// Define a type for product module ID values
+export type ProductModuleIdCode = keyof typeof PRODUCT_MODULE_ID;
+export type ProductModuleIdLabel = (typeof PRODUCT_MODULE_ID)[ProductModuleIdCode];
+
+/**
  * Constants for admin role values
  */
 export const ADMIN_ROLES = {
@@ -161,3 +175,64 @@ export const TASK_OUTPUT_STATUS = {
 // Define a type for task output status values
 export type TaskOutputStatusCode = keyof typeof TASK_OUTPUT_STATUS;
 export type TaskOutputStatusLabel = (typeof TASK_OUTPUT_STATUS)[TaskOutputStatusCode];
+
+/**
+ * Report field names for filtering in Druva MSP Reports API
+ * These are used in the filters.filterBy array
+ */
+export const REPORT_FIELD_NAMES = {
+  DATE: 'date',
+  CUSTOMER_GLOBAL_ID: 'customerGlobalId',
+  ACCOUNT_NAME: 'accountName',
+  TENANT_ID: 'tenantId',
+  PRODUCT_ID: 'productId',
+  PRODUCT_MODULE_ID: 'productModuleId',
+  USAGE_DESCRIPTION: 'usageDescription',
+  EDITION_NAME: 'editionName',
+  SERVICE_PLAN_ID: 'servicePlanId',
+} as const;
+
+// Define a type for report field names
+export type ReportFieldName = (typeof REPORT_FIELD_NAMES)[keyof typeof REPORT_FIELD_NAMES];
+
+/**
+ * Report operators for filtering in Druva MSP Reports API
+ * These are used in the filters.filterBy array
+ *
+ * Note: All string comparisons will be case sensitive.
+ */
+export const REPORT_OPERATORS = {
+  // Return data with exact match for given field name
+  EQUAL: 'EQUAL',
+
+  // Return data not matching with given values
+  NOTEQUAL: 'NOTEQUAL',
+
+  // Value for this operator will be an array; returns data matching any value in the array
+  CONTAINS: 'CONTAINS',
+
+  // Less than comparison
+  LT: 'LT',
+
+  // Less than or equal to comparison
+  LTE: 'LTE',
+
+  // Greater than comparison
+  GT: 'GT',
+
+  // Greater than or equal to comparison
+  GTE: 'GTE',
+} as const;
+
+// Define a type for report operators
+export type ReportOperator = (typeof REPORT_OPERATORS)[keyof typeof REPORT_OPERATORS];
+
+/**
+ * Interface for a report filter object
+ * Used in filters.filterBy arrays
+ */
+export interface IReportFilter {
+  fieldName: ReportFieldName;
+  operator: ReportOperator;
+  value: string | number | boolean | string[] | number[];
+}

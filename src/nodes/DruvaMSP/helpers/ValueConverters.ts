@@ -4,6 +4,7 @@ import type {
   TenantStatusCode,
   TenantTypeCode,
   ProductIdCode,
+  ProductModuleIdCode,
   AdminRoleCode,
   AdminStatusCode,
   EventCategoryCode,
@@ -15,6 +16,7 @@ import {
   TENANT_STATUS,
   TENANT_TYPE,
   PRODUCT_ID,
+  PRODUCT_MODULE_ID,
   ADMIN_ROLES,
   ADMIN_STATUSES,
   EVENT_CATEGORIES,
@@ -46,6 +48,15 @@ export function getTenantTypeLabel(typeCode: number): string {
  */
 export function getProductIdLabel(productId: number): string {
   return PRODUCT_ID[productId as ProductIdCode] || `Unknown Product (${productId})`;
+}
+
+/**
+ * Convert a product module ID to its human-readable label
+ */
+export function getProductModuleIdLabel(moduleId: number): string {
+  return (
+    PRODUCT_MODULE_ID[moduleId as ProductModuleIdCode] || `Unknown Product Module (${moduleId})`
+  );
 }
 
 /**
@@ -125,6 +136,15 @@ export function getProductIdCode(label: string): number | undefined {
 }
 
 /**
+ * Convert a product module ID label to its code
+ */
+export function getProductModuleIdCode(label: string): number | undefined {
+  const entries = Object.entries(PRODUCT_MODULE_ID);
+  const found = entries.find(([_, value]) => value === label);
+  return found ? Number.parseInt(found[0], 10) : undefined;
+}
+
+/**
  * Convert an admin role label to its code
  */
 export function getAdminRoleCode(label: string): number | undefined {
@@ -185,6 +205,16 @@ export function getTenantTypeOptions(): INodePropertyOptions[] {
  */
 export function getProductIdOptions(): INodePropertyOptions[] {
   return Object.entries(PRODUCT_ID).map(([key, value]) => ({
+    name: value,
+    value: Number.parseInt(key, 10),
+  }));
+}
+
+/**
+ * Get product module ID options for n8n UI
+ */
+export function getProductModuleIdOptions(): INodePropertyOptions[] {
+  return Object.entries(PRODUCT_MODULE_ID).map(([key, value]) => ({
     name: value,
     value: Number.parseInt(key, 10),
   }));

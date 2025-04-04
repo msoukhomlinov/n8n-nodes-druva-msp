@@ -60,35 +60,60 @@ export const adminFields: INodeProperties[] = [
     description: 'Max number of results to return',
   },
   {
-    displayName: 'Filter By',
-    name: 'filters',
-    type: 'collection',
-    placeholder: 'Add Filter',
-    default: {},
+    displayName: 'Filter by Email',
+    name: 'filterByEmail',
+    type: 'boolean',
     displayOptions: {
       show: {
         resource: ['admin'],
         operation: ['getMany'],
       },
     },
-    options: [
-      {
-        displayName: 'Email',
-        name: 'email',
-        type: 'string',
-        default: '',
-        description: 'Filter administrators by email address',
+    default: false,
+    description: 'Whether to filter administrators by email address',
+  },
+  {
+    displayName: 'Email',
+    name: 'email',
+    type: 'string',
+    displayOptions: {
+      show: {
+        resource: ['admin'],
+        operation: ['getMany'],
+        filterByEmail: [true],
       },
-      {
-        displayName: 'Role',
-        name: 'role',
-        type: 'multiOptions',
-        typeOptions: {
-          loadOptionsMethod: 'getAdminRoles',
-        },
-        default: [],
-        description: 'Filter administrators by their role',
+    },
+    default: '',
+    description: 'Email address to filter administrators by',
+  },
+  {
+    displayName: 'Filter by Role',
+    name: 'filterByRole',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['admin'],
+        operation: ['getMany'],
       },
-    ],
+    },
+    default: false,
+    description: 'Whether to filter administrators by their role',
+  },
+  {
+    displayName: 'Role',
+    name: 'role',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getAdminRoles',
+    },
+    displayOptions: {
+      show: {
+        resource: ['admin'],
+        operation: ['getMany'],
+        filterByRole: [true],
+      },
+    },
+    default: [],
+    description: 'Roles to filter administrators by',
   },
 ];
