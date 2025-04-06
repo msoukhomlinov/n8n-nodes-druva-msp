@@ -607,6 +607,58 @@ function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; i
 }
 
 /**
+ * Flattens the hierarchical consumption data structure into a simple array
+ * where each item contains all information from all levels.
+ * @param data Hierarchical customer consumption data
+ * @returns Flattened array of consumption records
+ */
+function flattenConsumptionData(data: ICustomerConsumption[]): IDataObject[] {
+  const flattened: IDataObject[] = [];
+
+  // Iterate through each customer
+  for (const customer of data) {
+    const { customerGlobalId, customerName, accountName, startDate, endDate, products } = customer;
+
+    // Iterate through each product
+    for (const product of products) {
+      const { productId, productName, tenantId, tenantType, modules } = product;
+
+      // Iterate through each module
+      for (const module of modules) {
+        const { productModuleId, productModuleName, usageItems } = module;
+
+        // Iterate through each usage item
+        for (const usageItem of usageItems) {
+          // Create a fully flattened record with all properties
+          flattened.push({
+            customerGlobalId,
+            customerName,
+            accountName,
+            startDate,
+            endDate,
+            productId,
+            productName,
+            tenantId,
+            tenantType,
+            productModuleId,
+            productModuleName,
+            editionName: usageItem.editionName,
+            servicePlanId: usageItem.servicePlanId,
+            servicePlanName: usageItem.servicePlanName,
+            usageDescription: usageItem.usageDescription,
+            usageAmount: usageItem.usageAmount,
+            usageUnit: usageItem.usageUnit,
+            cuConsumed: usageItem.cuConsumed,
+          });
+        }
+      }
+    }
+  }
+
+  return flattened;
+}
+
+/**
  * Executes the Consumption Billing Analyzer operation.
  * @param this The context object.
  * @param i The index of the current item.
@@ -783,41 +835,12 @@ export async function executeConsumptionBillingAnalyzerOperation(
       // Add timestamp information
       const timestamp = new Date().toISOString();
 
-      // Check if we should return full response or just data
-      const returnFullResponse = this.getNodeParameter('returnFullResponse', i, false) as boolean;
+      // Flatten the hierarchical structure to a simpler format
+      const flattenedData = flattenConsumptionData(processedData);
+      console.log(`[INFO] Flattened data into ${flattenedData.length} records`);
 
-      // Return the final output
-      const outputResponse: IDataObject = {
-        success: true,
-        message: 'Consumption Billing Analysis completed successfully',
-        timestamp,
-        analysisVersion: '1.0',
-        parameters: {
-          startDate,
-          endDate,
-          calculationMethod,
-          roundingDirection: applyRounding ? roundingDirection : 'none',
-          decimalPlaces: applyRounding && roundingDirection !== 'none' ? decimalPlaces : 'N/A',
-          applyRounding,
-          filterOutZeroUsage,
-          convertByteValues,
-          byteConversionUnit: convertByteValues ? byteConversionUnit : 'N/A',
-          customerFilter: filterByCustomers ? customerIds.join(', ') : 'All customers',
-        },
-        validation: {
-          isValid: validationResult.isValid,
-          issueCount: validationResult.issues.length,
-          issues: validationResult.issues.length ? validationResult.issues : undefined,
-        },
-        data: processedData,
-      };
-
-      // If not returning full response, just return the data array
-      if (!returnFullResponse) {
-        responseData = this.helpers.returnJsonArray(processedData as unknown as IDataObject[]);
-      } else {
-        responseData = this.helpers.returnJsonArray([outputResponse]);
-      }
+      // Return the flattened data
+      responseData = this.helpers.returnJsonArray(flattenedData);
     }
 
     return responseData;

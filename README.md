@@ -35,6 +35,12 @@ These resources have been fully tested and are ready for production use:
   - Generate customer-specific access tokens for API operations
   - List and filter customers with client-side filtering capabilities
 
+- **Consumption Billing Analyzer**
+  - Process consumption data with custom calculation methods for billing purposes
+  - Apply configurable rounding and byte-value conversion
+  - Returns a fully flattened data structure for easy processing in n8n workflows
+  - Filter by specific customers, date ranges, and service plans
+
 ### Additional Resources (In Development)
 
 The following resources are available but require additional testing before production use:

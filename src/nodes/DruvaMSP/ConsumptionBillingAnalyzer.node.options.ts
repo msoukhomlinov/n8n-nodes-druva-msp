@@ -299,22 +299,4 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
       },
     },
   },
-
-  /* -------------------------------------------------------------------------- */
-  /*                        Output Format Fields                              */
-  /* -------------------------------------------------------------------------- */
-  {
-    displayName: 'Return Full Response',
-    name: 'returnFullResponse',
-    type: 'boolean',
-    default: false,
-    description:
-      'Whether to return the complete analysis response with metadata (timestamp, parameters, validation results) or just the customer consumption data. When disabled (default), the response will only contain the customer consumption data array for easier processing in workflows.',
-    displayOptions: {
-      show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
-      },
-    },
-  },
 ];
