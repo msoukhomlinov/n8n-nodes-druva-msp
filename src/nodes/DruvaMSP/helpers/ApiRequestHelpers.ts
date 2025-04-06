@@ -110,6 +110,39 @@ export async function druvaMspApiRequest(
       if (typeof response === 'object') {
         const keys = Object.keys(response);
         console.log('[DEBUG] Response Keys:', keys.join(', '));
+
+        // Add more detailed debugging for the data
+        if (response.data !== undefined) {
+          console.log(
+            '[DEBUG] Data Type:',
+            Array.isArray(response.data) ? 'Array' : typeof response.data,
+          );
+          console.log(
+            '[DEBUG] Data Length:',
+            Array.isArray(response.data) ? response.data.length : 'Not an array',
+          );
+
+          // If data is an empty array, explicitly log that
+          if (Array.isArray(response.data) && response.data.length === 0) {
+            console.log('[DEBUG] DATA IS EMPTY ARRAY - No records match the filter criteria');
+          }
+          // If data is an array with elements, show the first item
+          else if (Array.isArray(response.data) && response.data.length > 0) {
+            console.log(
+              '[DEBUG] First Data Item Sample:',
+              JSON.stringify(response.data[0], null, 2),
+            );
+          }
+        }
+
+        // Also debug information about filters, pagination, etc.
+        if (response.filters) {
+          console.log('[DEBUG] Response Filters:', JSON.stringify(response.filters, null, 2));
+        }
+
+        if (response.nextPageToken) {
+          console.log('[DEBUG] Next Page Token:', response.nextPageToken);
+        }
       }
     }
 

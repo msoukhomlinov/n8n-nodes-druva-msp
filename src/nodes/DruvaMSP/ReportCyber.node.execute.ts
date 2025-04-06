@@ -6,8 +6,8 @@ import type {
 } from 'n8n-workflow';
 
 import { druvaMspApiRequest, druvaMspApiRequestAllReportItems } from './GenericFunctions';
-import { createReportFilter, createReportFilters } from './helpers/ReportHelpers';
 import { REPORT_FIELD_NAMES, REPORT_OPERATORS } from './helpers/Constants';
+import { getRelativeDateRange } from './helpers/DateHelpers';
 
 /**
  * Executes the selected Report - Cyber Resilience operation.
@@ -27,8 +27,36 @@ export async function executeReportCyberOperation(
       // Implement Get Rollback Actions Report logic
       const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
       const limit = this.getNodeParameter('limit', i, 50) as number;
-      const startTime = this.getNodeParameter('startTime', i, '') as string;
-      const endTime = this.getNodeParameter('endTime', i, '') as string;
+
+      // Get date parameters based on selection method
+      const dateSelectionMethod = this.getNodeParameter(
+        'dateSelectionMethod',
+        i,
+        'relativeDates',
+      ) as string;
+
+      let startTime = '';
+      let endTime = '';
+
+      // Skip date filter initialization if "All Dates" is selected
+      if (dateSelectionMethod !== 'allDates') {
+        if (dateSelectionMethod === 'specificDates') {
+          // Use specific dates provided by user
+          startTime = this.getNodeParameter('startDate', i, '') as string;
+          endTime = this.getNodeParameter('endDate', i, '') as string;
+        } else {
+          // Use relative date range
+          const relativeDateRange = this.getNodeParameter(
+            'relativeDateRange',
+            i,
+            'currentMonth',
+          ) as string;
+          const dateRange = getRelativeDateRange(relativeDateRange);
+          startTime = dateRange.startDate;
+          endTime = dateRange.endDate;
+        }
+      }
+
       const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
       const filterByEntityTypes = this.getNodeParameter('filterByEntityTypes', i, false) as boolean;
       const filterByActionTypes = this.getNodeParameter('filterByActionTypes', i, false) as boolean;
@@ -36,10 +64,12 @@ export async function executeReportCyberOperation(
       const endpoint = '/msp/reporting/v1/reports/mspDGRollbackActions';
 
       // Prepare request body
-      const body: IDataObject = {
-        startTime,
-        endTime,
-      };
+      const body: IDataObject = {};
+
+      if (dateSelectionMethod !== 'allDates') {
+        body.startTime = startTime;
+        body.endTime = endTime;
+      }
 
       if (filterByCustomers) {
         const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
@@ -63,27 +93,112 @@ export async function executeReportCyberOperation(
       }
 
       if (returnAll) {
-        // For POST requests with pagination in the body, use our centralized function
-        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
-        responseData = this.helpers.returnJsonArray(allItems);
-      } else {
-        // Use createReportFilters to create a properly structured request with filters
-        const filterBy = [];
+        // Create filter array to collect all filters
+        const filterBy: IDataObject[] = [];
+
+        // Add customer filter if specified
         const customerIds = body.customerIds as string[] | undefined;
         if (customerIds && customerIds.length > 0) {
-          filterBy.push(createReportFilter(REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID, REPORT_OPERATORS.CONTAINS, customerIds));
+          filterBy.push({
+            fieldName: REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID,
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: customerIds,
+          });
         }
 
-        // Create a new body without customerIds to avoid duplication
+        // Add date filters if specified
+        if (body.startTime) {
+          filterBy.push({
+            fieldName: 'fromDate',
+            operator: REPORT_OPERATORS.LTE,
+            value: body.startTime,
+          });
+        }
+
+        if (body.endTime) {
+          filterBy.push({
+            fieldName: 'toDate',
+            operator: REPORT_OPERATORS.GTE,
+            value: body.endTime,
+          });
+        }
+
+        // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
-          startTime: body.startTime,
-          endTime: body.endTime,
-          // Copy any other fields except customerIds
+          // Copy any other fields except dates and customerIds (we handle those in filters)
+          ...(body.entityTypes ? { entityTypes: body.entityTypes } : {}),
+          ...(body.actionTypes ? { actionTypes: body.actionTypes } : {}),
+          // Add filters object with proper structure
+          filters: {
+            pageSize: 500,
+            filterBy,
+          },
+        };
+
+        // Debug log to see the structure
+        console.log(
+          `[DEBUG] Pagination request body for ${endpoint}:`,
+          JSON.stringify(requestBody, null, 2),
+        );
+
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
+        responseData = this.helpers.returnJsonArray(allItems);
+      } else {
+        // Create filter array to collect all filters
+        const filterBy: IDataObject[] = [];
+
+        // Add customer filter if specified
+        const customerIds = body.customerIds as string[] | undefined;
+        if (customerIds && customerIds.length > 0) {
+          filterBy.push({
+            fieldName: REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID,
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: customerIds,
+          });
+        }
+
+        // Add date filters if specified
+        if (body.startTime) {
+          filterBy.push({
+            fieldName: 'fromDate',
+            operator: REPORT_OPERATORS.LTE,
+            value: body.startTime,
+          });
+        }
+
+        if (body.endTime) {
+          filterBy.push({
+            fieldName: 'toDate',
+            operator: REPORT_OPERATORS.GTE,
+            value: body.endTime,
+          });
+        }
+
+        // Create a properly structured request body with filters for the API
+        const requestBody: IDataObject = {
+          // Copy any other fields except dates and customerIds (we handle those in filters)
           ...(body.entityTypes ? { entityTypes: body.entityTypes } : {}),
           ...(body.actionTypes ? { actionTypes: body.actionTypes } : {}),
           // Add filters object
-          filters: createReportFilters(limit, filterBy)
+          filters: {
+            pageSize: limit,
+            filterBy,
+          },
         };
+
+        // Always ensure we have a properly structured filters object in the request body
+        if (!requestBody.filters) {
+          // If no filters object exists yet, create one with at least pageSize
+          requestBody.filters = {
+            pageSize: limit,
+            filterBy: [], // Include empty filterBy array even if no filters
+          };
+        }
+
+        console.log(
+          `[DEBUG] Final request body for ${endpoint}:`,
+          JSON.stringify(requestBody, null, 2),
+        );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];
@@ -93,8 +208,36 @@ export async function executeReportCyberOperation(
       // Implement Get Data Protection Risk Report logic
       const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
       const limit = this.getNodeParameter('limit', i, 50) as number;
-      const startTime = this.getNodeParameter('startTime', i, '') as string;
-      const endTime = this.getNodeParameter('endTime', i, '') as string;
+
+      // Get date parameters based on selection method
+      const dateSelectionMethod = this.getNodeParameter(
+        'dateSelectionMethod',
+        i,
+        'relativeDates',
+      ) as string;
+
+      let startTime = '';
+      let endTime = '';
+
+      // Skip date filter initialization if "All Dates" is selected
+      if (dateSelectionMethod !== 'allDates') {
+        if (dateSelectionMethod === 'specificDates') {
+          // Use specific dates provided by user
+          startTime = this.getNodeParameter('startDate', i, '') as string;
+          endTime = this.getNodeParameter('endDate', i, '') as string;
+        } else {
+          // Use relative date range
+          const relativeDateRange = this.getNodeParameter(
+            'relativeDateRange',
+            i,
+            'currentMonth',
+          ) as string;
+          const dateRange = getRelativeDateRange(relativeDateRange);
+          startTime = dateRange.startDate;
+          endTime = dateRange.endDate;
+        }
+      }
+
       const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
       const filterByWorkloadTypes = this.getNodeParameter(
         'filterByWorkloadTypes',
@@ -110,11 +253,13 @@ export async function executeReportCyberOperation(
 
       const endpoint = '/msp/reporting/v1/reports/mspDGDataProtectionRisk';
 
-      // Prepare request body
-      const body: IDataObject = {
-        startTime,
-        endTime,
-      };
+      // Prepare request body - only include dates if we're not using 'allDates'
+      const body: IDataObject = {};
+
+      if (dateSelectionMethod !== 'allDates') {
+        body.startTime = startTime;
+        body.endTime = endTime;
+      }
 
       if (filterByCustomers) {
         const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
@@ -145,28 +290,114 @@ export async function executeReportCyberOperation(
       }
 
       if (returnAll) {
-        // For POST requests with pagination in the body, use our centralized function
-        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, body);
-        responseData = this.helpers.returnJsonArray(allItems);
-      } else {
-        // Use createReportFilters to create a properly structured request with filters
-        const filterBy = [];
+        // Create filter array to collect all filters
+        const filterBy: IDataObject[] = [];
+
+        // Add customer filter if specified
         const customerIds = body.customerIds as string[] | undefined;
         if (customerIds && customerIds.length > 0) {
-          filterBy.push(createReportFilter(REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID, REPORT_OPERATORS.CONTAINS, customerIds));
+          filterBy.push({
+            fieldName: REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID,
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: customerIds,
+          });
         }
 
-        // Create a new body without customerIds to avoid duplication
+        // Add date filters if specified
+        if (body.startTime) {
+          filterBy.push({
+            fieldName: 'fromDate',
+            operator: REPORT_OPERATORS.LTE,
+            value: body.startTime,
+          });
+        }
+
+        if (body.endTime) {
+          filterBy.push({
+            fieldName: 'toDate',
+            operator: REPORT_OPERATORS.GTE,
+            value: body.endTime,
+          });
+        }
+
+        // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
-          startTime: body.startTime,
-          endTime: body.endTime,
-          // Copy any other fields except customerIds
+          // Copy any other fields except dates and customerIds (we handle those in filters)
+          ...(body.workloadTypes ? { workloadTypes: body.workloadTypes } : {}),
+          ...(body.connectionStatus ? { connectionStatus: body.connectionStatus } : {}),
+          ...(body.riskLevels ? { riskLevels: body.riskLevels } : {}),
+          // Add filters object with proper structure
+          filters: {
+            pageSize: 500,
+            filterBy,
+          },
+        };
+
+        // Debug log to see the structure
+        console.log(
+          `[DEBUG] Pagination request body for ${endpoint}:`,
+          JSON.stringify(requestBody, null, 2),
+        );
+
+        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
+        responseData = this.helpers.returnJsonArray(allItems);
+      } else {
+        // Create filter array to collect all filters
+        const filterBy: IDataObject[] = [];
+
+        // Add customer filter if specified
+        const customerIds = body.customerIds as string[] | undefined;
+        if (customerIds && customerIds.length > 0) {
+          filterBy.push({
+            fieldName: REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID,
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: customerIds,
+          });
+        }
+
+        // Add date filters if specified
+        if (body.startTime) {
+          filterBy.push({
+            fieldName: 'fromDate',
+            operator: REPORT_OPERATORS.LTE,
+            value: body.startTime,
+          });
+        }
+
+        if (body.endTime) {
+          filterBy.push({
+            fieldName: 'toDate',
+            operator: REPORT_OPERATORS.GTE,
+            value: body.endTime,
+          });
+        }
+
+        // Create a properly structured request body with filters for the API
+        const requestBody: IDataObject = {
+          // Copy any other fields except dates and customerIds (we handle those in filters)
           ...(body.workloadTypes ? { workloadTypes: body.workloadTypes } : {}),
           ...(body.connectionStatus ? { connectionStatus: body.connectionStatus } : {}),
           ...(body.riskLevels ? { riskLevels: body.riskLevels } : {}),
           // Add filters object
-          filters: createReportFilters(limit, filterBy)
+          filters: {
+            pageSize: limit,
+            filterBy,
+          },
         };
+
+        // Always ensure we have a properly structured filters object in the request body
+        if (!requestBody.filters) {
+          // If no filters object exists yet, create one with at least pageSize
+          requestBody.filters = {
+            pageSize: limit,
+            filterBy: [], // Include empty filterBy array even if no filters
+          };
+        }
+
+        console.log(
+          `[DEBUG] Final request body for ${endpoint}:`,
+          JSON.stringify(requestBody, null, 2),
+        );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];

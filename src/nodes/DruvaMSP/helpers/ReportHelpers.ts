@@ -173,3 +173,12 @@ export async function getReportOperatorOptions() {
     { name: 'Greater Than or Equal', value: REPORT_OPERATORS.GTE },
   ];
 }
+
+/**
+ * Safely cast an array of IDataObject to IReportFilter[]
+ * @param filters Array of filter objects
+ * @returns Array cast as IReportFilter[]
+ */
+export function castFiltersArray(filters: IDataObject[]): IReportFilter[] {
+  return filters as unknown as IReportFilter[];
+}

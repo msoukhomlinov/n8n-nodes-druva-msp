@@ -39,45 +39,91 @@ export const reportCyberFields: INodeProperties[] = [
   /*                Common Fields (used across both operations)                 */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Filter by Date Range',
-    name: 'filterByDateRange',
-    type: 'boolean',
+    displayName: 'Date Selection Method',
+    name: 'dateSelectionMethod',
+    type: 'options',
+    options: [
+      {
+        name: 'All Dates',
+        value: 'allDates',
+      },
+      {
+        name: 'Specific Dates',
+        value: 'specificDates',
+      },
+      {
+        name: 'Relative Date Range',
+        value: 'relativeDates',
+      },
+    ],
+    default: 'relativeDates',
+    description:
+      'Choose whether to use specific dates, relative date ranges, or include all dates (no date filter)',
     displayOptions: {
       show: {
         resource: ['reportCyber'],
         operation: ['getRollbackActions', 'getDataProtectionRisk'],
       },
     },
-    default: true,
-    description: 'Whether to filter results by time period',
   },
   {
-    displayName: 'Start Time',
-    name: 'startTime',
+    displayName: 'Start Date',
+    name: 'startDate',
     type: 'dateTime',
     displayOptions: {
       show: {
         resource: ['reportCyber'],
         operation: ['getRollbackActions', 'getDataProtectionRisk'],
-        filterByDateRange: [true],
+        dateSelectionMethod: ['specificDates'],
       },
     },
     default: '',
-    description: 'Start time for the report period',
+    required: true,
+    description: 'Start date for the report period',
   },
   {
-    displayName: 'End Time',
-    name: 'endTime',
+    displayName: 'End Date',
+    name: 'endDate',
     type: 'dateTime',
     displayOptions: {
       show: {
         resource: ['reportCyber'],
         operation: ['getRollbackActions', 'getDataProtectionRisk'],
-        filterByDateRange: [true],
+        dateSelectionMethod: ['specificDates'],
       },
     },
     default: '',
-    description: 'End time for the report period',
+    required: true,
+    description: 'End date for the report period',
+  },
+  {
+    displayName: 'Date Range',
+    name: 'relativeDateRange',
+    type: 'options',
+    displayOptions: {
+      show: {
+        resource: ['reportCyber'],
+        operation: ['getRollbackActions', 'getDataProtectionRisk'],
+        dateSelectionMethod: ['relativeDates'],
+      },
+    },
+    options: [
+      { name: 'Current Month', value: 'currentMonth' },
+      { name: 'Previous Month', value: 'previousMonth' },
+      { name: 'Current Quarter', value: 'currentQuarter' },
+      { name: 'Previous Quarter', value: 'previousQuarter' },
+      { name: 'Current Year', value: 'currentYear' },
+      { name: 'Previous Year', value: 'previousYear' },
+      { name: 'Last 30 Days', value: 'last30Days' },
+      { name: 'Last 60 Days', value: 'last60Days' },
+      { name: 'Last 90 Days', value: 'last90Days' },
+      { name: 'Last 6 Months', value: 'last6Months' },
+      { name: 'Last 12 Months', value: 'last12Months' },
+      { name: 'Year To Date', value: 'yearToDate' },
+    ],
+    default: 'currentMonth',
+    required: true,
+    description: 'Select a predefined date range for the report',
   },
   {
     displayName: 'Filter by Customers',
@@ -95,10 +141,9 @@ export const reportCyberFields: INodeProperties[] = [
   {
     displayName: 'Customer IDs',
     name: 'customerIds',
-    type: 'string',
+    type: 'multiOptions',
     typeOptions: {
-      multipleValues: true,
-      multipleValueButtonText: 'Add Customer ID',
+      loadOptionsMethod: 'getCustomers',
     },
     displayOptions: {
       show: {

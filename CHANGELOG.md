@@ -45,13 +45,6 @@ The following resources have been fully implemented, tested, and are ready for p
   - **Usage Reports**
     - Global Usage Summary - Retrieve global usage data across all customers
     - Tenant Consumption - Retrieve tenant consumption data
-
-#### In Development Resources
-
-The following resources are implemented but require additional testing:
-
-- **Report Resources**
-  - **Usage Reports**
     - Tenant Quota - Retrieve tenant quota information
 
   - **Cyber Resilience Reports**
@@ -69,6 +62,11 @@ The following resources are implemented but require additional testing:
     - Storage Alert - Retrieve storage alert information
     - Cloud Cache Statistics - Retrieve cloud cache statistics
 
+#### In Development Resources
+
+The following resources are implemented but require additional testing:
+
+- **Report Resources**
   - **Hybrid Workloads Reports**
     - Backup Activity - Retrieve backup activity information
     - Consumption by Backup Set - Retrieve consumption data by backup set

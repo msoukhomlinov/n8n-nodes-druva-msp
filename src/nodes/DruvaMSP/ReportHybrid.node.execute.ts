@@ -221,12 +221,12 @@ export async function executeReportHybridOperation(
           }
         }
 
-        const filterByResourceType = this.getNodeParameter(
-          'filterByResourceType',
+        const filterByResourceTypes = this.getNodeParameter(
+          'filterByResourceTypes',
           0,
           false,
         ) as boolean;
-        if (filterByResourceType) {
+        if (filterByResourceTypes) {
           const resourceType = this.getNodeParameter('resourceType', 0, []) as string[];
           if (resourceType.length > 0) {
             requestBody.resourceType = resourceType;

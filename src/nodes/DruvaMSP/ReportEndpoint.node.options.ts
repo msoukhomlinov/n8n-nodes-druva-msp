@@ -79,42 +79,99 @@ export const reportEndpointFields: INodeProperties[] = [
   /*                         Common Fields (used across operations)              */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Filter by Date Range',
-    name: 'filterByDateRange',
-    type: 'boolean',
+    displayName: 'Date Selection Method',
+    name: 'dateSelectionMethod',
+    type: 'options',
+    options: [
+      {
+        name: 'All Dates',
+        value: 'allDates',
+      },
+      {
+        name: 'Specific Dates',
+        value: 'specificDates',
+      },
+      {
+        name: 'Relative Date Range',
+        value: 'relativeDates',
+      },
+    ],
+    default: 'relativeDates',
+    description:
+      'Choose whether to use specific dates, relative date ranges, or include all dates (no date filter)',
     displayOptions: {
       show: {
         resource: ['reportEndpoint'],
       },
+      hide: {
+        operation: ['getStorageStatistics'],
+      },
     },
-    default: true,
-    description: 'Whether to filter results by time period',
   },
   {
-    displayName: 'Start Time',
-    name: 'startTime',
+    displayName: 'Start Date',
+    name: 'startDate',
     type: 'dateTime',
     displayOptions: {
       show: {
         resource: ['reportEndpoint'],
-        filterByDateRange: [true],
+        dateSelectionMethod: ['specificDates'],
+      },
+      hide: {
+        operation: ['getStorageStatistics'],
       },
     },
     default: '',
-    description: 'Start time for the report period',
+    required: true,
+    description: 'Start date for the report period',
   },
   {
-    displayName: 'End Time',
-    name: 'endTime',
+    displayName: 'End Date',
+    name: 'endDate',
     type: 'dateTime',
     displayOptions: {
       show: {
         resource: ['reportEndpoint'],
-        filterByDateRange: [true],
+        dateSelectionMethod: ['specificDates'],
+      },
+      hide: {
+        operation: ['getStorageStatistics'],
       },
     },
     default: '',
-    description: 'End time for the report period',
+    required: true,
+    description: 'End date for the report period',
+  },
+  {
+    displayName: 'Date Range',
+    name: 'relativeDateRange',
+    type: 'options',
+    displayOptions: {
+      show: {
+        resource: ['reportEndpoint'],
+        dateSelectionMethod: ['relativeDates'],
+      },
+      hide: {
+        operation: ['getStorageStatistics'],
+      },
+    },
+    options: [
+      { name: 'Current Month', value: 'currentMonth' },
+      { name: 'Previous Month', value: 'previousMonth' },
+      { name: 'Current Quarter', value: 'currentQuarter' },
+      { name: 'Previous Quarter', value: 'previousQuarter' },
+      { name: 'Current Year', value: 'currentYear' },
+      { name: 'Previous Year', value: 'previousYear' },
+      { name: 'Last 30 Days', value: 'last30Days' },
+      { name: 'Last 60 Days', value: 'last60Days' },
+      { name: 'Last 90 Days', value: 'last90Days' },
+      { name: 'Last 6 Months', value: 'last6Months' },
+      { name: 'Last 12 Months', value: 'last12Months' },
+      { name: 'Year To Date', value: 'yearToDate' },
+    ],
+    default: 'currentMonth',
+    required: true,
+    description: 'Select a predefined date range for the report',
   },
   {
     displayName: 'Filter by Customers',
@@ -131,10 +188,9 @@ export const reportEndpointFields: INodeProperties[] = [
   {
     displayName: 'Customer IDs',
     name: 'customerIds',
-    type: 'string',
+    type: 'multiOptions',
     typeOptions: {
-      multipleValues: true,
-      multipleValueButtonText: 'Add Customer ID',
+      loadOptionsMethod: 'getCustomers',
     },
     displayOptions: {
       show: {
@@ -291,168 +347,6 @@ export const reportEndpointFields: INodeProperties[] = [
   },
 
   /* -------------------------------------------------------------------------- */
-  /*                     Fields specific to getLicenseUsage                      */
-  /* -------------------------------------------------------------------------- */
-  {
-    displayName: 'Report Period',
-    name: 'period',
-    type: 'options',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getLicenseUsage'],
-      },
-    },
-    options: [
-      {
-        name: 'Weekly',
-        value: 'WEEKLY',
-      },
-      {
-        name: 'Monthly',
-        value: 'MONTHLY',
-      },
-    ],
-    default: 'WEEKLY',
-    description: 'Time period for the license usage report',
-  },
-
-  /* -------------------------------------------------------------------------- */
-  /*                   Fields specific to getLastBackupStatus                    */
-  /* -------------------------------------------------------------------------- */
-  {
-    displayName: 'Filter by Backup Status',
-    name: 'filterByBackupStatus',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getLastBackupStatus'],
-      },
-    },
-    default: false,
-    description: 'Whether to filter results by backup status',
-  },
-  {
-    displayName: 'Backup Status',
-    name: 'backupStatus',
-    type: 'multiOptions',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getLastBackupStatus'],
-        filterByBackupStatus: [true],
-      },
-    },
-    options: [
-      {
-        name: 'Success',
-        value: 'SUCCESS',
-      },
-      {
-        name: 'Failed',
-        value: 'FAILED',
-      },
-      {
-        name: 'In Progress',
-        value: 'IN_PROGRESS',
-      },
-      {
-        name: 'Pending',
-        value: 'PENDING',
-      },
-    ],
-    default: [],
-    description: 'Backup status values to filter by',
-  },
-  {
-    displayName: 'Filter by Device Types',
-    name: 'filterByDeviceTypes',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getLastBackupStatus'],
-      },
-    },
-    default: false,
-    description: 'Whether to filter results by device types',
-  },
-  {
-    displayName: 'Device Types',
-    name: 'deviceTypes',
-    type: 'multiOptions',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getLastBackupStatus'],
-        filterByDeviceTypes: [true],
-      },
-    },
-    options: [
-      {
-        name: 'Laptop',
-        value: 'LAPTOP',
-      },
-      {
-        name: 'Desktop',
-        value: 'DESKTOP',
-      },
-      {
-        name: 'Mobile',
-        value: 'MOBILE',
-      },
-    ],
-    default: [],
-    description: 'Device types to filter by',
-  },
-  {
-    displayName: 'Filter by Data Source Types',
-    name: 'filterByDataSourceTypes',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getLastBackupStatus'],
-      },
-    },
-    default: false,
-    description: 'Whether to filter results by data source types',
-  },
-  {
-    displayName: 'Data Source Types',
-    name: 'dataSourceTypes',
-    type: 'multiOptions',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getLastBackupStatus'],
-        filterByDataSourceTypes: [true],
-      },
-    },
-    options: [
-      {
-        name: 'File System',
-        value: 'FILE_SYSTEM',
-      },
-      {
-        name: 'Mail',
-        value: 'MAIL',
-      },
-      {
-        name: 'Contacts',
-        value: 'CONTACTS',
-      },
-      {
-        name: 'Calendar',
-        value: 'CALENDAR',
-      },
-    ],
-    default: [],
-    description: 'Data source types to filter by',
-  },
-
-  /* -------------------------------------------------------------------------- */
   /*                        Fields specific to getAlerts                         */
   /* -------------------------------------------------------------------------- */
   {
@@ -531,55 +425,68 @@ export const reportEndpointFields: INodeProperties[] = [
     options: [
       {
         name: 'Critical',
-        value: 'CRITICAL',
+        value: 'Critical',
       },
       {
         name: 'High',
-        value: 'HIGH',
+        value: 'High',
       },
       {
         name: 'Medium',
-        value: 'MEDIUM',
+        value: 'Medium',
       },
       {
         name: 'Low',
-        value: 'LOW',
+        value: 'Low',
       },
     ],
     default: [],
     description: 'Alert severity levels to filter by',
   },
-
-  /* -------------------------------------------------------------------------- */
-  /*                    Fields specific to getStorageStatistics                  */
-  /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Report Period',
-    name: 'storagePeriod',
+    displayName: 'Filter by Active Status',
+    name: 'filterByActiveStatus',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['reportEndpoint'],
+        operation: ['getAlerts'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter results by active status',
+  },
+  {
+    displayName: 'Active Status',
+    name: 'activeStatus',
     type: 'options',
     displayOptions: {
       show: {
         resource: ['reportEndpoint'],
-        operation: ['getStorageStatistics'],
+        operation: ['getAlerts'],
+        filterByActiveStatus: [true],
       },
     },
     options: [
       {
-        name: 'Daily',
-        value: 'DAILY',
+        name: 'Active Alerts Only',
+        value: 'Yes',
+        description: 'Retrieve data for active alerts that require attention',
       },
       {
-        name: 'Weekly',
-        value: 'WEEKLY',
-      },
-      {
-        name: 'Monthly',
-        value: 'MONTHLY',
+        name: 'Resolved Alerts Only',
+        value: 'No',
+        description: 'Retrieve data for resolved or deleted alerts',
       },
     ],
-    default: 'DAILY',
-    description: 'Time period for the storage statistics report',
+    default: 'Yes',
+    description: 'Filter by whether alerts are active or resolved',
   },
+
+  /* -------------------------------------------------------------------------- */
+  /*                    Fields specific to getStorageStatistics                  */
+  /* -------------------------------------------------------------------------- */
+  // Note: Removed unsupported parameters that don't align with the API
 
   /* -------------------------------------------------------------------------- */
   /*                      Fields specific to getStorageAlert                     */
@@ -633,33 +540,7 @@ export const reportEndpointFields: INodeProperties[] = [
   /* -------------------------------------------------------------------------- */
   /*                  Fields specific to getCloudCacheStatistics                 */
   /* -------------------------------------------------------------------------- */
-  {
-    displayName: 'Report Period',
-    name: 'cloudCachePeriod',
-    type: 'options',
-    displayOptions: {
-      show: {
-        resource: ['reportEndpoint'],
-        operation: ['getCloudCacheStatistics'],
-      },
-    },
-    options: [
-      {
-        name: 'Daily',
-        value: 'DAILY',
-      },
-      {
-        name: 'Weekly',
-        value: 'WEEKLY',
-      },
-      {
-        name: 'Monthly',
-        value: 'MONTHLY',
-      },
-    ],
-    default: 'DAILY',
-    description: 'Time period for the cloud cache statistics report',
-  },
+  // Note: Removed unsupported parameters that don't align with the API
   {
     displayName: 'Filter by Cache Status',
     name: 'filterByCacheStatus',
