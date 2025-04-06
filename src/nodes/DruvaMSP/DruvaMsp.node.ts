@@ -53,6 +53,13 @@ import { executeReportEndpointOperation } from './ReportEndpoint.node.execute';
 import { reportHybridOperations, reportHybridFields } from './ReportHybrid.node.options';
 import { executeReportHybridOperation } from './ReportHybrid.node.execute';
 
+// Import Consumption Billing Analyzer resource
+import {
+  consumptionBillingAnalyzerOperations,
+  consumptionBillingAnalyzerFields,
+} from './ConsumptionBillingAnalyzer.node.options';
+import { executeConsumptionBillingAnalyzerOperation } from './ConsumptionBillingAnalyzer.node.execute';
+
 // Import the value converters at the top of the file
 import {
   getTenantStatusOptions,
@@ -121,6 +128,10 @@ export class DruvaMsp implements INodeType {
             value: 'admin',
           },
           {
+            name: 'Consumption Billing Analyzer',
+            value: 'consumptionBillingAnalyzer',
+          },
+          {
             name: 'Customer',
             value: 'customer',
           },
@@ -163,6 +174,7 @@ export class DruvaMsp implements INodeType {
 
       // Operations for each resource
       ...adminOperations,
+      ...consumptionBillingAnalyzerOperations,
       ...customerOperations,
       ...tenantOperations,
       ...servicePlanOperations,
@@ -175,6 +187,7 @@ export class DruvaMsp implements INodeType {
 
       // Fields for each resource/operation
       ...adminFields,
+      ...consumptionBillingAnalyzerFields,
       ...customerFields,
       ...tenantFields,
       ...servicePlanFields,
@@ -480,49 +493,66 @@ export class DruvaMsp implements INodeType {
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
-    const resource = this.getNodeParameter('resource', 0, '') as string;
+    const length = items.length;
+    let responseData: INodeExecutionData[] | INodeExecutionData[][] = [];
+    const resource = this.getNodeParameter('resource', 0) as string;
 
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < length; i++) {
       try {
-        let resultData: INodeExecutionData[] = [];
-        if (resource === 'admin') {
-          resultData = await executeAdminOperation.call(this, i);
-        } else if (resource === 'customer') {
-          resultData = await executeCustomerOperation.call(this, i);
+        if (resource === 'customer') {
+          // Execute Customer operations
+          responseData = await executeCustomerOperation.call(this, i);
         } else if (resource === 'tenant') {
-          resultData = await executeTenantOperation.call(this, i);
+          // Execute Tenant operations
+          responseData = await executeTenantOperation.call(this, i);
         } else if (resource === 'servicePlan') {
-          resultData = await executeServicePlanOperation.call(this, i);
+          // Execute Service Plan operations
+          responseData = await executeServicePlanOperation.call(this, i);
         } else if (resource === 'task') {
-          resultData = await executeTaskOperation.call(this, i);
+          // Execute Task operations
+          responseData = await executeTaskOperation.call(this, i);
         } else if (resource === 'event') {
-          resultData = await executeEventOperation.call(this, i);
+          // Execute Event operations
+          responseData = await executeEventOperation.call(this, i);
+        } else if (resource === 'admin') {
+          // Execute Admin operations
+          responseData = await executeAdminOperation.call(this, i);
         } else if (resource === 'reportUsage') {
-          resultData = await executeReportUsageOperation.call(this, i);
+          // Execute Report Usage operations
+          responseData = await executeReportUsageOperation.call(this, i);
         } else if (resource === 'reportCyber') {
-          resultData = await executeReportCyberOperation.call(this, i);
+          // Execute Report Cyber operations
+          responseData = await executeReportCyberOperation.call(this, i);
         } else if (resource === 'reportEndpoint') {
-          resultData = await executeReportEndpointOperation.call(this, i);
+          // Execute Report Endpoint operations
+          responseData = await executeReportEndpointOperation.call(this, i);
         } else if (resource === 'reportHybrid') {
-          const hybridResult = await executeReportHybridOperation.call(this);
-          resultData = hybridResult[0];
+          // Execute Report Hybrid operations
+          responseData = await executeReportHybridOperation.call(this);
+        } else if (resource === 'consumptionBillingAnalyzer') {
+          // Execute Consumption Billing Analyzer operations
+          responseData = await executeConsumptionBillingAnalyzerOperation.call(this, i);
         } else {
           throw new NodeOperationError(
             this.getNode(),
-            `The resource '${resource}' is not supported!`,
-            { itemIndex: i },
+            `The resource '${resource}' is not implemented!`,
           );
         }
-        // Push successful results
-        const executionData = this.helpers.constructExecutionMetaData(
-          this.helpers.returnJsonArray(resultData),
-          { itemData: { item: i } },
-        );
+
+        // Ensure responseData is always INodeExecutionData[] by flattening if needed
+        const dataToProcess =
+          Array.isArray(responseData) && responseData.length > 0 && Array.isArray(responseData[0])
+            ? (responseData as INodeExecutionData[][]).flat()
+            : (responseData as INodeExecutionData[]);
+
+        const executionData = this.helpers.constructExecutionMetaData(dataToProcess, {
+          itemData: { item: i },
+        });
         returnData.push(...executionData);
       } catch (error) {
         if (this.continueOnFail()) {
           const executionErrorData = this.helpers.constructExecutionMetaData(
-            this.helpers.returnJsonArray({ error: error.message }),
+            [{ json: { error: error.message } }],
             { itemData: { item: i } },
           );
           returnData.push(...executionErrorData);
