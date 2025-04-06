@@ -14,6 +14,12 @@ export const reportHybridOperations: INodeProperties[] = [
     },
     options: [
       {
+        name: 'Get Alert History Report',
+        value: 'getAlertHistoryReport',
+        description: 'Retrieve alert history information',
+        action: 'Get alert history report',
+      },
+      {
         name: 'Get Backup Activity Report',
         value: 'getBackupActivityReport',
         description: 'Retrieve backup activity for hybrid workloads',
@@ -24,6 +30,12 @@ export const reportHybridOperations: INodeProperties[] = [
         value: 'getConsumptionByBackupSetReport',
         description: 'Retrieve consumption by backup set data',
         action: 'Get consumption by backup set report',
+      },
+      {
+        name: 'Get Storage Consumption by BackupSets Report',
+        value: 'getStorageConsumptionByBackupSetsReport',
+        description: 'Retrieve storage consumption details for backup sets',
+        action: 'Get storage consumption by backup sets report',
       },
       {
         name: 'Get DR Failback Activity Report',
@@ -49,14 +61,8 @@ export const reportHybridOperations: INodeProperties[] = [
         description: 'Retrieve resource status information',
         action: 'Get resource status report',
       },
-      {
-        name: 'Get Alert History Report',
-        value: 'getAlertHistoryReport',
-        description: 'Retrieve alert history information',
-        action: 'Get alert history report',
-      },
     ],
-    default: 'getBackupActivityReport',
+    default: 'getAlertHistoryReport',
   },
 ];
 
@@ -64,7 +70,7 @@ export const reportHybridOperations: INodeProperties[] = [
 export const reportHybridFields: INodeProperties[] = [
   /* Common Fields for All Report Operations */
 
-  // Filter by Customer IDs
+  // Return All / Limit fields
   {
     displayName: 'Return All',
     name: 'returnAll',
@@ -94,6 +100,94 @@ export const reportHybridFields: INodeProperties[] = [
     default: 50,
     description: 'Max number of results to return',
   },
+
+  // Date Selection Method - aligned with Events resource
+  {
+    displayName: 'Date Selection Method',
+    name: 'dateSelectionMethod',
+    type: 'options',
+    options: [
+      {
+        name: 'No Date Filter',
+        value: 'noDates',
+      },
+      {
+        name: 'Specific Dates',
+        value: 'specificDates',
+      },
+      {
+        name: 'Relative Date Range',
+        value: 'relativeDates',
+      },
+    ],
+    default: 'relativeDates',
+    displayOptions: {
+      show: {
+        resource: ['reportHybrid'],
+      },
+    },
+    description:
+      'Choose whether to use specific dates, relative date ranges, or include all dates (no date filter)',
+  },
+
+  // Specific Dates selection - aligned with Events resource
+  {
+    displayName: 'Start Date',
+    name: 'startDate',
+    type: 'dateTime',
+    displayOptions: {
+      show: {
+        resource: ['reportHybrid'],
+        dateSelectionMethod: ['specificDates'],
+      },
+    },
+    default: '',
+    description: 'Start date for filtering report data (inclusive)',
+  },
+  {
+    displayName: 'End Date',
+    name: 'endDate',
+    type: 'dateTime',
+    displayOptions: {
+      show: {
+        resource: ['reportHybrid'],
+        dateSelectionMethod: ['specificDates'],
+      },
+    },
+    default: '',
+    description: 'End date for filtering report data (inclusive)',
+  },
+
+  // Relative Date Range selection - aligned with Events resource
+  {
+    displayName: 'Date Range',
+    name: 'relativeDateRange',
+    type: 'options',
+    displayOptions: {
+      show: {
+        resource: ['reportHybrid'],
+        dateSelectionMethod: ['relativeDates'],
+      },
+    },
+    options: [
+      { name: 'Current Month', value: 'currentMonth' },
+      { name: 'Previous Month', value: 'previousMonth' },
+      { name: 'Current Quarter', value: 'currentQuarter' },
+      { name: 'Previous Quarter', value: 'previousQuarter' },
+      { name: 'Current Year', value: 'currentYear' },
+      { name: 'Previous Year', value: 'previousYear' },
+      { name: 'Last 30 Days', value: 'last30Days' },
+      { name: 'Last 60 Days', value: 'last60Days' },
+      { name: 'Last 90 Days', value: 'last90Days' },
+      { name: 'Last 6 Months', value: 'last6Months' },
+      { name: 'Last 12 Months', value: 'last12Months' },
+      { name: 'Year To Date', value: 'yearToDate' },
+    ],
+    default: 'currentMonth',
+    description: 'Select a predefined date range for filtering report data',
+  },
+
+  // Customer Filter - aligned with Events resource
   {
     displayName: 'Filter by Customer(s)',
     name: 'filterByCustomers',
@@ -123,92 +217,6 @@ export const reportHybridFields: INodeProperties[] = [
     description: 'ID of the customer(s) to filter by',
   },
 
-  // Date Range Filter (common to all operations)
-  {
-    displayName: 'Filter by Date Range',
-    name: 'filterByDateRange',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['reportHybrid'],
-      },
-    },
-    default: true,
-    description: 'Whether to filter results by date range',
-  },
-
-  // Date Range for Backup Activity and Consumption Reports (uses startDate/endDate)
-  {
-    displayName: 'Start Date',
-    name: 'startDate',
-    type: 'dateTime',
-    displayOptions: {
-      show: {
-        resource: ['reportHybrid'],
-        operation: ['getBackupActivityReport', 'getConsumptionByBackupSetReport'],
-        filterByDateRange: [true],
-      },
-    },
-    default: '',
-    description: 'Start date for the report (YYYY-MM-DD)',
-  },
-  {
-    displayName: 'End Date',
-    name: 'endDate',
-    type: 'dateTime',
-    displayOptions: {
-      show: {
-        resource: ['reportHybrid'],
-        operation: ['getBackupActivityReport', 'getConsumptionByBackupSetReport'],
-        filterByDateRange: [true],
-      },
-    },
-    default: '',
-    description: 'End date for the report (YYYY-MM-DD)',
-  },
-
-  // Date Range for other reports (uses startTime/endTime)
-  {
-    displayName: 'Start Time',
-    name: 'startTime',
-    type: 'dateTime',
-    displayOptions: {
-      show: {
-        resource: ['reportHybrid'],
-        operation: [
-          'getDRFailbackActivityReport',
-          'getDRFailoverActivityReport',
-          'getDRReplicationActivityReport',
-          'getResourceStatusReport',
-          'getAlertHistoryReport',
-        ],
-        filterByDateRange: [true],
-      },
-    },
-    default: '',
-    description: 'Start time for the report (ISO format)',
-  },
-  {
-    displayName: 'End Time',
-    name: 'endTime',
-    type: 'dateTime',
-    displayOptions: {
-      show: {
-        resource: ['reportHybrid'],
-        operation: [
-          'getDRFailbackActivityReport',
-          'getDRFailoverActivityReport',
-          'getDRReplicationActivityReport',
-          'getResourceStatusReport',
-          'getAlertHistoryReport',
-        ],
-        filterByDateRange: [true],
-      },
-    },
-    default: '',
-    description: 'End time for the report (ISO format)',
-  },
-
   /* Fields specific to Backup Activity Report */
   {
     displayName: 'Filter by Workload Types',
@@ -222,6 +230,7 @@ export const reportHybridFields: INodeProperties[] = [
           'getConsumptionByBackupSetReport',
           'getResourceStatusReport',
           'getAlertHistoryReport',
+          'getStorageConsumptionByBackupSetsReport',
         ],
       },
     },
@@ -243,12 +252,13 @@ export const reportHybridFields: INodeProperties[] = [
           'getConsumptionByBackupSetReport',
           'getResourceStatusReport',
           'getAlertHistoryReport',
+          'getStorageConsumptionByBackupSetsReport',
         ],
         filterByWorkloadTypes: [true],
       },
     },
     default: [],
-    description: 'Types of workloads to filter by',
+    description: 'Types of workloads to filter by. For Alert History, this filters by Alert Type.',
   },
   {
     displayName: 'Filter by Backup Status',
@@ -289,11 +299,7 @@ export const reportHybridFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['reportHybrid'],
-        operation: [
-          'getDRFailbackActivityReport',
-          'getDRFailoverActivityReport',
-          'getDRReplicationActivityReport',
-        ],
+        operation: ['getDRFailbackActivityReport', 'getDRReplicationActivityReport'],
       },
     },
     default: false,
@@ -309,11 +315,7 @@ export const reportHybridFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['reportHybrid'],
-        operation: [
-          'getDRFailbackActivityReport',
-          'getDRFailoverActivityReport',
-          'getDRReplicationActivityReport',
-        ],
+        operation: ['getDRFailbackActivityReport', 'getDRReplicationActivityReport'],
         filterByDRPlanIds: [true],
       },
     },
@@ -466,6 +468,7 @@ export const reportHybridFields: INodeProperties[] = [
       },
     },
     default: [],
-    description: 'Alert severity levels to filter by',
+    description:
+      'Alert severity levels to filter by (will be converted to Critical/Warning/Info format expected by API)',
   },
 ];

@@ -1,102 +1,102 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "MSP Authentication",
-    "version": "3.0"
+      "title": "MSP Authentication",
+      "version": "3.0"
   },
   "servers": [
-    {
-      "url": "https://apis.druva.com/msp"
-    }
+      {
+          "url": "https://apis.druva.com/msp"
+      }
   ],
   "components": {
-    "securitySchemes": {
-      "sec0": {
-        "type": "http",
-        "scheme": "basic"
+      "securitySchemes": {
+          "sec0": {
+              "type": "http",
+              "scheme": "basic"
+          }
       }
-    }
   },
   "security": [
-    {
-      "sec0": []
-    }
+      {
+          "sec0": []
+      }
   ],
   "paths": {
-    "/auth/v1/token": {
-      "post": {
-        "summary": "MSP Authentication",
-        "description": "",
-        "operationId": "msp-authentication",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "grant_type": {
-                    "type": "string",
-                    "default": "client_credentials"
+      "/auth/v1/token": {
+          "post": {
+              "summary": "MSP Authentication",
+              "description": "",
+              "operationId": "msp-authentication",
+              "requestBody": {
+                  "content": {
+                      "application/x-www-form-urlencoded": {
+                          "schema": {
+                              "type": "object",
+                              "properties": {
+                                  "grant_type": {
+                                      "type": "string",
+                                      "default": "client_credentials"
+                                  }
+                              }
+                          }
+                      }
                   }
-                }
+              },
+              "responses": {
+                  "200": {
+                      "description": "200",
+                      "content": {
+                          "application/json": {
+                              "examples": {
+                                  "Result": {
+                                      "value": "{}"
+                                  }
+                              },
+                              "schema": {
+                                  "type": "object",
+                                  "properties": {}
+                              }
+                          }
+                      }
+                  },
+                  "400": {
+                      "description": "400",
+                      "content": {
+                          "application/json": {
+                              "examples": {
+                                  "Result": {
+                                      "value": "{}"
+                                  }
+                              },
+                              "schema": {
+                                  "type": "object",
+                                  "properties": {}
+                              }
+                          }
+                      }
+                  }
+              },
+              "deprecated": false,
+              "x-readme": {
+                  "code-samples": [
+                      {
+                          "language": "curl",
+                          "code": "curl -X POST -H 'authorization: Basic <Your Base64 encoded credentials>' -d 'grant_type=client_credentials' https://apis.druva.com/msp/auth/v1/token",
+                          "name": "cURL"
+                      }
+                  ],
+                  "samples-languages": [
+                      "curl"
+                  ]
               }
-            }
           }
-        },
-        "responses": {
-          "200": {
-            "description": "200",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "Result": {
-                    "value": "{}"
-                  }
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {}
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "400",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "Result": {
-                    "value": "{}"
-                  }
-                },
-                "schema": {
-                  "type": "object",
-                  "properties": {}
-                }
-              }
-            }
-          }
-        },
-        "deprecated": false,
-        "x-readme": {
-          "code-samples": [
-            {
-              "language": "curl",
-              "code": "curl -X POST -H 'authorization: Basic <Your Base64 encoded credentials>' -d 'grant_type=client_credentials' https://apis.druva.com/msp/auth/v1/token",
-              "name": "cURL"
-            }
-          ],
-          "samples-languages": [
-            "curl"
-          ]
-        }
       }
-    }
   },
   "x-readme": {
-    "headers": [],
-    "explorer-enabled": true,
-    "proxy-enabled": true
+      "headers": [],
+      "explorer-enabled": true,
+      "proxy-enabled": true
   },
   "x-readme-fauxas": true
 }

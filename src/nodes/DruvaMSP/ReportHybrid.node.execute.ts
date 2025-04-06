@@ -1,6 +1,32 @@
 import type { IExecuteFunctions, IDataObject, INodeExecutionData } from 'n8n-workflow';
 
 import { druvaMspApiRequest, druvaMspApiRequestAllPagedItems } from './GenericFunctions';
+import { getRelativeDateRange } from './helpers/DateHelpers';
+
+/**
+ * Helper function to create a filter object for the report APIs
+ */
+function createFilter(
+  fieldName: string,
+  operator: string,
+  value: string | number | string[] | number[],
+): IDataObject {
+  return {
+    fieldName,
+    operator,
+    value,
+  };
+}
+
+/**
+ * Helper function to build the filters object for the report APIs
+ */
+function buildFiltersObject(pageSize: number, filters: IDataObject[] = []): IDataObject {
+  return {
+    pageSize,
+    filterBy: filters,
+  };
+}
 
 /**
  * Common function for fetching report items with pagination handling
@@ -66,31 +92,88 @@ function getCustomerIds(this: IExecuteFunctions): string[] | undefined {
 }
 
 /**
- * Determines if dates should be filtered and returns the appropriate date range
+ * Determines date range based on the date selection method.
  */
-function getDateRange(
-  this: IExecuteFunctions,
-  operation: string,
-): { [key: string]: string } | undefined {
-  const filterByDateRange = this.getNodeParameter('filterByDateRange', 0, false) as boolean;
+function getDateRange(this: IExecuteFunctions): { startDate: string; endDate: string } | undefined {
+  const dateSelectionMethod = this.getNodeParameter(
+    'dateSelectionMethod',
+    0,
+    'relativeDates',
+  ) as string;
 
-  if (!filterByDateRange) {
+  // If no date filtering is needed
+  if (dateSelectionMethod === 'noDates') {
     return undefined;
   }
 
-  // For operations that use startDate/endDate format
-  if (['getBackupActivityReport', 'getConsumptionByBackupSetReport'].includes(operation)) {
-    return {
-      startDate: this.getNodeParameter('startDate', 0) as string,
-      endDate: this.getNodeParameter('endDate', 0) as string,
-    };
+  let startDate = '';
+  let endDate = '';
+
+  // Handle specific dates selection
+  if (dateSelectionMethod === 'specificDates') {
+    startDate = this.getNodeParameter('startDate', 0, '') as string;
+    endDate = this.getNodeParameter('endDate', 0, '') as string;
+
+    // If either date is missing, return undefined
+    if (!startDate || !endDate) {
+      return undefined;
+    }
+  }
+  // Handle relative date range selection
+  else if (dateSelectionMethod === 'relativeDates') {
+    const relativeDateRange = this.getNodeParameter(
+      'relativeDateRange',
+      0,
+      'currentMonth',
+    ) as string;
+    const dateRange = getRelativeDateRange(relativeDateRange);
+    startDate = dateRange.startDate;
+    endDate = dateRange.endDate;
   }
 
-  // For operations that use startTime/endTime format
-  return {
-    startTime: this.getNodeParameter('startTime', 0) as string,
-    endTime: this.getNodeParameter('endTime', 0) as string,
-  };
+  return { startDate, endDate };
+}
+
+/**
+ * Adds date filters to the filters array using the appropriate field names for each operation
+ */
+function addDateFilters(
+  this: IExecuteFunctions,
+  filters: IDataObject[],
+  operation: string,
+  dateRange?: { startDate: string; endDate: string },
+): void {
+  if (!dateRange) return;
+
+  const { startDate, endDate } = dateRange;
+
+  // Alert History report uses lastUpdatedTime field
+  if (operation === 'getAlertHistoryReport') {
+    if (startDate) {
+      filters.push(createFilter('lastUpdatedTime', 'GTE', startDate));
+    }
+    if (endDate) {
+      filters.push(createFilter('lastUpdatedTime', 'LTE', endDate));
+    }
+  }
+  // Backup Activity report uses started/ended fields for date filtering
+  else if (operation === 'getBackupActivityReport') {
+    if (startDate) {
+      filters.push(createFilter('started', 'GTE', startDate));
+    }
+    if (endDate) {
+      filters.push(createFilter('ended', 'LTE', endDate));
+    }
+  }
+  // Default behavior for other reports - use lastUpdatedTime
+  else {
+    if (startDate) {
+      filters.push(createFilter('lastUpdatedTime', 'GTE', startDate));
+    }
+    if (endDate) {
+      filters.push(createFilter('lastUpdatedTime', 'LTE', endDate));
+    }
+  }
 }
 
 /**
@@ -109,31 +192,56 @@ export async function executeReportHybridOperation(
     try {
       // Common filters that might be used across operations
       const customerIds = getCustomerIds.call(this);
-      const dateRange = getDateRange.call(this, operation);
+      const dateRange = getDateRange.call(this);
+      const pageSize = limit || 500;
 
-      // Base request body with pagination
+      // Create filters array for the structured request format
+      const filters: IDataObject[] = [];
+
+      // Add customer filter if specified
+      if (customerIds && customerIds.length > 0) {
+        filters.push(createFilter('customerGlobalId', 'CONTAINS', customerIds));
+      }
+
+      // Add date filters with appropriate field names
+      addDateFilters.call(this, filters, operation, dateRange);
+
+      // Base request body with structured filters
       const requestBody: IDataObject = {
-        page: 1,
-        pageSize: limit || 500,
+        filters: buildFiltersObject(pageSize, filters),
       };
 
-      // Add common filters to request body if they exist
-      if (customerIds) {
-        requestBody.customerIds = customerIds;
-      }
-
-      if (dateRange) {
-        Object.assign(requestBody, dateRange);
-      }
+      // Ensure the filterBy property is properly typed as an array
+      const filterBy = ((requestBody.filters as IDataObject).filterBy as IDataObject[]) || [];
 
       let endpoint = '';
       let responseData: IDataObject[] = [];
 
-      // Branch based on operation type
-      if (operation === 'getBackupActivityReport') {
-        endpoint = '/msp/reporting/v1/reports/mspEWBackupActivity';
+      // Branch based on operation type and add operation-specific filters
+      if (operation === 'getAlertHistoryReport') {
+        endpoint = '/msp/reporting/v1/reports/mspEWAlertHistory';
 
-        // Add additional filters specific to this operation
+        // Add Alert Severity filter if specified
+        const filterByAlertSeverity = this.getNodeParameter(
+          'filterByAlertSeverity',
+          0,
+          false,
+        ) as boolean;
+        if (filterByAlertSeverity) {
+          const alertSeverity = this.getNodeParameter('alertSeverity', 0, []) as string[];
+          if (alertSeverity.length > 0) {
+            // Map severity values to the format expected by the API (first letter capitalized)
+            const mappedSeverity = alertSeverity.map((severity) => {
+              if (severity === 'CRITICAL') return 'Critical';
+              if (severity === 'WARNING') return 'Warning';
+              if (severity === 'INFO') return 'Info';
+              return severity;
+            });
+            filterBy.push(createFilter('severity', 'CONTAINS', mappedSeverity));
+          }
+        }
+
+        // Add Workload Types filter if specified
         const filterByWorkloadTypes = this.getNodeParameter(
           'filterByWorkloadTypes',
           0,
@@ -142,7 +250,22 @@ export async function executeReportHybridOperation(
         if (filterByWorkloadTypes) {
           const workloadTypes = this.getNodeParameter('workloadTypes', 0, []) as string[];
           if (workloadTypes.length > 0) {
-            requestBody.workloadTypes = workloadTypes;
+            filterBy.push(createFilter('alertType', 'CONTAINS', workloadTypes));
+          }
+        }
+      } else if (operation === 'getBackupActivityReport') {
+        endpoint = '/msp/reporting/v1/reports/mspEWBackupActivity';
+
+        // Add additional filters specific to this operation using the structured format
+        const filterByWorkloadTypes = this.getNodeParameter(
+          'filterByWorkloadTypes',
+          0,
+          false,
+        ) as boolean;
+        if (filterByWorkloadTypes) {
+          const workloadTypes = this.getNodeParameter('workloadTypes', 0, []) as string[];
+          if (workloadTypes.length > 0) {
+            filterBy.push(createFilter('workloads', 'CONTAINS', workloadTypes));
           }
         }
 
@@ -154,13 +277,13 @@ export async function executeReportHybridOperation(
         if (filterByBackupStatus) {
           const backupStatus = this.getNodeParameter('backupStatus', 0, []) as string[];
           if (backupStatus.length > 0) {
-            requestBody.backupStatus = backupStatus;
+            filterBy.push(createFilter('status', 'CONTAINS', backupStatus));
           }
         }
       } else if (operation === 'getConsumptionByBackupSetReport') {
         endpoint = '/msp/reporting/v1/reports/mspEWConsumptionByBackupSet';
 
-        // Add additional filters specific to this operation
+        // Add additional filters specific to this operation using the structured format
         const filterByWorkloadTypes = this.getNodeParameter(
           'filterByWorkloadTypes',
           0,
@@ -169,46 +292,67 @@ export async function executeReportHybridOperation(
         if (filterByWorkloadTypes) {
           const workloadTypes = this.getNodeParameter('workloadTypes', 0, []) as string[];
           if (workloadTypes.length > 0) {
-            requestBody.workloadTypes = workloadTypes;
+            filterBy.push(createFilter('workloadTypes', 'CONTAINS', workloadTypes));
+          }
+        }
+      } else if (operation === 'getStorageConsumptionByBackupSetsReport') {
+        endpoint = '/msp/reporting/v1/reports/mspEWStorageConsumptionbyBackupSets';
+
+        // Add additional filters specific to this operation using the structured format
+        const filterByWorkloadTypes = this.getNodeParameter(
+          'filterByWorkloadTypes',
+          0,
+          false,
+        ) as boolean;
+        if (filterByWorkloadTypes) {
+          const workloadTypes = this.getNodeParameter('workloadTypes', 0, []) as string[];
+          if (workloadTypes.length > 0) {
+            filterBy.push(createFilter('backupContent', 'CONTAINS', workloadTypes));
           }
         }
       } else if (operation === 'getDRFailbackActivityReport') {
         endpoint = '/msp/reporting/v1/reports/mspEWDisasterRecoveryFailbackActivity';
 
-        // Add additional filters specific to this operation
+        // Add additional filters specific to this operation using the structured format
         const filterByDRPlanIds = this.getNodeParameter('filterByDRPlanIds', 0, false) as boolean;
         if (filterByDRPlanIds) {
           const drPlanIds = this.getNodeParameter('drPlanIds', 0, []) as string[];
           if (drPlanIds.length > 0) {
-            requestBody.drPlanIds = drPlanIds;
+            filterBy.push(createFilter('drPlanName', 'CONTAINS', drPlanIds));
           }
         }
       } else if (operation === 'getDRFailoverActivityReport') {
         endpoint = '/msp/reporting/v1/reports/mspEWDisasterRecoveryFailoverActivity';
 
-        // Add additional filters specific to this operation
-        const filterByDRPlanIds = this.getNodeParameter('filterByDRPlanIds', 0, false) as boolean;
-        if (filterByDRPlanIds) {
-          const drPlanIds = this.getNodeParameter('drPlanIds', 0, []) as string[];
-          if (drPlanIds.length > 0) {
-            requestBody.drPlanIds = drPlanIds;
-          }
-        }
+        // Remove DR plan filtering for Failover report since it's not supported in the API
+        // According to the API spec, 'drPlanName' is not a valid field for this report
       } else if (operation === 'getDRReplicationActivityReport') {
         endpoint = '/msp/reporting/v1/reports/mspEWDisasterRecoveryReplicationActivity';
 
-        // Add additional filters specific to this operation
+        // Add additional filters specific to this operation using the structured format
         const filterByDRPlanIds = this.getNodeParameter('filterByDRPlanIds', 0, false) as boolean;
         if (filterByDRPlanIds) {
           const drPlanIds = this.getNodeParameter('drPlanIds', 0, []) as string[];
           if (drPlanIds.length > 0) {
-            requestBody.drPlanIds = drPlanIds;
+            filterBy.push(createFilter('drPlanName', 'CONTAINS', drPlanIds));
+          }
+        }
+
+        const filterByReplicationStatus = this.getNodeParameter(
+          'filterByReplicationStatus',
+          0,
+          false,
+        ) as boolean;
+        if (filterByReplicationStatus) {
+          const replicationStatus = this.getNodeParameter('replicationStatus', 0, []) as string[];
+          if (replicationStatus.length > 0) {
+            filterBy.push(createFilter('status', 'CONTAINS', replicationStatus));
           }
         }
       } else if (operation === 'getResourceStatusReport') {
         endpoint = '/msp/reporting/v1/reports/mspEWResourceStatus';
 
-        // Add additional filters specific to this operation
+        // Add additional filters specific to this operation using the structured format
         const filterByResourceStatus = this.getNodeParameter(
           'filterByResourceStatus',
           0,
@@ -217,7 +361,9 @@ export async function executeReportHybridOperation(
         if (filterByResourceStatus) {
           const resourceStatus = this.getNodeParameter('resourceStatus', 0, []) as string[];
           if (resourceStatus.length > 0) {
-            requestBody.resourceStatus = resourceStatus;
+            // For boolean fields like backupEnabled, EQUAL is more appropriate than CONTAINS
+            // Take first value in case multiple are selected (API likely expects a single boolean)
+            filterBy.push(createFilter('backupEnabled', 'EQUAL', resourceStatus[0]));
           }
         }
 
@@ -229,51 +375,48 @@ export async function executeReportHybridOperation(
         if (filterByResourceTypes) {
           const resourceType = this.getNodeParameter('resourceType', 0, []) as string[];
           if (resourceType.length > 0) {
-            requestBody.resourceType = resourceType;
+            filterBy.push(createFilter('backupsetType', 'CONTAINS', resourceType));
           }
         }
-      } else if (operation === 'getAlertHistoryReport') {
-        endpoint = '/msp/reporting/v1/reports/mspEWAlertHistory';
 
-        // Add additional filters specific to this operation
-        const filterByAlertSeverity = this.getNodeParameter(
-          'filterByAlertSeverity',
+        const filterByWorkloadTypes = this.getNodeParameter(
+          'filterByWorkloadTypes',
           0,
           false,
         ) as boolean;
-        if (filterByAlertSeverity) {
-          const alertSeverity = this.getNodeParameter('alertSeverity', 0, []) as string[];
-          if (alertSeverity.length > 0) {
-            requestBody.alertSeverity = alertSeverity;
+        if (filterByWorkloadTypes) {
+          const workloadTypes = this.getNodeParameter('workloadTypes', 0, []) as string[];
+          if (workloadTypes.length > 0) {
+            filterBy.push(createFilter('backupContent', 'CONTAINS', workloadTypes));
           }
         }
       }
 
-      // Fetch data with pagination handling
-      if (returnAll) {
-        responseData = await druvaMspApiRequestAllPagedItems.call(
-          this,
-          'POST',
-          endpoint,
-          requestBody,
-          'items',
-        );
-      } else {
-        // For limit requests, we can just use druvaMspApiRequest directly
-        const response = (await druvaMspApiRequest.call(
-          this,
-          'POST',
-          endpoint,
-          requestBody,
-        )) as IDataObject;
-        responseData = (response.items as IDataObject[]) || [];
+      // Execute API request with pagination handling
+      responseData = await druvaMspApiRequestAllPagedItems.call(
+        this,
+        'POST',
+        endpoint,
+        requestBody,
+        'data',
+      );
+
+      if (!returnAll && limit) {
+        responseData = responseData.slice(0, limit);
       }
 
-      // Return the data
-      returnData.push(...this.helpers.returnJsonArray(responseData));
+      const executionData = this.helpers.constructExecutionMetaData(
+        this.helpers.returnJsonArray(responseData),
+        { itemData: { item: i } },
+      );
+      returnData.push(...executionData);
     } catch (error) {
       if (this.continueOnFail()) {
-        returnData.push({ json: { error: error.message } });
+        const executionData = this.helpers.constructExecutionMetaData(
+          this.helpers.returnJsonArray({ error: error.message }),
+          { itemData: { item: i } },
+        );
+        returnData.push(...executionData);
         continue;
       }
       throw error;
