@@ -384,7 +384,6 @@ export async function druvaMspApiRequestAllReportItems(
       // For report endpoints, API returns "nextPageToken" but expects "pageToken" in requests
       requestBody = { pageToken: nextPageToken };
       console.log(`[DEBUG] Using only pageToken for pagination: ${nextPageToken}`);
-      console.log('[DEBUG] Note: API returns "nextPageToken" but expects "pageToken" in requests');
 
       // Check for token loop - if detected, stop pagination
       if (!paginationHelper.trackToken(nextPageToken)) {
@@ -476,7 +475,6 @@ export async function druvaMspApiRequestAllReportV2Items(
 
       // Debug logging
       console.log(`[DEBUG] Using only pageToken for pagination: ${nextPageToken}`);
-      console.log('[DEBUG] Note: API returns "nextPageToken" but expects "pageToken" in requests');
 
       // Loop detection - check if we've seen this token before
       if (seenTokens.has(nextPageToken)) {

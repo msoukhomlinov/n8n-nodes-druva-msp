@@ -108,7 +108,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
       { name: 'Last 12 Months', value: 'last12Months' },
       { name: 'Year To Date', value: 'yearToDate' },
     ],
-    default: 'currentMonth',
+    default: 'previousMonth',
     required: true,
     description: 'Select a predefined date range for billing period analysis',
   },
@@ -184,7 +184,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayName: 'Apply Rounding',
     name: 'applyRounding',
     type: 'boolean',
-    default: false,
+    default: true,
     description: 'Whether to apply rounding to the calculated values',
     displayOptions: {
       show: {
@@ -229,7 +229,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
       { name: '2 (Hundredths)', value: 2 },
       { name: '3 (Thousandths)', value: 3 },
     ],
-    default: 2,
+    default: 1,
     description: 'Number of decimal places to round to',
     displayOptions: {
       show: {
@@ -247,7 +247,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayName: 'Filter Out Zero Usage',
     name: 'filterOutZeroUsage',
     type: 'boolean',
-    default: false,
+    default: true,
     description: 'Whether to filter out items where both usage amount and CU consumed are zero',
     displayOptions: {
       show: {
@@ -264,7 +264,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayName: 'Convert Byte Values',
     name: 'convertByteValues',
     type: 'boolean',
-    default: false,
+    default: true,
     description: 'Whether to convert raw byte values to a larger unit (GB or TB)',
     displayOptions: {
       show: {
@@ -296,6 +296,24 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
         resource: ['consumptionBillingAnalyzer'],
         operation: ['analyzeConsumption'],
         convertByteValues: [true],
+      },
+    },
+  },
+
+  /* -------------------------------------------------------------------------- */
+  /*                        Output Format Fields                              */
+  /* -------------------------------------------------------------------------- */
+  {
+    displayName: 'Return Full Response',
+    name: 'returnFullResponse',
+    type: 'boolean',
+    default: false,
+    description:
+      'Whether to return the complete analysis response with metadata (timestamp, parameters, validation results) or just the customer consumption data. When disabled (default), the response will only contain the customer consumption data array for easier processing in workflows.',
+    displayOptions: {
+      show: {
+        resource: ['consumptionBillingAnalyzer'],
+        operation: ['analyzeConsumption'],
       },
     },
   },

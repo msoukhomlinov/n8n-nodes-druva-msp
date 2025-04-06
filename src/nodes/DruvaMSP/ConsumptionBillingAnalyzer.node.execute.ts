@@ -783,6 +783,9 @@ export async function executeConsumptionBillingAnalyzerOperation(
       // Add timestamp information
       const timestamp = new Date().toISOString();
 
+      // Check if we should return full response or just data
+      const returnFullResponse = this.getNodeParameter('returnFullResponse', i, false) as boolean;
+
       // Return the final output
       const outputResponse: IDataObject = {
         success: true,
@@ -809,7 +812,12 @@ export async function executeConsumptionBillingAnalyzerOperation(
         data: processedData,
       };
 
-      responseData = this.helpers.returnJsonArray([outputResponse]);
+      // If not returning full response, just return the data array
+      if (!returnFullResponse) {
+        responseData = this.helpers.returnJsonArray(processedData as unknown as IDataObject[]);
+      } else {
+        responseData = this.helpers.returnJsonArray([outputResponse]);
+      }
     }
 
     return responseData;
