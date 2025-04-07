@@ -832,9 +832,6 @@ export async function executeConsumptionBillingAnalyzerOperation(
         }
       }
 
-      // Add timestamp information
-      const timestamp = new Date().toISOString();
-
       // Flatten the hierarchical structure to a simpler format
       const flattenedData = flattenConsumptionData(processedData);
       console.log(`[INFO] Flattened data into ${flattenedData.length} records`);
