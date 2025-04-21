@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/msoukhomlinov/n8n-nodes-druva-msp.git"
+    "url": "git+https://github.com/msoukhomlinov/n8n-nodes-druva-msp.git"
   },
   "main": "index.js",
   "scripts": {
