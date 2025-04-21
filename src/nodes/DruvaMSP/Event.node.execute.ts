@@ -9,6 +9,7 @@ import type {
 import { druvaMspApiRequest, PaginationHelper } from './GenericFunctions';
 import { getSyslogSeverityLabel } from './helpers/ValueConverters';
 import { getRelativeDateRange } from './helpers/DateHelpers';
+import { logger } from './helpers/LoggerHelper';
 
 /**
  * Filter events based on provided filters that cannot be handled by the API
@@ -345,6 +346,10 @@ async function fetchEvents(
       const LOW_EVENT_THRESHOLD = 0.1; // 10% of requested page size
       const MAX_CONSECUTIVE_LOW_COUNT = 3; // Stop after 3 consecutive low count pages
 
+      logger.info(
+        `Events: Fetching from ${endpoint} (max page size: ${queryParams?.pageSize || 500})`,
+      );
+
       do {
         // If we have a nextPageToken, use only that parameter without any filters
         // This is a requirement of the Druva MSP API
@@ -376,14 +381,14 @@ async function fetchEvents(
 
         if (pageEvents.length > 0 && pageEvents.length < lowEventThreshold) {
           consecutiveLowCountPages++;
-          console.log(
-            `[DEBUG] Received only ${pageEvents.length} events (less than ${lowEventThreshold}). This may indicate we're near the end of available data.`,
+          logger.debug(
+            `Page with low event count: ${pageEvents.length} events (threshold: ${lowEventThreshold})`,
           );
 
           // If we've had multiple consecutive pages with very few events, assume we've got all meaningful data
           if (consecutiveLowCountPages >= MAX_CONSECUTIVE_LOW_COUNT) {
-            console.log(
-              `[DEBUG] Received ${MAX_CONSECUTIVE_LOW_COUNT} consecutive pages with very few events. Assuming all meaningful data retrieved.`,
+            logger.debug(
+              `Stopping pagination after ${MAX_CONSECUTIVE_LOW_COUNT} consecutive low-count pages`,
             );
             break;
           }
@@ -399,33 +404,35 @@ async function fetchEvents(
         nextPageToken = responseData.nextPageToken as string;
 
         // Log progress for debugging
-        console.log(
-          `[DEBUG] Retrieved ${pageEvents.length} events. Total so far: ${events.length}. Next token: ${nextPageToken || 'none'}`,
+        logger.debug(
+          `Page progress: +${pageEvents.length} events (total: ${events.length})${
+            nextPageToken ? ', more pages available' : ''
+          }`,
         );
 
         // Track the token and check for loops or max count
         if (!paginationHelper.trackToken(nextPageToken)) {
-          console.log('[DEBUG] Pagination stopped due to loop detection or max count reached.');
+          logger.debug('Pagination stopped: loop detected or max count reached');
           break;
         }
 
         // Special case: If we got exactly 0 events but have a next token, this is likely an API quirk
         // In this case, we should stop pagination to avoid unnecessary requests
         if (pageEvents.length === 0 && nextPageToken) {
-          console.log(
-            '[DEBUG] Received 0 events but have a next token. Stopping pagination to avoid unnecessary requests.',
+          logger.debug(
+            'Stopping pagination: received 0 events but have a next token (likely API quirk)',
           );
           break;
         }
       } while (nextPageToken);
 
-      console.log(`[DEBUG] Retrieved a total of ${events.length} events.`);
+      logger.info(`Events: Fetch complete - retrieved ${events.length} total events`);
     } else {
       const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, queryParams);
       events = ((response as IDataObject)?.events as IDataObject[]) || [];
     }
   } catch (error) {
-    console.error(`Error retrieving events: ${(error as Error).message}`);
+    logger.error(`Error retrieving events: ${(error as Error).message}`, error as Error);
     throw error;
   }
 
@@ -486,7 +493,11 @@ async function fetchEvents(
     }
 
     events = applyRemainingFilters(events, filters);
-    console.log(`[DEBUG] Events filtered: ${originalCount} -> ${events.length}`);
+    logger.debug(
+      `Events filtered: ${originalCount} → ${events.length} (${Math.round(
+        (events.length / originalCount || 0) * 100,
+      )}% retained)`,
+    );
   }
 
   // Process events (format timestamps, etc.)
@@ -516,7 +527,9 @@ export async function executeEventOperation(
       const options = this.getNodeParameter('options', i, {}) as IDataObject;
       const endpoint = '/msp/v2/events';
 
+      logger.info(`Operation: Retrieving MSP events from ${endpoint}`);
       const events = await fetchEvents.call(this, endpoint, returnAll, limit, i, options);
+      logger.info(`Operation complete: Retrieved ${events.length} MSP events`);
 
       responseData = this.helpers.returnJsonArray(events);
     } else if (operation === 'getManyCustomerEvents') {
@@ -527,11 +540,16 @@ export async function executeEventOperation(
       const options = this.getNodeParameter('options', i, {}) as IDataObject;
       const endpoint = `/msp/v3/customers/${customerId}/events`;
 
+      logger.info(`Operation: Retrieving customer events for customer ${customerId}`);
       const events = await fetchEvents.call(this, endpoint, returnAll, limit, i, options);
+      logger.info(
+        `Operation complete: Retrieved ${events.length} events for customer ${customerId}`,
+      );
 
       responseData = this.helpers.returnJsonArray(events);
     }
   } catch (error) {
+    logger.error(`Failed to execute ${operation} operation`, error as Error);
     if (this.continueOnFail()) {
       return [{ json: {}, error: error as NodeApiError }];
     }

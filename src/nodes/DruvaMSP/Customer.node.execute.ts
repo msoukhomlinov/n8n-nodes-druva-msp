@@ -4,6 +4,7 @@ import type { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-wor
 
 import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
 import { getCustomerStatusLabel } from './helpers/ValueConverters';
+import { logger } from './helpers/LoggerHelper';
 
 /**
  * Processes the customer data to add derived fields
@@ -58,7 +59,7 @@ export async function executeCustomerOperation(
       accountName = this.getNodeParameter('accountName', i, '') as string;
     } else {
       accountName = customerName;
-      console.log('[DEBUG] Using customer name as account name:', accountName);
+      logger.debug(`Customer: Using customer name as account name: ${accountName}`);
     }
 
     const tenantAdmins = this.getNodeParameter('tenantAdmins', i, []) as string[];
@@ -75,37 +76,29 @@ export async function executeCustomerOperation(
 
     // Only add tenantAdmins if any admins are specified
     if (tenantAdmins && Array.isArray(tenantAdmins) && tenantAdmins.length > 0) {
-      console.log(`[DEBUG] Processing tenantAdmins for create: ${JSON.stringify(tenantAdmins)}`);
-      console.log(
-        `[DEBUG] tenantAdmins type: ${typeof tenantAdmins}, isArray: ${Array.isArray(tenantAdmins)}, length: ${tenantAdmins.length}`,
+      logger.debug(
+        `Customer: Processing ${tenantAdmins.length} tenant admins for customer creation`,
       );
 
       // Convert string IDs to numbers if they are numeric strings
       const tenantAdminIds = tenantAdmins.map((id) => {
-        console.log(`[DEBUG] Processing admin ID: ${id} (type: ${typeof id})`);
         // Handle both string and number IDs
         if (typeof id === 'string') {
           const numId = Number.parseInt(id, 10);
           if (!Number.isNaN(numId)) {
-            console.log(`[DEBUG] Converted string ID "${id}" to number: ${numId}`);
             return numId;
           }
-          console.log(`[DEBUG] Keeping ID as string: "${id}" (not a numeric string)`);
           return id;
         }
-        console.log(`[DEBUG] Using ID as-is (already numeric): ${id}`);
         return id;
       });
 
-      console.log(`[DEBUG] Formatted tenantAdminIds for create: ${JSON.stringify(tenantAdminIds)}`);
+      logger.debug(
+        `Customer: Tenant admins processing complete: ${tenantAdminIds.length} IDs processed`,
+      );
       body.tenantAdmins = tenantAdminIds;
     } else {
-      console.log(
-        `[DEBUG] No tenantAdmins specified for create or empty array: ${JSON.stringify(tenantAdmins)}`,
-      );
-      console.log(
-        `[DEBUG] tenantAdmins type: ${typeof tenantAdmins}, isArray: ${Array.isArray(tenantAdmins)}, value: ${tenantAdmins}`,
-      );
+      logger.debug('Customer: No tenant admins specified for customer creation');
     }
 
     const endpoint = '/msp/v2/customers';
@@ -253,37 +246,27 @@ export async function executeCustomerOperation(
 
     // Only add tenantAdmins if any admins are specified
     if (tenantAdmins && Array.isArray(tenantAdmins) && tenantAdmins.length > 0) {
-      console.log(`[DEBUG] Processing tenantAdmins for update: ${JSON.stringify(tenantAdmins)}`);
-      console.log(
-        `[DEBUG] tenantAdmins type: ${typeof tenantAdmins}, isArray: ${Array.isArray(tenantAdmins)}, length: ${tenantAdmins.length}`,
-      );
+      logger.debug(`Customer: Processing ${tenantAdmins.length} tenant admins for customer update`);
 
       // Convert string IDs to numbers if they are numeric strings
       const tenantAdminIds = tenantAdmins.map((id) => {
-        console.log(`[DEBUG] Processing admin ID: ${id} (type: ${typeof id})`);
         // Handle both string and number IDs
         if (typeof id === 'string') {
           const numId = Number.parseInt(id, 10);
           if (!Number.isNaN(numId)) {
-            console.log(`[DEBUG] Converted string ID "${id}" to number: ${numId}`);
             return numId;
           }
-          console.log(`[DEBUG] Keeping ID as string: "${id}" (not a numeric string)`);
           return id;
         }
-        console.log(`[DEBUG] Using ID as-is (already numeric): ${id}`);
         return id;
       });
 
-      console.log(`[DEBUG] Formatted tenantAdminIds for update: ${JSON.stringify(tenantAdminIds)}`);
+      logger.debug(
+        `Customer: Tenant admins processing complete: ${tenantAdminIds.length} IDs processed`,
+      );
       body.tenantAdmins = tenantAdminIds;
     } else {
-      console.log(
-        `[DEBUG] No tenantAdmins specified for update or empty array: ${JSON.stringify(tenantAdmins)}`,
-      );
-      console.log(
-        `[DEBUG] tenantAdmins type: ${typeof tenantAdmins}, isArray: ${Array.isArray(tenantAdmins)}, value: ${tenantAdmins}`,
-      );
+      logger.debug('Customer: No tenant admins specified for customer update');
     }
 
     // Handle features update if enabled
@@ -308,7 +291,7 @@ export async function executeCustomerOperation(
       // An empty array will disable all features
       body.features = features;
 
-      console.log(`[DEBUG] Updating features for customer: ${JSON.stringify(features)}`);
+      logger.debug(`Customer: Updating features for customer: ${JSON.stringify(features)}`);
     }
 
     const endpoint = `/msp/v2/customers/${customerId}`;

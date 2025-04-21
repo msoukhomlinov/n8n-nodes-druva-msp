@@ -9,6 +9,7 @@ import type {
 } from 'n8n-workflow';
 
 import { getDruvaMspAccessToken } from './AuthHelpers';
+import { logger } from './LoggerHelper';
 
 /**
  * Build the API URL for a given endpoint
@@ -75,86 +76,44 @@ export async function druvaMspApiRequest(
 
     // If API call is to a Reports endpoint, add detailed debug logging
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
-      console.log('[DEBUG] Druva MSP API Request Details:');
-      console.log(`[DEBUG] Method: ${method}`);
-      console.log(`[DEBUG] URL: ${options.uri}`);
-      console.log(
-        '[DEBUG] Request Headers:',
-        JSON.stringify(
-          {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer <TOKEN_MASKED>',
-          },
-          null,
-          2,
-        ),
+      logger.debug(
+        `API Request: ${method} ${options.uri}${
+          method === 'POST' || method === 'PUT'
+            ? ` with ${Object.keys(body).length} parameters`
+            : Object.keys(qs).length > 0
+              ? ` with ${Object.keys(qs).length} query params`
+              : ''
+        }`,
       );
-
-      if (method === 'POST' || method === 'PUT') {
-        console.log('[DEBUG] Request Body:', JSON.stringify(body, null, 2));
-      }
-
-      if (Object.keys(qs).length > 0) {
-        console.log('[DEBUG] Query Params:', JSON.stringify(qs, null, 2));
-      }
     }
 
     // Make the actual API request
     const response = await this.helpers.request(options);
 
-    // If API call is to a Reports endpoint, add detailed debug logging for response
+    // If API call is to a Reports endpoint, add summary debug logging for response
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
-      console.log('[DEBUG] Druva MSP API Response:');
-      console.log('[DEBUG] Status: Success');
-      console.log('[DEBUG] Response Type:', typeof response);
       if (typeof response === 'object') {
-        const keys = Object.keys(response);
-        console.log('[DEBUG] Response Keys:', keys.join(', '));
-
-        // Add more detailed debugging for the data
-        if (response.data !== undefined) {
-          console.log(
-            '[DEBUG] Data Type:',
-            Array.isArray(response.data) ? 'Array' : typeof response.data,
-          );
-          console.log(
-            '[DEBUG] Data Length:',
-            Array.isArray(response.data) ? response.data.length : 'Not an array',
-          );
-
-          // If data is an empty array, explicitly log that
-          if (Array.isArray(response.data) && response.data.length === 0) {
-            console.log('[DEBUG] DATA IS EMPTY ARRAY - No records match the filter criteria');
-          }
-          // If data is an array with elements, show the first item
-          else if (Array.isArray(response.data) && response.data.length > 0) {
-            console.log(
-              '[DEBUG] First Data Item Sample:',
-              JSON.stringify(response.data[0], null, 2),
-            );
-          }
-        }
-
-        // Also debug information about filters, pagination, etc.
-        if (response.filters) {
-          console.log('[DEBUG] Response Filters:', JSON.stringify(response.filters, null, 2));
-        }
-
-        if (response.nextPageToken) {
-          console.log('[DEBUG] Next Page Token:', response.nextPageToken);
-        }
+        logger.debug(
+          `API Response: Success. ${
+            Array.isArray(response.data)
+              ? `Received ${response.data?.length || 0} records`
+              : `Response keys: ${Object.keys(response).join(', ')}`
+          }${response.nextPageToken ? ' (has more pages)' : ''}`,
+        );
+      } else {
+        logger.debug(`API Response: Success. Response type: ${typeof response}`);
       }
     }
 
     return response;
   } catch (error) {
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
-      console.log('[DEBUG] Druva MSP API Error Response:');
-      console.log('[DEBUG] Status: Failed');
-      console.log('[DEBUG] Error:', error.message);
-      if (error.response?.body) {
-        console.log('[DEBUG] API Error Details:', JSON.stringify(error.response.body, null, 2));
-      }
+      logger.error(
+        `API Error: ${error.statusCode || 500} - ${error.message || 'Unknown error'}${
+          error.response?.body ? ' (details in API response)' : ''
+        }`,
+        error,
+      );
     }
 
     // Handle API error response

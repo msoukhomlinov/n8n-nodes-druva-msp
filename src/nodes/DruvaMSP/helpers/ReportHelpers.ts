@@ -7,6 +7,7 @@ import {
   type ReportOperator,
 } from './Constants';
 import { formatReportDate } from './DateHelpers';
+import { logger } from './LoggerHelper';
 
 /**
  * Format a date for use in report filters (RFC3339 format)
@@ -113,11 +114,9 @@ export function createServicePlanFilter(servicePlanIds: string[]): IReportFilter
     throw new Error('Invalid service plan ID: cannot be converted to a number');
   }
 
-  console.log('[DEBUG] Creating service plan filter:');
-  console.log(
-    `[DEBUG] Original service plan ID: ${servicePlanIds[0]} (type: ${typeof servicePlanIds[0]})`,
+  logger.debug(
+    `Report: Creating service plan filter: ID ${servicePlanIds[0]} → ${numericId} (numeric)`,
   );
-  console.log(`[DEBUG] Converted numeric ID: ${numericId} (type: ${typeof numericId})`);
 
   return createReportFilter(
     REPORT_FIELD_NAMES.SERVICE_PLAN_ID,

@@ -1,6 +1,7 @@
 import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 
 import { druvaMspApiRequest } from './ApiRequestHelpers';
+import { logger } from './LoggerHelper';
 
 /**
  * Polls a task until it completes or reaches the timeout.
@@ -31,26 +32,24 @@ export async function waitForTaskCompletion(
     enrichApiResponseWithDates,
   } = await import('./ValueConverters');
 
-  console.log(
-    `[DEBUG] Druva MSP API - Starting to poll task ${taskId} (max ${maxWaitTime}s, interval ${pollInterval}s)`,
+  logger.debug(
+    `Task: Starting to poll task ${taskId} (max ${maxWaitTime}s, interval ${pollInterval}s)`,
   );
 
   while (!taskComplete && attempts < maxAttempts) {
     attempts++;
-    console.log(
-      `[DEBUG] Druva MSP API - Polling task ${taskId}, attempt ${attempts}/${maxAttempts}`,
-    );
+    logger.debug(`Task: Polling task ${taskId}, attempt ${attempts}/${maxAttempts}`);
 
     const response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as IDataObject;
 
     // Log the field names for debugging on first attempt
     if (attempts === 1) {
-      console.log('[DEBUG] Task API Response Fields:', Object.keys(response));
+      logger.debug(`Task: API Response Fields: ${Object.keys(response).join(', ')}`);
     }
 
     // Check if task is complete (status 4 = Finished)
     if (response?.status === 4) {
-      console.log(`[DEBUG] Druva MSP API - Task ${taskId} completed successfully`);
+      logger.debug(`Task: Task ${taskId} completed successfully`);
       taskComplete = true;
 
       // 1. First enrich the response with human-readable labels for status
@@ -68,7 +67,7 @@ export async function waitForTaskCompletion(
       if ('createdOn' in response) dateFields.push('createdOn');
       if ('updatedOn' in response) dateFields.push('updatedOn');
 
-      console.log('[DEBUG] Date fields to enrich:', dateFields);
+      logger.debug(`Task: Date fields to enrich: ${dateFields.join(', ')}`);
 
       const enrichedWithDates = enrichApiResponseWithDates(enrichedWithLabels, dateFields);
 
@@ -96,8 +95,8 @@ export async function waitForTaskCompletion(
 
     // Wait for next poll
     if (!taskComplete && attempts < maxAttempts) {
-      console.log(
-        `[DEBUG] Druva MSP API - Task ${taskId} not complete yet (status: ${response?.status}), waiting ${pollInterval}s before next poll`,
+      logger.debug(
+        `Task: Task ${taskId} not complete yet (status: ${response?.status}), waiting ${pollInterval}s before next poll`,
       );
       await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
     }

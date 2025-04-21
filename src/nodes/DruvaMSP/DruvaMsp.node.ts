@@ -60,6 +60,9 @@ import {
 } from './ConsumptionBillingAnalyzer.node.options';
 import { executeConsumptionBillingAnalyzerOperation } from './ConsumptionBillingAnalyzer.node.execute';
 
+// Import central logger
+import { logger } from './helpers/LoggerHelper';
+
 // Import the value converters at the top of the file
 import {
   getTenantStatusOptions,
@@ -244,7 +247,7 @@ export class DruvaMsp implements INodeType {
                 value: customerId,
               });
             } catch (error) {
-              console.error('[ERROR] Error processing customer:', error);
+              logger.error('Error processing customer:', error);
             }
           }
 
@@ -253,7 +256,7 @@ export class DruvaMsp implements INodeType {
 
           return returnData;
         } catch (error) {
-          console.error('[ERROR] Error retrieving customers:', error);
+          logger.error('Error retrieving customers:', error);
           return [{ name: `Error fetching customers: ${(error as Error).message}`, value: '' }];
         }
       },
@@ -296,7 +299,7 @@ export class DruvaMsp implements INodeType {
 
           return returnData;
         } catch (error) {
-          console.error('[ERROR] Error retrieving tenants:', error);
+          logger.error('Error retrieving tenants:', error);
           return [{ name: `Error fetching tenants: ${(error as Error).message}`, value: '' }];
         }
       },
@@ -340,7 +343,7 @@ export class DruvaMsp implements INodeType {
 
               returnData.push({ name, value });
             } catch (error) {
-              console.error('[ERROR] Error formatting admin:', error);
+              logger.error('Error formatting admin:', error);
             }
           }
 
@@ -349,7 +352,7 @@ export class DruvaMsp implements INodeType {
 
           return returnData;
         } catch (error) {
-          console.error('[ERROR] Error retrieving admins:', error);
+          logger.error('Error retrieving admins:', error);
           return [{ name: `Error fetching admins: ${(error as Error).message}`, value: '' }];
         }
       },
@@ -372,14 +375,14 @@ export class DruvaMsp implements INodeType {
           );
 
           // Log the service plans response for debugging
-          console.log(
-            '[DEBUG] Service Plans Response:',
-            JSON.stringify(servicePlans).substring(0, 500),
-          );
+          logger.debug(`Service Plans: Retrieved ${servicePlans.length} plans from API`);
 
           if (servicePlans.length > 0) {
-            // Log the first service plan to see its structure
-            console.log('[DEBUG] First Service Plan:', JSON.stringify(servicePlans[0]));
+            // Only log critical info about the first plan (ID and name fields)
+            const plan = servicePlans[0];
+            const planId = plan.id || plan.servicePlanId || plan.servicePlanID;
+            const planName = plan.name || plan.servicePlanName;
+            logger.debug(`Sample plan: ID=${planId}, Name=${planName}`);
           }
 
           // Format the options for the UI
@@ -394,20 +397,17 @@ export class DruvaMsp implements INodeType {
                 value: planId.toString(),
               });
             } else {
-              console.log(
-                '[DEBUG] Skipping service plan missing id or name:',
-                JSON.stringify(plan),
-              );
+              logger.debug(`Skipping plan with missing data: ID=${planId}, Name=${planName}`);
             }
           }
 
           // Sort the service plans alphabetically by name
           returnData.sort((a, b) => a.name.localeCompare(b.name));
 
-          console.log('[DEBUG] Returning service plan options:', JSON.stringify(returnData));
+          logger.debug(`Service Plans: Prepared ${returnData.length} options for UI dropdown`);
           return returnData;
         } catch (error) {
-          console.error('[ERROR] Error retrieving service plans:', error);
+          logger.error('Error retrieving service plans:', error);
           return [{ name: `Error fetching service plans: ${(error as Error).message}`, value: '' }];
         }
       },

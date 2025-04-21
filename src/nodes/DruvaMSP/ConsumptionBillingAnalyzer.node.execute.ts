@@ -6,6 +6,7 @@ import {
   createDateRangeFilter,
   createReportFilters,
 } from './helpers/ReportHelpers';
+import { logger } from './helpers/LoggerHelper';
 
 import type { IExecuteFunctions } from 'n8n-workflow';
 import type { IDataObject, INodeExecutionData } from 'n8n-workflow';
@@ -295,8 +296,8 @@ function processCustomerConsumptionData(
   if (customerLookup[customerGlobalId]?.customerName) {
     customerName = customerLookup[customerGlobalId].customerName as string;
   } else {
-    console.log(
-      `[INFO] Customer details not found for ID: ${customerGlobalId}, using accountName instead`,
+    logger.info(
+      `Consumption: Customer details not found for ID: ${customerGlobalId}, using accountName instead`,
     );
   }
 
@@ -732,10 +733,10 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       // ------- DATA RETRIEVAL PHASE -------
 
-      console.log('[INFO] Starting data retrieval phase...');
+      logger.info('Consumption: Starting data retrieval phase...');
 
       // Fetch Customer data for enrichment
-      console.log('[INFO] Fetching customer data for enrichment...');
+      logger.info('Consumption: Fetching customer data for enrichment...');
       const customersEndpoint = '/msp/v2/customers';
       const customers = (await druvaMspApiRequestAllItems.call(
         this,
@@ -749,10 +750,10 @@ export async function executeConsumptionBillingAnalyzerOperation(
       // Create a lookup object for quick customer reference
       const customerLookup = createCustomerLookup(customers);
 
-      console.log(`[INFO] Retrieved ${customers.length} customers`);
+      logger.info(`Consumption: Retrieved ${customers.length} customers`);
 
       // Fetch Consumption Data
-      console.log('[INFO] Fetching consumption data...');
+      logger.info('Consumption: Fetching consumption data...');
       const consumptionEndpoint = '/msp/reporting/v1/reports/consumptionItemized';
 
       // Prepare request body with the correct structure - always fetch all data with maximum page size
@@ -769,11 +770,11 @@ export async function executeConsumptionBillingAnalyzerOperation(
         'data',
       )) as IDataObject[];
 
-      console.log(`[INFO] Retrieved ${consumptionData.length} consumption records`);
+      logger.info(`Consumption: Retrieved ${consumptionData.length} consumption records`);
 
       // Validate the data retrieved
       if (!consumptionData.length) {
-        console.log('[WARNING] No consumption data found for the selected period and filters');
+        logger.warn('Consumption: No consumption data found for the selected period and filters');
 
         // Return informative error when no data is found
         return this.helpers.returnJsonArray({
@@ -793,7 +794,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       // ------- PROCESSING PHASE -------
 
-      console.log('[INFO] Processing consumption data...');
+      logger.info('Consumption: Processing consumption data...');
 
       // Parse date strings to Date objects for calculations
       const startDateObj = new Date(startDate);
@@ -816,25 +817,25 @@ export async function executeConsumptionBillingAnalyzerOperation(
         endDateObj,
       );
 
-      console.log(`[INFO] Processed data for ${processedData.length} customers`);
+      logger.info(`Consumption: Processed data for ${processedData.length} customers`);
 
       // ------- OUTPUT GENERATION PHASE -------
 
-      console.log('[INFO] Generating final output...');
+      logger.info('Consumption: Generating final output...');
 
       // Validate the output data
       const validationResult = validateOutputData(processedData);
 
       if (!validationResult.isValid) {
-        console.log('[WARNING] Validation issues found in the processed data:');
+        logger.warn('Consumption: Validation issues found in the processed data:');
         for (const issue of validationResult.issues) {
-          console.log(`- ${issue}`);
+          logger.warn(`Consumption: - ${issue}`);
         }
       }
 
       // Flatten the hierarchical structure to a simpler format
       const flattenedData = flattenConsumptionData(processedData);
-      console.log(`[INFO] Flattened data into ${flattenedData.length} records`);
+      logger.info(`Consumption: Flattened data into ${flattenedData.length} records`);
 
       // Return the flattened data
       responseData = this.helpers.returnJsonArray(flattenedData);
@@ -842,6 +843,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
     return responseData;
   } catch (error) {
+    logger.error('Consumption: Error during execution', error);
     if (this.continueOnFail()) {
       return this.helpers.returnJsonArray({ error: error.message });
     }

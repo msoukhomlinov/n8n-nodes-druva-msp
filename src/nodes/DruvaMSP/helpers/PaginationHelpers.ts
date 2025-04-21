@@ -9,6 +9,7 @@ import type {
 
 import { druvaMspApiRequest } from './ApiRequestHelpers';
 import { getDruvaMspAccessToken } from './AuthHelpers';
+import { logger } from './LoggerHelper';
 
 /**
  * Helper class for managing pagination through API requests.
@@ -44,15 +45,17 @@ export class PaginationHelper {
 
     // Safety check for maximum number of pagination requests
     if (this.loopCounter > this.maxLoopCount) {
-      console.log(
-        `[WARNING] Reached maximum number of pagination requests (${this.maxLoopCount}). This might indicate an API issue.`,
+      logger.warn(
+        `Pagination: Reached maximum number of pagination requests (${this.maxLoopCount}). This might indicate an API issue.`,
       );
       return false;
     }
 
     // Check if we've seen this token before (loop detection)
     if (this.seenTokens.has(token)) {
-      console.log(`[WARNING] Detected pagination loop with token: ${token}. Stopping pagination.`);
+      logger.warn(
+        `Pagination: Detected pagination loop with token: ${token}. Stopping pagination.`,
+      );
       return false;
     }
 
@@ -154,8 +157,8 @@ export async function druvaMspApiRequestAllItems(
     if (query.nextPageToken) {
       // Check if we've seen this token before (loop detection)
       if (seenTokens.has(query.nextPageToken as string)) {
-        console.log(
-          `[WARNING] Detected pagination loop with token: ${query.nextPageToken}. Stopping pagination.`,
+        logger.warn(
+          `AllItems: Detected pagination loop with token: ${query.nextPageToken}. Stopping pagination.`,
         );
         break;
       }
@@ -168,8 +171,8 @@ export async function druvaMspApiRequestAllItems(
 
       // Safety check for maximum number of pagination requests
       if (loopCounter > MAX_LOOP_COUNT) {
-        console.log(
-          `[WARNING] Reached maximum number of pagination requests (${MAX_LOOP_COUNT}). This might indicate an API issue.`,
+        logger.warn(
+          `AllItems: Reached maximum number of pagination requests (${MAX_LOOP_COUNT}). This might indicate an API issue.`,
         );
         break;
       }
@@ -200,8 +203,8 @@ export async function druvaMspApiRequestAllItemsForOptions(
   body?: IDataObject,
   initialQs?: IDataObject,
 ): Promise<IDataObject[]> {
-  console.log(`[DEBUG] Options Pagination - Starting paginated request to ${endpoint}`);
-  console.log(`[DEBUG] Options Pagination - Looking for items under key ${itemsKey}`);
+  logger.debug(`Options: Starting paginated request to ${endpoint}`);
+  logger.debug(`Options: Looking for items under key ${itemsKey}`);
 
   // Get credentials for API access
   const credentials = await this.getCredentials('druvaMspApi');
@@ -224,13 +227,11 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
   do {
     pageCount++;
-    console.log(`[DEBUG] Options Pagination - Fetching page ${pageCount}`);
+    logger.debug(`Options: Fetching page ${pageCount}`);
 
     // Safety check - limit total pages to prevent excessive API calls
     if (pageCount > MAX_TOTAL_PAGES) {
-      console.warn(
-        `[WARN] Options Pagination - Reached maximum page limit of ${MAX_TOTAL_PAGES}, stopping pagination`,
-      );
+      logger.warn(`Options: Reached maximum page limit of ${MAX_TOTAL_PAGES}, stopping pagination`);
       break;
     }
 
@@ -239,15 +240,15 @@ export async function druvaMspApiRequestAllItemsForOptions(
     if (pageToken) {
       // For subsequent requests, ONLY include pageToken parameter with no other parameters
       qs = { pageToken };
-      console.log(`[DEBUG] Options Pagination - Using pageToken: ${pageToken}`);
-      console.log(
-        '[DEBUG] Options Pagination - IMPORTANT: Using only pageToken with no other parameters as per API requirements',
+      logger.debug(`Options: Using pageToken: ${pageToken}`);
+      logger.debug(
+        'Options: IMPORTANT: Using only pageToken with no other parameters as per API requirements',
       );
 
       // Check for repeat tokens to prevent infinite loops
       if (previousTokens.has(pageToken)) {
-        console.warn(
-          `[WARN] Options Pagination - Detected repeat token "${pageToken}" - stopping pagination to prevent infinite loop`,
+        logger.warn(
+          `Options: Detected repeat token "${pageToken}" - stopping pagination to prevent infinite loop`,
         );
         pageToken = null;
         break;
@@ -264,13 +265,13 @@ export async function druvaMspApiRequestAllItemsForOptions(
         qs.pageSize = pageSize;
       }
 
-      console.log('[DEBUG] Options Pagination - First request includes initial parameters:', qs);
+      logger.debug(`Options: First request includes initial parameters: ${JSON.stringify(qs)}`);
     }
 
     try {
       // Make the API request
       const url = `${baseUrl}${endpoint}`;
-      console.log(`[DEBUG] Options Pagination - Making request to: ${url}`);
+      logger.debug(`Options: Making request to: ${url}`);
 
       const response = (await this.helpers.request({
         method: method as IHttpRequestOptions['method'],
@@ -284,8 +285,8 @@ export async function druvaMspApiRequestAllItemsForOptions(
         json: true,
       })) as IDataObject;
 
-      console.log(`[DEBUG] Options Pagination - Response received for page ${pageCount}`);
-      console.log('[DEBUG] Options Pagination - Response keys:', Object.keys(response));
+      logger.debug(`Options: Response received for page ${pageCount}`);
+      logger.debug(`Options: Response keys: ${Object.keys(response).join(', ')}`);
 
       const items = response[itemsKey] as IDataObject[] | undefined;
       // API returns nextPageToken but expects pageToken in requests
@@ -293,7 +294,7 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
       // Process the retrieved items
       if (Array.isArray(items)) {
-        console.log(`[DEBUG] Options Pagination - Found ${items.length} items on this page`);
+        logger.debug(`Options: Found ${items.length} items on this page`);
 
         // Check if we're getting inefficient pagination (single items per page)
         if (items.length === 1) {
@@ -301,8 +302,8 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
           // If we've had too many consecutive single-item pages, warn and consider stopping
           if (consecutiveSingleItemPages >= MAX_CONSECUTIVE_SINGLE_ITEM_PAGES) {
-            console.warn(
-              `[WARN] Options Pagination - Received ${consecutiveSingleItemPages} consecutive pages with only 1 item. This appears to be the Druva API's normal behavior for Events, but is inefficient.`,
+            logger.warn(
+              `Options: Received ${consecutiveSingleItemPages} consecutive pages with only 1 item. This appears to be the Druva API's normal behavior for Events, but is inefficient.`,
             );
           }
         } else {
@@ -312,34 +313,31 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
         allItems.push(...items);
       } else {
-        console.warn(
-          `[WARN] Options Pagination - Expected an array under key ${itemsKey} but received:`,
-          items,
+        logger.warn(
+          `Options: Expected an array under key ${itemsKey} but received: ${JSON.stringify(items)}`,
         );
-        console.log('[DEBUG] Options Pagination - Response structure:', response);
+        logger.debug(`Options: Response structure: ${JSON.stringify(response)}`);
         pageToken = null;
       }
 
       if (pageToken) {
-        console.log(`[DEBUG] Options Pagination - Next page token found: ${pageToken}`);
+        logger.debug(`Options: Next page token found: ${pageToken}`);
       } else {
-        console.log('[DEBUG] Options Pagination - No next page token found, this is the last page');
+        logger.debug('Options: No next page token found, this is the last page');
       }
 
       if (items === undefined || items.length === 0) {
-        console.log(
-          '[DEBUG] Options Pagination - No items found on this page, stopping pagination',
-        );
+        logger.debug('Options: No items found on this page, stopping pagination');
         pageToken = null;
       }
     } catch (error) {
-      console.error(`[ERROR] Options Pagination - Failed during page ${pageCount}:`, error);
+      logger.error(`Options: Failed during page ${pageCount}:`, error as Error);
       throw error;
     }
   } while (pageToken);
 
-  console.log(
-    `[DEBUG] Options Pagination - Complete. Retrieved ${allItems.length} items total across ${pageCount} pages`,
+  logger.debug(
+    `Options: Complete. Retrieved ${allItems.length} items total across ${pageCount} pages`,
   );
   return allItems;
 }
@@ -383,7 +381,7 @@ export async function druvaMspApiRequestAllReportItems(
       // For Druva API: "You can query using the pageToken/nextPageToken or filters; you cannot provide both simultaneously."
       // For report endpoints, API returns "nextPageToken" but expects "pageToken" in requests
       requestBody = { pageToken: nextPageToken };
-      console.log(`[DEBUG] Using only pageToken for pagination: ${nextPageToken}`);
+      logger.debug(`Report: Using only pageToken for pagination: ${nextPageToken}`);
 
       // Check for token loop - if detected, stop pagination
       if (!paginationHelper.trackToken(nextPageToken)) {
@@ -392,7 +390,7 @@ export async function druvaMspApiRequestAllReportItems(
     } else {
       // For the first request, use the initial body with all filters
       requestBody = firstRequestBody;
-      console.log('[DEBUG] Using initial request body with filters for first page');
+      logger.debug('Report: Using initial request body with filters for first page');
 
       // Even without a token, increment the loop counter for safety limits
       if (!paginationHelper.incrementCounter()) {
@@ -401,7 +399,7 @@ export async function druvaMspApiRequestAllReportItems(
     }
 
     // Debug logging to show request structure
-    console.log(`[DEBUG] Request body for ${endpoint}:`, JSON.stringify(requestBody, null, 2));
+    logger.debug(`Report: Request body for ${endpoint}: ${JSON.stringify(requestBody, null, 2)}`);
 
     // Make the request
     const response = (await druvaMspApiRequest.call(
@@ -416,8 +414,8 @@ export async function druvaMspApiRequestAllReportItems(
     nextPageToken = response.nextPageToken as string | null | undefined;
 
     // Debug logging for response
-    console.log(`[DEBUG] Response from ${endpoint} has nextPageToken: ${nextPageToken}`);
-    console.log(`[DEBUG] Response contains ${items ? items.length : 0} items`);
+    logger.debug(`Report: Response from ${endpoint} has nextPageToken: ${nextPageToken}`);
+    logger.debug(`Report: Response contains ${items ? items.length : 0} items`);
 
     // Add items to our result array if we have any
     if (paginationHelper.hasItems(items)) {
@@ -474,12 +472,12 @@ export async function druvaMspApiRequestAllReportV2Items(
       requestBody = { pageToken: nextPageToken };
 
       // Debug logging
-      console.log(`[DEBUG] Using only pageToken for pagination: ${nextPageToken}`);
+      logger.debug(`ReportV2: Using only pageToken for pagination: ${nextPageToken}`);
 
       // Loop detection - check if we've seen this token before
       if (seenTokens.has(nextPageToken)) {
-        console.log(
-          `[WARNING] Detected pagination loop with token: ${nextPageToken}. Stopping pagination.`,
+        logger.warn(
+          `ReportV2: Detected pagination loop with token: ${nextPageToken}. Stopping pagination.`,
         );
         break;
       }
@@ -489,19 +487,19 @@ export async function druvaMspApiRequestAllReportV2Items(
     } else {
       // For the first request, use the initial body with all filters
       requestBody = firstRequestBody;
-      console.log('[DEBUG] Using initial request body with filters for first page');
+      logger.debug('ReportV2: Using initial request body with filters for first page');
     }
 
     // Debug logging to show request structure
-    console.log(`[DEBUG] Request body for ${endpoint}:`, JSON.stringify(requestBody, null, 2));
+    logger.debug(`ReportV2: Request body for ${endpoint}: ${JSON.stringify(requestBody, null, 2)}`);
 
     // Increment request counter
     loopCounter++;
 
     // Safety check for maximum number of pagination requests
     if (loopCounter > MAX_LOOP_COUNT) {
-      console.log(
-        `[WARNING] Reached maximum number of pagination requests (${MAX_LOOP_COUNT}). This might indicate an API issue.`,
+      logger.warn(
+        `ReportV2: Reached maximum number of pagination requests (${MAX_LOOP_COUNT}). This might indicate an API issue.`,
       );
       break;
     }
@@ -519,8 +517,8 @@ export async function druvaMspApiRequestAllReportV2Items(
     nextPageToken = response.nextPageToken as string | null | undefined;
 
     // Debug logging for response
-    console.log(`[DEBUG] Response from ${endpoint} has nextPageToken: ${nextPageToken}`);
-    console.log(`[DEBUG] Response contains ${items ? items.length : 0} items`);
+    logger.debug(`ReportV2: Response from ${endpoint} has nextPageToken: ${nextPageToken}`);
+    logger.debug(`ReportV2: Response contains ${items ? items.length : 0} items`);
 
     // Add items to our result array
     if (Array.isArray(items) && items.length > 0) {
@@ -567,8 +565,8 @@ export async function druvaMspApiRequestAllPagedItems(
 
     // Safety check for maximum number of pagination requests
     if (loopCounter > MAX_LOOP_COUNT) {
-      console.log(
-        `[WARNING] Reached maximum number of pagination requests (${MAX_LOOP_COUNT}). This might indicate an API issue.`,
+      logger.warn(
+        `PagedItems: Reached maximum number of pagination requests (${MAX_LOOP_COUNT}). This might indicate an API issue.`,
       );
       break;
     }
@@ -591,8 +589,8 @@ export async function druvaMspApiRequestAllPagedItems(
       // Loop detection - if we got the same number of items as before and it's not a full page,
       // we might be in a loop
       if (items.length === previousItemCount && items.length < pageSize) {
-        console.log(
-          `[WARNING] Detected potential pagination loop at page ${page}. Stopping pagination.`,
+        logger.warn(
+          `PagedItems: Detected potential pagination loop at page ${page}. Stopping pagination.`,
         );
         break;
       }

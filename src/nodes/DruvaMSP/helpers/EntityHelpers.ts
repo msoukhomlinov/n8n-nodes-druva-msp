@@ -1,6 +1,7 @@
 import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 
 import { druvaMspApiRequest } from './ApiRequestHelpers';
+import { logger } from './LoggerHelper';
 
 /**
  * Retrieves the customer ID for a specific tenant.
@@ -14,7 +15,7 @@ export async function getTenantCustomerId(
   this: IExecuteFunctions,
   tenantId: string,
 ): Promise<string> {
-  console.log(`[DEBUG] Looking up customer ID for tenant: ${tenantId}`);
+  logger.debug(`Tenant: Looking up customer ID for tenant: ${tenantId}`);
 
   // Get all tenants and find the matching one
   try {
@@ -31,21 +32,22 @@ export async function getTenantCustomerId(
 
     if (response.tenants && Array.isArray(response.tenants)) {
       const tenants = response.tenants as IDataObject[];
-      console.log(
-        `[DEBUG] Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`,
+      logger.debug(
+        `Tenant: Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`,
       );
 
       const targetTenant = tenants.find((tenant) => tenant.id === tenantId);
 
       if (targetTenant?.customerID) {
         const customerId = targetTenant.customerID as string;
-        console.log(`[DEBUG] Found customer ID ${customerId} for tenant ${tenantId}`);
+        logger.debug(`Tenant: Found customer ID ${customerId} for tenant ${tenantId}`);
         return customerId;
       }
     }
 
     throw new Error(`Tenant with ID ${tenantId} not found or missing customer ID`);
   } catch (error) {
+    logger.error(`Tenant: Failed to retrieve customer ID for tenant ${tenantId}`, error as Error);
     throw new Error(
       `Failed to retrieve customer ID for tenant ${tenantId}: ${(error as Error).message}`,
     );

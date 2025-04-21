@@ -9,6 +9,7 @@ import type {
 import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
 import { getServicePlanStatusLabel } from './helpers/ValueConverters';
 import { enrichApiResponse, enrichApiResponseArray } from './helpers/ValueConverters';
+import { logger } from './helpers/LoggerHelper';
 
 export async function executeServicePlanOperation(
   this: IExecuteFunctions,
@@ -57,25 +58,19 @@ export async function executeServicePlanOperation(
         ? (this.getNodeParameter('nameContains', i, '') as string).toLowerCase()
         : '';
 
-      // Log filter settings
-      if (filterByEdition) {
-        console.log(
-          `[INFO] Druva MSP API - Post-processing filter: Filtering service plans by editions: ${selectedEditions.join(', ')}`,
-        );
-      }
-      if (filterByFeature) {
-        console.log(
-          `[INFO] Druva MSP API - Post-processing filter: Filtering service plans by features: ${selectedFeatures.join(', ')}`,
-        );
-      }
-      if (filterByStatus && selectedStatus !== undefined) {
-        console.log(
-          `[INFO] Druva MSP API - Post-processing filter: Filtering service plans by status: ${selectedStatus}`,
-        );
-      }
-      if (filterByName && nameContains) {
-        console.log(
-          `[INFO] Druva MSP API - Post-processing filter: Filtering service plans with name containing: ${nameContains}`,
+      // Log active filters in a consolidated format
+      const activeFilters = [];
+      if (filterByEdition && selectedEditions.length > 0)
+        activeFilters.push(`editions: ${selectedEditions.join(', ')}`);
+      if (filterByFeature && selectedFeatures.length > 0)
+        activeFilters.push(`features: ${selectedFeatures.join(', ')}`);
+      if (filterByStatus && selectedStatus !== undefined)
+        activeFilters.push(`status: ${selectedStatus}`);
+      if (filterByName && nameContains) activeFilters.push(`name contains: ${nameContains}`);
+
+      if (activeFilters.length > 0) {
+        logger.debug(
+          `[INFO-START] Druva MSP API - Post-processing filters applied: ${activeFilters.join('; ')}`,
         );
       }
 
@@ -153,9 +148,9 @@ export async function executeServicePlanOperation(
         });
       }
 
-      // Add a message about the number of service plans found after filtering
-      console.log(
-        `[INFO] Druva MSP API - Found ${filteredServicePlans.length} service plans after filtering (out of ${servicePlans.length} total)`,
+      // Add a summary message about the number of service plans found after filtering
+      logger.debug(
+        `[INFO-END] Druva MSP API - Filter summary: ${filteredServicePlans.length}/${servicePlans.length} service plans match criteria`,
       );
 
       responseData = this.helpers.returnJsonArray(filteredServicePlans);

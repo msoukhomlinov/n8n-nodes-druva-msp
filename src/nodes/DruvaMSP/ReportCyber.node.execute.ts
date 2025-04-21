@@ -8,6 +8,7 @@ import type {
 import { druvaMspApiRequest, druvaMspApiRequestAllReportItems } from './GenericFunctions';
 import { REPORT_FIELD_NAMES, REPORT_OPERATORS } from './helpers/Constants';
 import { getRelativeDateRange } from './helpers/DateHelpers';
+import { logger } from './helpers/LoggerHelper';
 
 /**
  * Executes the selected Report - Cyber Resilience operation.
@@ -136,12 +137,16 @@ export async function executeReportCyberOperation(
         };
 
         // Debug log to see the structure
-        console.log(
-          `[DEBUG] Pagination request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
         );
 
         const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         // Create filter array to collect all filters
@@ -195,13 +200,17 @@ export async function executeReportCyberOperation(
           };
         }
 
-        console.log(
-          `[DEBUG] Final request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
     } else if (operation === 'getDataProtectionRisk') {
@@ -334,12 +343,16 @@ export async function executeReportCyberOperation(
         };
 
         // Debug log to see the structure
-        console.log(
-          `[DEBUG] Pagination request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
         );
 
         const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         // Create filter array to collect all filters
@@ -394,13 +407,17 @@ export async function executeReportCyberOperation(
           };
         }
 
-        console.log(
-          `[DEBUG] Final request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
     }

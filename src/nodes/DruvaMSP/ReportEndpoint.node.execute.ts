@@ -8,6 +8,7 @@ import type {
 import { druvaMspApiRequest, druvaMspApiRequestAllReportItems } from './GenericFunctions';
 import { REPORT_FIELD_NAMES, REPORT_OPERATORS } from './helpers/Constants';
 import { getRelativeDateRange } from './helpers/DateHelpers';
+import { logger } from './helpers/LoggerHelper';
 
 /**
  * Executes the selected Report - Endpoint operation.
@@ -129,9 +130,8 @@ export async function executeReportEndpointOperation(
         };
 
         // Debug log to see the structure
-        console.log(
-          `[DEBUG] Pagination request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
         );
 
         // The Users report returns data in the 'data' key, not 'items'
@@ -141,6 +141,11 @@ export async function executeReportEndpointOperation(
           requestBody,
           'data',
         );
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         // Create filter array to collect all filters
@@ -184,15 +189,19 @@ export async function executeReportEndpointOperation(
           },
         };
 
-        console.log(
-          `[DEBUG] Final request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
 
         // Extract data from the 'data' key instead of 'items'
         const items = (response as IDataObject)?.data ?? [];
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
     } else if (operation === 'getUserRollout') {
@@ -254,9 +263,8 @@ export async function executeReportEndpointOperation(
         };
 
         // Debug log to see the structure
-        console.log(
-          `[DEBUG] Pagination request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
         );
 
         // The User Rollout report returns data in the 'data' key, not 'items'
@@ -266,6 +274,11 @@ export async function executeReportEndpointOperation(
           requestBody,
           'data',
         );
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         // Create filter array to collect all filters
@@ -309,15 +322,19 @@ export async function executeReportEndpointOperation(
           },
         };
 
-        console.log(
-          `[DEBUG] Final request body for ${endpoint}:`,
-          JSON.stringify(requestBody, null, 2),
+        logger.debug(
+          `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
 
         // Extract data from the 'data' key instead of 'items'
         const items = (response as IDataObject)?.data ?? [];
+
+        logger.debug(
+          `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
+        );
+
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
     } else if (operation === 'getUserProvisioning') {

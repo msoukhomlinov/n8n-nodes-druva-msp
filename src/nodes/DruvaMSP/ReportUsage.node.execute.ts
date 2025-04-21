@@ -14,6 +14,7 @@ import {
   createReportFilters,
   createUsageDescriptionFilter,
 } from './helpers/ReportHelpers';
+import { logger } from './helpers/LoggerHelper';
 
 import type { IExecuteFunctions } from 'n8n-workflow';
 import type { IDataObject, INodeExecutionData, NodeApiError } from 'n8n-workflow';
@@ -201,9 +202,8 @@ export async function executeReportUsageOperation(
       };
 
       // Debug logging to show request details
-      console.log('[DEBUG] Druva MSP API Request:');
-      console.log(`[DEBUG] Endpoint: ${endpoint}`);
-      console.log(`[DEBUG] Request Body: ${JSON.stringify(body, null, 2)}`);
+      logger.debug(`ReportUsage.${operation}: Making API request to ${endpoint}`);
+      logger.debug(`ReportUsage.${operation}: Request body: ${JSON.stringify(body, null, 2)}`);
 
       if (returnAll) {
         // For POST requests with pagination in the body, use our centralized function
@@ -213,19 +213,29 @@ export async function executeReportUsageOperation(
           body,
           'data',
         );
+
+        logger.debug(
+          `[DEBUG-DRUVA-MSP] ReportUsage.${operation}: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} total items across all pages`,
+        );
+
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
-        console.log('[DEBUG] API Response Status:', response ? 'Success' : 'Empty');
-        if (response) {
-          console.log(
-            `[DEBUG] Response Data Count: ${
-              (response as IDataObject)?.data
-                ? ((response as IDataObject).data as IDataObject[]).length
-                : 0
-            }`,
+
+        const itemCount = (response as IDataObject)?.data
+          ? ((response as IDataObject).data as IDataObject[]).length
+          : 0;
+
+        logger.debug(
+          `[DEBUG-DRUVA-MSP] ReportUsage.${operation}: Retrieved ${itemCount} items from first page`,
+        );
+
+        if ((response as IDataObject).nextPageToken) {
+          logger.debug(
+            `[DEBUG-DRUVA-MSP] ReportUsage.${operation}: More items available in subsequent pages`,
           );
         }
+
         const items = (response as IDataObject)?.data ?? [];
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }

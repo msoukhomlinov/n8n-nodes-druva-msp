@@ -14,6 +14,9 @@ import {
   enrichApiResponseWithDates,
 } from './helpers/ValueConverters';
 
+// First, import the logger at the top of the file
+import { logger } from './helpers/LoggerHelper';
+
 /**
  * Task response interface
  */
@@ -68,7 +71,7 @@ export async function executeTaskOperation(
       const response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as ITaskResponse;
 
       // Log the field names for debugging
-      console.log('[DEBUG] Task API Response Fields:', Object.keys(response));
+      logger.debug(`Task: API Response Fields: ${Object.keys(response).join(', ')}`);
 
       // 1. First enrich the response with human-readable labels
       const enrichedWithLabels = enrichApiResponse(response, {
@@ -85,7 +88,7 @@ export async function executeTaskOperation(
       if ('createdOn' in response) dateFields.push('createdOn');
       if ('updatedOn' in response) dateFields.push('updatedOn');
 
-      console.log('[DEBUG] Date fields to enrich:', dateFields);
+      logger.debug(`Task: Date fields to enrich: ${dateFields.join(', ')}`);
 
       const enrichedWithDates = enrichApiResponseWithDates(enrichedWithLabels, dateFields);
 
@@ -130,7 +133,7 @@ export async function executeTaskOperation(
 
         // Log the field names for debugging on first attempt
         if (attempts === 1) {
-          console.log('[DEBUG] Task API Response Fields:', Object.keys(response));
+          logger.debug(`Task: API Response Fields: ${Object.keys(response).join(', ')}`);
         }
 
         // 1. First enrich the response with human-readable labels
@@ -149,7 +152,7 @@ export async function executeTaskOperation(
         if ('updatedOn' in response) dateFields.push('updatedOn');
 
         if (attempts === 1) {
-          console.log('[DEBUG] Date fields to enrich:', dateFields);
+          logger.debug(`Task: Date fields to enrich: ${dateFields.join(', ')}`);
         }
 
         const enrichedWithDates = enrichApiResponseWithDates(enrichedWithLabels, dateFields);

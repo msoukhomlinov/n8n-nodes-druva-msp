@@ -18,6 +18,7 @@ import {
   getTenantTypeLabel,
   getProductIdLabel,
 } from './helpers/ValueConverters';
+import { logger } from './helpers/LoggerHelper';
 
 export async function executeTenantOperation(
   this: IExecuteFunctions,
@@ -86,7 +87,7 @@ export async function executeTenantOperation(
       // as that's what the API expects according to the documentation
       if (filterByCustomer && customerId) {
         qs.customerIds = customerId;
-        console.log(`[INFO] Druva MSP API - Filtering tenants by customer ID: ${customerId}`);
+        logger.info(`Tenant: Filtering tenants by customer ID: ${customerId}`);
       }
 
       if (!returnAll) {
@@ -124,8 +125,8 @@ export async function executeTenantOperation(
             productID: getProductIdLabel,
           });
         } else {
-          console.warn(
-            `[WARN] Druva MSP API - Unexpected response format for Tenant Get Many: ${JSON.stringify(response)}`,
+          logger.warn(
+            `Tenant: Unexpected response format for Tenant Get Many: ${JSON.stringify(response)}`,
           );
           responseData = [];
         }
@@ -133,9 +134,7 @@ export async function executeTenantOperation(
 
       // Filter by status if requested
       if (filterByStatus && statusFilter !== undefined) {
-        console.log(
-          `[INFO] Druva MSP API - Post-processing filter: Filtering tenants by status ${statusFilter}`,
-        );
+        logger.info(`Tenant: Post-processing filter: Filtering tenants by status ${statusFilter}`);
         responseData = (responseData as IDataObject[]).filter(
           (tenant) => tenant.status === statusFilter,
         );
@@ -143,9 +142,7 @@ export async function executeTenantOperation(
 
       // Filter by tenant type if requested
       if (filterByType && typeFilter !== undefined) {
-        console.log(
-          `[INFO] Druva MSP API - Post-processing filter: Filtering tenants by type ${typeFilter}`,
-        );
+        logger.info(`Tenant: Post-processing filter: Filtering tenants by type ${typeFilter}`);
         responseData = (responseData as IDataObject[]).filter(
           (tenant) => tenant.tenantType === typeFilter,
         );
@@ -153,8 +150,8 @@ export async function executeTenantOperation(
 
       // Filter by product if requested
       if (filterByProduct && productFilter !== undefined) {
-        console.log(
-          `[INFO] Druva MSP API - Post-processing filter: Filtering tenants by product ${productFilter}`,
+        logger.info(
+          `Tenant: Post-processing filter: Filtering tenants by product ${productFilter}`,
         );
         responseData = (responseData as IDataObject[]).filter(
           (tenant) => tenant.productID === productFilter,
@@ -162,32 +159,32 @@ export async function executeTenantOperation(
       }
 
       // Add a message about the number of tenants found after filtering
-      console.log(
-        `[INFO] Druva MSP API - Found ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : 0} tenants after filtering`,
+      logger.info(
+        `Tenant: Found ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : 0} tenants after filtering`,
       );
 
       // Add detailed debugging of the final data being returned
-      console.log(
-        `[DEBUG] Druva MSP API - Final response data structure: ${JSON.stringify(Array.isArray(responseData) && (responseData as IDataObject[]).length > 0 ? (responseData as IDataObject[])[0] : 'No data')}`,
+      logger.debug(
+        `Tenant: Final response data structure: ${JSON.stringify(Array.isArray(responseData) && (responseData as IDataObject[]).length > 0 ? (responseData as IDataObject[])[0] : 'No data')}`,
       );
-      console.log(
-        `[DEBUG] Druva MSP API - First 3 items in response: ${JSON.stringify(Array.isArray(responseData) ? (responseData as IDataObject[]).slice(0, 3) : 'Not an array')}`,
+      logger.debug(
+        `Tenant: First 3 items in response: ${JSON.stringify(Array.isArray(responseData) ? (responseData as IDataObject[]).slice(0, 3) : 'Not an array')}`,
       );
 
       // Make sure responseData is correctly assigned for the return statement
       if (Array.isArray(responseData)) {
-        console.log(
-          `[DEBUG] Druva MSP API - responseData is properly an array of length ${(responseData as IDataObject[]).length}`,
+        logger.debug(
+          `Tenant: responseData is properly an array of length ${(responseData as IDataObject[]).length}`,
         );
       } else {
         // Convert to array if not already
-        console.log('[DEBUG] Druva MSP API - responseData is NOT an array, converting to array');
+        logger.debug('Tenant: responseData is NOT an array, converting to array');
         responseData = [responseData as IDataObject];
       }
 
       // Important debug statement right before moving to the next operation
-      console.log(
-        `[DEBUG] Druva MSP API - End of getMany operation, responseData has ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : 'unknown'} items`,
+      logger.debug(
+        `Tenant: End of getMany operation, responseData has ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : 'unknown'} items`,
       );
     } else if (operation === 'suspend') {
       // Parameter
@@ -208,7 +205,7 @@ export async function executeTenantOperation(
 
         // Use the correct API endpoint that includes both customer ID and tenant ID
         const endpoint = `/msp/v2/customers/${customerId}/tenants/${tenantId}/suspend`;
-        console.log(`[DEBUG] Druva MSP API - Suspending tenant at endpoint: ${endpoint}`);
+        logger.debug(`Tenant: Suspending tenant at endpoint: ${endpoint}`);
 
         // POST request with no body
         const suspendResponse = (await druvaMspApiRequest.call(
@@ -220,7 +217,7 @@ export async function executeTenantOperation(
         // If we should wait for task completion
         if (waitForCompletion && suspendResponse.task && (suspendResponse.task as IDataObject).id) {
           const taskId = (suspendResponse.task as IDataObject).id as string;
-          console.log(`[DEBUG] Druva MSP API - Waiting for task ${taskId} to complete`);
+          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
 
           // Wait for the task to complete
           const taskResponse = await waitForTaskCompletion.call(this, taskId);
@@ -251,7 +248,7 @@ export async function executeTenantOperation(
 
         // Use the correct API endpoint that includes both customer ID and tenant ID
         const endpoint = `/msp/v2/customers/${customerId}/tenants/${tenantId}/unsuspend`;
-        console.log(`[DEBUG] Druva MSP API - Unsuspending tenant at endpoint: ${endpoint}`);
+        logger.debug(`Tenant: Unsuspending tenant at endpoint: ${endpoint}`);
 
         // POST request with no body
         const unsuspendResponse = (await druvaMspApiRequest.call(
@@ -267,7 +264,7 @@ export async function executeTenantOperation(
           (unsuspendResponse.task as IDataObject).id
         ) {
           const taskId = (unsuspendResponse.task as IDataObject).id as string;
-          console.log(`[DEBUG] Druva MSP API - Waiting for task ${taskId} to complete`);
+          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
 
           // Wait for the task to complete
           const taskResponse = await waitForTaskCompletion.call(this, taskId);
@@ -291,25 +288,23 @@ export async function executeTenantOperation(
   }
 
   // Return the final data
-  console.log(
-    `[DEBUG] Druva MSP API - Finalizing execution, responseData has ${Array.isArray(responseData) ? responseData.length : 'unknown'} items`,
+  logger.debug(
+    `Tenant: Finalizing execution, responseData has ${Array.isArray(responseData) ? responseData.length : 'unknown'} items`,
   );
-  console.log(
-    `[DEBUG] Druva MSP API - responseData type: ${typeof responseData}, isArray: ${Array.isArray(responseData)}`,
+  logger.debug(
+    `Tenant: responseData type: ${typeof responseData}, isArray: ${Array.isArray(responseData)}`,
   );
 
   // Force the correct structure for responseData
   let returnItems: INodeExecutionData[] = [];
 
   if (Array.isArray(responseData)) {
-    console.log(
-      `[DEBUG] Druva MSP API - Processing array response with ${responseData.length} items`,
-    );
+    logger.debug(`Tenant: Processing array response with ${responseData.length} items`);
     returnItems = responseData.map((item) => ({
       json: item,
     }));
   } else {
-    console.log('[DEBUG] Druva MSP API - Processing single item response');
+    logger.debug('Tenant: Processing single item response');
     returnItems = [
       {
         json: responseData as IDataObject,
@@ -317,6 +312,6 @@ export async function executeTenantOperation(
     ];
   }
 
-  console.log(`[DEBUG] Druva MSP API - Final return contains ${returnItems.length} items`);
+  logger.debug(`Tenant: Final return contains ${returnItems.length} items`);
   return returnItems;
 }
