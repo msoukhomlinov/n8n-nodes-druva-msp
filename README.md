@@ -2,21 +2,6 @@
 
 This package provides n8n nodes to integrate with Druva MSP APIs, allowing Managed Service Providers to automate various operations related to customer management, tenant provisioning, reporting, and more.
 
-## Installation
-
-Follow these steps to install this custom node package in your n8n instance:
-
-1. **Install via npm:**
-   ```
-   npm install n8n-nodes-druva-msp
-   ```
-
-2. **Manual installation:**
-   - Clone this repository
-   - Install dependencies with `npm install`
-   - Build the package using `npm run build`
-   - Copy the `dist` folder to your n8n custom nodes directory
-
 ## Features
 
 The Druva MSP integration provides access to the following key resources:

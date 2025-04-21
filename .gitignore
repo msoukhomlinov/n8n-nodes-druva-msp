@@ -3,6 +3,8 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
 
 # Environment variables
 .env
@@ -32,8 +34,9 @@ logs/
 coverage/
 .nyc_output/
 
-# .cursor-settings.json
-# .cursorcache
-# .cursorconfig
-# .cursorignore
-# .cursorrules
+# Cursor-specific files
+.cursor-settings.json
+.cursorcache
+.cursorconfig
+.cursorignore
+.cursorrules
