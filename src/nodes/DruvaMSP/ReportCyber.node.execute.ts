@@ -131,7 +131,7 @@ export async function executeReportCyberOperation(
           ...(body.actionTypes ? { actionTypes: body.actionTypes } : {}),
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };
@@ -337,7 +337,7 @@ export async function executeReportCyberOperation(
           ...(body.riskLevels ? { riskLevels: body.riskLevels } : {}),
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };

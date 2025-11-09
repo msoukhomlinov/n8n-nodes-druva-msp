@@ -233,12 +233,33 @@ function processEvents(events: IDataObject[], options: IDataObject): IDataObject
 /**
  * A helper function to fetch events with consistent logic for both MSP and Customer events.
  *
+ * API ENDPOINTS:
+ * - MSP Events: GET https://apis.druva.com/msp/v2/events
+ *   Reference: https://developer.druva.com/reference/getmspevents
+ * - Customer Events: GET https://apis.druva.com/msp/v3/customers/{customerID}/events
+ *   Reference: https://developer.druva.com/reference/getcustomerevents
+ *   Note: Recommended polling frequency per customer - only once in 30 minutes
+ *
  * IMPORTANT PAGINATION NOTES:
  * - This implementation uses direct token-based pagination with PaginationHelper to handle large event sets (>1000 events)
  * - We use a high loop count limit (10000) to allow fetching up to ~5 million events while maintaining loop protection
  * - The Druva MSP API has a specific requirement: You cannot use pageToken and filters simultaneously
  * - For subsequent requests after the first page, we must use ONLY the pageToken parameter
- * - The pageSize is set to 500 (API maximum) to minimize the number of requests needed
+ * - The pageSize is set to 100 (API maximum) to minimize the number of requests needed
+ *
+ * QUERY PARAMETERS (API-supported):
+ * - pageSize: Maximum number of events per page (max 100)
+ * - pageToken: Token for pagination (cannot be used with other filters)
+ * - category: Event category filter (EVENT, AUDIT, ALERT) - single value only
+ * - type: Event type filter - single value only
+ * - syslogSeverity: Severity level filter (0-7) - single value only
+ * - startDate: Start date for filtering events (ISO 8601 format)
+ * - endDate: End date for filtering events (ISO 8601 format)
+ *
+ * CLIENT-SIDE FILTERING (not supported by API):
+ * - Multiple category/type/severity values (API only supports single values)
+ * - Feature filtering
+ * - Initiator filtering (searches in event details)
  *
  * @param this The context object.
  * @param endpoint The API endpoint to call.
@@ -263,9 +284,9 @@ async function fetchEvents(
 
   // Always set a page size
   if (returnAll) {
-    queryParams.pageSize = 500; // Maximum allowed by API
+    queryParams.pageSize = 100; // Maximum allowed by API
   } else {
-    queryParams.pageSize = Math.min(limit, 500);
+    queryParams.pageSize = Math.min(limit, 100);
   }
 
   // Handle date selection based on method
@@ -293,6 +314,15 @@ async function fetchEvents(
       const dateRange = getRelativeDateRange(relativeDateRange);
       startDate = dateRange.startDate;
       endDate = dateRange.endDate;
+    }
+
+    // Add date filters as query parameters if API supports them
+    // Note: Dates are sent as ISO 8601 strings (RFC3339 format)
+    if (startDate) {
+      queryParams.startDate = startDate;
+    }
+    if (endDate) {
+      queryParams.endDate = endDate;
     }
   }
 
@@ -335,7 +365,7 @@ async function fetchEvents(
   try {
     if (returnAll) {
       // Use PaginationHelper with a much higher loop count limit (10000 instead of 100)
-      // This allows for retrieving up to ~5 million events (assuming 500 events per page)
+      // This allows for retrieving up to ~5 million events (assuming 100 events per page)
       const paginationHelper = new PaginationHelper(10000);
       events = [];
 
@@ -347,7 +377,7 @@ async function fetchEvents(
       const MAX_CONSECUTIVE_LOW_COUNT = 3; // Stop after 3 consecutive low count pages
 
       logger.info(
-        `Events: Fetching from ${endpoint} (max page size: ${queryParams?.pageSize || 500})`,
+        `Events: Fetching from ${endpoint} (max page size: ${queryParams?.pageSize || 100})`,
       );
 
       do {
@@ -365,17 +395,18 @@ async function fetchEvents(
         )) as IDataObject;
 
         // Extract events from the response
+        // API Response Structure: { events: Event[], nextPageToken?: string }
         const pageEvents = (responseData.events as IDataObject[]) || [];
 
         // Check if we received substantially fewer events than requested
         // This is a strong indicator that we've reached or are near the end of available data
-        let requestedPageSize = 500; // Default value
+        let requestedPageSize = 100; // Default value
         if ('pageToken' in requestParams) {
           // If using page token, get the page size from the original query params
-          requestedPageSize = Number(queryParams.pageSize) || 500;
+          requestedPageSize = Number(queryParams.pageSize) || 100;
         } else {
           // Otherwise get it from the current request params
-          requestedPageSize = Number(requestParams.pageSize) || 500;
+          requestedPageSize = Number(requestParams.pageSize) || 100;
         }
         const lowEventThreshold = Math.floor(requestedPageSize * LOW_EVENT_THRESHOLD);
 
@@ -428,6 +459,8 @@ async function fetchEvents(
 
       logger.info(`Events: Fetch complete - retrieved ${events.length} total events`);
     } else {
+      // For limited results, make a single API request
+      // API Response Structure: { events: Event[], nextPageToken?: string }
       const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, queryParams);
       events = ((response as IDataObject)?.events as IDataObject[]) || [];
     }
@@ -440,10 +473,13 @@ async function fetchEvents(
   const filterByFeature = this.getNodeParameter('filterByFeature', i, false) as boolean;
   const filterByInitiator = this.getNodeParameter('filterByInitiator', i, false) as boolean;
 
-  const hasDateFilter = dateSelectionMethod !== 'allDates' && (startDate || endDate);
+  // Check if we need client-side date filtering
+  // Note: Even if dates are sent to API, we may still need client-side filtering
+  // if the API doesn't support date filtering or if we need to filter already-fetched results
+  const needsClientSideDateFilter = dateSelectionMethod !== 'allDates' && (startDate || endDate);
 
   const hasRemainingFilters =
-    hasDateFilter ||
+    needsClientSideDateFilter ||
     filterByFeature ||
     filterByInitiator ||
     (filterByCategory && categoryValues.length > 1) ||
@@ -456,8 +492,8 @@ async function fetchEvents(
     // Build filters object for applyRemainingFilters function
     const filters: IDataObject = {};
 
-    // Add date range filter if enabled
-    if (hasDateFilter) {
+    // Add date range filter if enabled (for client-side filtering)
+    if (needsClientSideDateFilter) {
       // Create nested structure as expected by applyRemainingFilters
       filters.dateRange = {
         dateRangeValues: {
@@ -521,7 +557,10 @@ export async function executeEventOperation(
 
   try {
     if (operation === 'getManyMspEvents') {
-      // Implement Get Many MSP Events logic
+      // Get Many MSP Events
+      // API: GET https://apis.druva.com/msp/v2/events
+      // Reference: https://developer.druva.com/reference/getmspevents
+      // Note: Currently using v2 endpoint. Verify if v3 endpoint (/msp/v3/events) is available.
       const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
       const limit = this.getNodeParameter('limit', i, 50) as number;
       const options = this.getNodeParameter('options', i, {}) as IDataObject;
@@ -533,7 +572,10 @@ export async function executeEventOperation(
 
       responseData = this.helpers.returnJsonArray(events);
     } else if (operation === 'getManyCustomerEvents') {
-      // Implement Get Many Customer Events logic
+      // Get Many Customer Events
+      // API: GET https://apis.druva.com/msp/v3/customers/{customerID}/events
+      // Reference: https://developer.druva.com/reference/getcustomerevents
+      // IMPORTANT: Recommended polling frequency per customer - only once in 30 minutes
       const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
       const limit = this.getNodeParameter('limit', i, 50) as number;
       const customerId = this.getNodeParameter('customerId', i) as string;
@@ -541,6 +583,9 @@ export async function executeEventOperation(
       const endpoint = `/msp/v3/customers/${customerId}/events`;
 
       logger.info(`Operation: Retrieving customer events for customer ${customerId}`);
+      logger.info(
+        'Note: Recommended polling frequency for customer events is once per 30 minutes per customer',
+      );
       const events = await fetchEvents.call(this, endpoint, returnAll, limit, i, options);
       logger.info(
         `Operation complete: Retrieved ${events.length} events for customer ${customerId}`,

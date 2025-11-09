@@ -32,12 +32,6 @@ export const reportHybridOperations: INodeProperties[] = [
         action: 'Get consumption by backup set report',
       },
       {
-        name: 'Get Storage Consumption by BackupSets Report',
-        value: 'getStorageConsumptionByBackupSetsReport',
-        description: 'Retrieve storage consumption details for backup sets',
-        action: 'Get storage consumption by backup sets report',
-      },
-      {
         name: 'Get DR Failback Activity Report',
         value: 'getDRFailbackActivityReport',
         description: 'Retrieve disaster recovery failback activity',
@@ -56,10 +50,23 @@ export const reportHybridOperations: INodeProperties[] = [
         action: 'Get DR replication activity report',
       },
       {
+        name: 'Get M365 Storage Consumption Report',
+        value: 'getM365StorageConsumptionReport',
+        description: 'Retrieve Microsoft 365 storage consumption details',
+        action: 'Get M365 storage consumption report',
+      },
+      {
         name: 'Get Resource Status Report',
         value: 'getResourceStatusReport',
         description: 'Retrieve resource status information',
         action: 'Get resource status report',
+      },
+      {
+        name: 'Get Storage Consumption by BackupSets Report',
+        value: 'getStorageConsumptionByBackupSetsReport',
+        description:
+          'Retrieve Backup Set wise storage consumption details for individual resources in the organization of MSP customers',
+        action: 'Get storage consumption by backup sets report',
       },
     ],
     default: 'getAlertHistoryReport',
@@ -470,5 +477,52 @@ export const reportHybridFields: INodeProperties[] = [
     default: [],
     description:
       'Alert severity levels to filter by (will be converted to Critical/Warning/Info format expected by API)',
+  },
+
+  /* Fields specific to M365 Storage Consumption Report */
+  {
+    displayName: 'Filter by Workload Name',
+    name: 'filterByWorkloadName',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['reportHybrid'],
+        operation: ['getM365StorageConsumptionReport'],
+      },
+    },
+    default: false,
+    description: 'Whether to filter by Microsoft 365 workload name',
+  },
+  {
+    displayName: 'Workload Name',
+    name: 'workloadName',
+    type: 'multiOptions',
+    options: [
+      {
+        name: 'SharePoint',
+        value: 'SharePoint',
+      },
+      {
+        name: 'OneDrive',
+        value: 'OneDrive',
+      },
+      {
+        name: 'Exchange',
+        value: 'Exchange',
+      },
+      {
+        name: 'Teams',
+        value: 'Teams',
+      },
+    ],
+    displayOptions: {
+      show: {
+        resource: ['reportHybrid'],
+        operation: ['getM365StorageConsumptionReport'],
+        filterByWorkloadName: [true],
+      },
+    },
+    default: [],
+    description: 'Microsoft 365 workload names to filter by',
   },
 ];

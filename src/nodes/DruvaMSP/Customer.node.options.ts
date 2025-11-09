@@ -255,6 +255,34 @@ export const customerFields: INodeProperties[] = [
       },
     },
   },
+  {
+    displayName: 'Update Features',
+    name: 'updateFeatures',
+    type: 'boolean',
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['create'],
+      },
+    },
+    description: 'Whether to set customer features during creation',
+  },
+  {
+    displayName: 'Security Posture and Observability',
+    name: 'securityPostureAndObservability',
+    type: 'boolean',
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['create'],
+        updateFeatures: [true],
+      },
+    },
+    description:
+      'Whether to enable the Security Posture and Observability feature for this customer',
+  },
   /* -------------------------------------------------------------------------- */
   /*                                customer:get                                */
   /* -------------------------------------------------------------------------- */

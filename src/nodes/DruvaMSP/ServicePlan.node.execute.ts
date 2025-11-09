@@ -22,7 +22,7 @@ export async function executeServicePlanOperation(
     if (operation === 'get') {
       // Implement Get logic
       const servicePlanId = this.getNodeParameter('servicePlanId', i) as string;
-      const endpoint = `/msp/v2/servicePlans/${servicePlanId}`;
+      const endpoint = `/msp/v3/servicePlans/${servicePlanId}`;
       const response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as IDataObject;
 
       // Enrich the response with human-readable labels
@@ -35,7 +35,7 @@ export async function executeServicePlanOperation(
       // Implement Get Many logic
       const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
       const limit = this.getNodeParameter('limit', i, 50) as number;
-      const endpoint = '/msp/v2/servicePlans';
+      const endpoint = '/msp/v3/servicePlans';
 
       // Get filter settings
       const filterByEdition = this.getNodeParameter('filterByEdition', i, false) as boolean;
@@ -89,8 +89,9 @@ export async function executeServicePlanOperation(
           status: getServicePlanStatusLabel,
         });
       } else {
+        // v3 API expects pageSize as a string
         const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, {
-          pageSize: limit,
+          pageSize: limit.toString(),
         });
         const plansData = (response as IDataObject)?.servicePlans ?? [];
 

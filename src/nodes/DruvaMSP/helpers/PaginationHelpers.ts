@@ -215,7 +215,7 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
   const allItems: IDataObject[] = [];
   let pageToken: string | undefined | null = undefined;
-  const pageSize = 500; // Use a large page size for loading options
+  const pageSize = 100; // Use a large page size for loading options
   let pageCount = 0;
   const previousTokens = new Set<string>(); // Prevent infinite loops
 
@@ -363,11 +363,11 @@ export async function druvaMspApiRequestAllReportItems(
     // If filters exists and has a pageSize property, make sure it's maximized
     const filters = firstRequestBody.filters as IDataObject;
     if (!filters.pageSize) {
-      filters.pageSize = 500;
+      filters.pageSize = 100;
     }
   } else if (firstRequestBody.pageSize === undefined) {
     // For backward compatibility with older code that sets pageSize directly on body
-    firstRequestBody.pageSize = 500;
+    firstRequestBody.pageSize = 100;
   }
 
   // Use the new PaginationHelper class for token tracking and loop detection
@@ -450,11 +450,11 @@ export async function druvaMspApiRequestAllReportV2Items(
     // If filters exists and has a pageSize property, make sure it's maximized
     const filters = firstRequestBody.filters as IDataObject;
     if (!filters.pageSize) {
-      filters.pageSize = 500;
+      filters.pageSize = 100;
     }
   } else if (firstRequestBody.pageSize === undefined) {
     // For backward compatibility with older code that sets pageSize directly on body
-    firstRequestBody.pageSize = 500;
+    firstRequestBody.pageSize = 100;
   }
 
   // Loop detection variables
@@ -547,7 +547,7 @@ export async function druvaMspApiRequestAllPagedItems(
   const body = { ...initialBody };
 
   // Default page size if not provided
-  const pageSize = (body.pageSize as number) || 500;
+  const pageSize = (body.pageSize as number) || 100;
   let page = (body.page as number) || 1;
 
   // Loop detection variables

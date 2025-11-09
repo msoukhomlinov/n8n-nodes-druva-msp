@@ -2,6 +2,38 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.2.0] - 2025-11-09
+
+### Added
+
+- **Tenant Resource**
+  - Create - Create a new tenant for a customer (v3 API)
+  - Update - Update an existing tenant using PATCH (v3 API)
+- **Report Resources**
+  - **Hybrid Workloads Reports**
+    - M365 Storage Consumption - Retrieve Microsoft 365 storage consumption details with workload name filtering
+
+### Changed
+
+- **Tenant Resource**
+  - Updated Get and Get Many operations to use v3 API endpoints (`/msp/v3/customers/{customerID}/tenants/{tenantID}` and `/msp/v3/tenants`)
+  - Updated query parameter `pageSize` to be sent as string for v3 API compliance
+- **Service Plan Resource**
+  - Updated Get and Get Many operations to use v3 API endpoints (`/msp/v3/servicePlans/{servicePlanId}` and `/msp/v3/servicePlans`)
+  - Updated query parameter `pageSize` to be sent as string for v3 API compliance
+  - Note: v2 endpoints were decommissioned on September 27, 2025
+- **Customer Resource**
+  - Updated Create, Get, Get Many, and Update operations to use v3 API endpoints (`/msp/v3/customers`)
+
+### Fixed
+
+- Fixed authentication header capitalization (`accept` → `Accept`) and added missing `Accept` header to align with Druva MSP API documentation requirements
+- **Customer Resource**
+  - Fixed Get Token operation to send form-urlencoded body with `grant_type=client_credentials` per API spec
+  - Fixed `pageSize` query parameter to be sent as string for Get Many operation
+  - Added features support to Create operation (Security Posture and Observability)
+
+
 ## [0.1.0] - 2025-03-31
 
 ### Added

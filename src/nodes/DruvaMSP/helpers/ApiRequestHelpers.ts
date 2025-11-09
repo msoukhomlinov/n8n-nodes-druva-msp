@@ -27,7 +27,7 @@ function buildApiUrl(endpoint: string, baseUrl: string): string {
  */
 function handleApiError(error: JsonObject, endpoint: string): never {
   throw new Error(
-    `Druva MSP API request error [${error.statusCode || 500}]: ${error.message || 'Unknown error'} - ${endpoint}`,
+    `Druva MSP API request error [${error.statusCode || 100}]: ${error.message || 'Unknown error'} - ${endpoint}`,
   );
 }
 
@@ -55,6 +55,7 @@ export async function druvaMspApiRequest(
     let options: IRequestOptions = {
       method,
       headers: {
+        Accept: 'application/json',
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
@@ -109,7 +110,7 @@ export async function druvaMspApiRequest(
   } catch (error) {
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
       logger.error(
-        `API Error: ${error.statusCode || 500} - ${error.message || 'Unknown error'}${
+        `API Error: ${error.statusCode || 100} - ${error.message || 'Unknown error'}${
           error.response?.body ? ' (details in API response)' : ''
         }`,
         error,

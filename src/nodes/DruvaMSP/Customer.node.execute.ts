@@ -5,6 +5,7 @@ import type { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-wor
 import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
 import { getCustomerStatusLabel } from './helpers/ValueConverters';
 import { logger } from './helpers/LoggerHelper';
+import { getDruvaMspAccessToken } from './helpers/AuthHelpers';
 
 /**
  * Processes the customer data to add derived fields
@@ -101,12 +102,36 @@ export async function executeCustomerOperation(
       logger.debug('Customer: No tenant admins specified for customer creation');
     }
 
-    const endpoint = '/msp/v2/customers';
+    // Handle features if enabled
+    const updateFeatures = this.getNodeParameter('updateFeatures', i, false) as boolean;
+    if (updateFeatures) {
+      const securityPostureAndObservability = this.getNodeParameter(
+        'securityPostureAndObservability',
+        i,
+        false,
+      ) as boolean;
+
+      // Create the features array based on selected options
+      const features: IDataObject[] = [];
+
+      if (securityPostureAndObservability) {
+        features.push({
+          name: 'Security Posture and Observability',
+        });
+      }
+
+      // Add features array to body (empty array is valid per API spec)
+      body.features = features;
+
+      logger.debug(`Customer: Adding features for customer creation: ${JSON.stringify(features)}`);
+    }
+
+    const endpoint = '/msp/v3/customers';
     const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
     responseData = this.helpers.returnJsonArray([response as IDataObject]);
   } else if (operation === 'get') {
     const customerId = this.getNodeParameter('customerId', i, '') as string;
-    const endpoint = `/msp/v2/customers/${customerId}`;
+    const endpoint = `/msp/v3/customers/${customerId}`;
     const response = await druvaMspApiRequest.call(this, 'GET', endpoint);
 
     // Process the customer data to add derived fields
@@ -116,7 +141,7 @@ export async function executeCustomerOperation(
   } else if (operation === 'getMany') {
     const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
     const limit = this.getNodeParameter('limit', i, 50) as number;
-    const endpoint = '/msp/v2/customers';
+    const endpoint = '/msp/v3/customers';
 
     let customers: IDataObject[] = [];
 
@@ -129,8 +154,9 @@ export async function executeCustomerOperation(
         'customers',
       )) as IDataObject[];
     } else {
+      // API spec requires pageSize as string
       const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, {
-        pageSize: limit,
+        pageSize: limit.toString(),
       });
       customers = ((response as IDataObject)?.customers as IDataObject[]) || [];
     }
@@ -270,6 +296,8 @@ export async function executeCustomerOperation(
     }
 
     // Handle features update if enabled
+    // Note: Features is optional in UpdateCustomerRequest schema, so we only include it when explicitly enabled
+    // Per API spec: "You MUST provide information for all the fields" - this refers to required fields (customerName, phone, address)
     const updateFeatures = this.getNodeParameter('updateFeatures', i, false) as boolean;
     if (updateFeatures) {
       const securityPostureAndObservability = this.getNodeParameter(
@@ -294,15 +322,32 @@ export async function executeCustomerOperation(
       logger.debug(`Customer: Updating features for customer: ${JSON.stringify(features)}`);
     }
 
-    const endpoint = `/msp/v2/customers/${customerId}`;
+    const endpoint = `/msp/v3/customers/${customerId}`;
     const response = await druvaMspApiRequest.call(this, 'PUT', endpoint, body);
     responseData = this.helpers.returnJsonArray([response as IDataObject]);
   } else if (operation === 'getToken') {
     const customerId = this.getNodeParameter('customerId', i, '') as string;
     const endpoint = `/msp/v2/customers/${customerId}/token`;
 
-    // The GenericFunctions.ts now handles form-urlencoded for this endpoint
-    const response = await druvaMspApiRequest.call(this, 'POST', endpoint);
+    // API requires form-urlencoded body with grant_type=client_credentials
+    // Get MSP access token first
+    const mspAccessToken = await getDruvaMspAccessToken.call(this);
+    const credentials = await this.getCredentials('druvaMspApi');
+    const baseUrl = (credentials.apiBaseUrl as string) || 'https://apis.druva.com';
+
+    // Make request with form-urlencoded body
+    const response = await this.helpers.request({
+      method: 'POST',
+      url: `${baseUrl}${endpoint}`,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Bearer ${mspAccessToken}`,
+      },
+      body: 'grant_type=client_credentials',
+      json: true,
+    });
+
     responseData = this.helpers.returnJsonArray([response as IDataObject]);
   }
 

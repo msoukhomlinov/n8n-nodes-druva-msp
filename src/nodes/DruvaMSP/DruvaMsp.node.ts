@@ -9,7 +9,7 @@ import type {
 } from 'n8n-workflow';
 
 // Import values and types used as values
-import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 // Import helper functions
 // Import Customer resource
@@ -104,8 +104,8 @@ export class DruvaMsp implements INodeType {
     defaults: {
       name: 'Druva MSP',
     },
-    inputs: [NodeConnectionType.Main],
-    outputs: [NodeConnectionType.Main],
+    inputs: [NodeConnectionTypes.Main],
+    outputs: [NodeConnectionTypes.Main],
     credentials: [
       {
         name: 'druvaMspApi',
@@ -208,18 +208,19 @@ export class DruvaMsp implements INodeType {
       // Get a list of customers (id/name pairs)
       async getCustomers(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
-        const endpoint = '/msp/v2/customers';
-        const pageSize = 500; // Use larger page size for efficiency
+        const endpoint = '/msp/v3/customers';
+        const pageSize = 100; // Use larger page size for efficiency
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
+          // v3 API expects pageSize as a string
           const customers = await druvaMspApiRequestAllItemsForOptions.call(
             this,
             'GET',
             endpoint,
             'customers',
             undefined,
-            { pageSize },
+            { pageSize: pageSize.toString() },
           );
 
           // Format the options for the UI
@@ -264,7 +265,7 @@ export class DruvaMsp implements INodeType {
       // Get a list of tenants
       async getTenants(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
-        const pageSize = 500; // Use larger page size for efficiency
+        const pageSize = 100; // Use larger page size for efficiency
         let customerId: unknown;
 
         try {
@@ -308,7 +309,7 @@ export class DruvaMsp implements INodeType {
       async getAdmins(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
         const endpoint = '/msp/v2/admins';
-        const pageSize = 500; // Use larger page size for efficiency
+        const pageSize = 100; // Use larger page size for efficiency
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
@@ -360,18 +361,19 @@ export class DruvaMsp implements INodeType {
       // Get service plans
       async getServicePlans(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
-        const endpoint = '/msp/v2/servicePlans';
-        const pageSize = 500; // Use larger page size for efficiency
+        const endpoint = '/msp/v3/servicePlans';
+        const pageSize = 100; // Use larger page size for efficiency
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
+          // v3 API expects pageSize as a string
           const servicePlans = await druvaMspApiRequestAllItemsForOptions.call(
             this,
             'GET',
             endpoint,
             'servicePlans',
             undefined,
-            { pageSize },
+            { pageSize: pageSize.toString() },
           );
 
           // Log the service plans response for debugging

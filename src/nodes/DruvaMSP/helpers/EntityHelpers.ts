@@ -20,7 +20,7 @@ export async function getTenantCustomerId(
   // Get all tenants and find the matching one
   try {
     const endpoint = '/msp/v2/tenants';
-    const qs = { pageSize: 500 };
+    const qs = { pageSize: 100 };
 
     const response = (await druvaMspApiRequest.call(
       this,

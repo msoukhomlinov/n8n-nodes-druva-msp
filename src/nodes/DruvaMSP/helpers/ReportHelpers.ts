@@ -128,13 +128,13 @@ export function createServicePlanFilter(servicePlanIds: string[]): IReportFilter
 /**
  * Create a complete filter object for Druva MSP report APIs
  * Use this to build the filters object for the API request
- * @param pageSize Maximum number of records to return (1-500)
+ * @param pageSize Maximum number of records to return (1-100)
  * @param filterBy Array of filter objects
  * @returns Complete filters object for report API requests
  */
 export function createReportFilters(pageSize: number, filterBy: IReportFilter[]): IDataObject {
   return {
-    pageSize: Math.min(Math.max(1, pageSize), 500), // Ensure pageSize is between 1-500
+    pageSize: Math.min(Math.max(1, pageSize), 100), // Ensure pageSize is between 1-100
     filterBy,
   };
 }
@@ -154,6 +154,7 @@ export async function getReportFieldNameOptions() {
     { name: 'Usage Description', value: REPORT_FIELD_NAMES.USAGE_DESCRIPTION },
     { name: 'Edition Name', value: REPORT_FIELD_NAMES.EDITION_NAME },
     { name: 'Service Plan ID', value: REPORT_FIELD_NAMES.SERVICE_PLAN_ID },
+    { name: 'Workload Name', value: REPORT_FIELD_NAMES.WORKLOAD_NAME },
   ];
 }
 

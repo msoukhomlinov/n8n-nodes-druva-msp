@@ -40,7 +40,7 @@ export class DruvaMspApi implements ICredentialType {
       url: '/msp/auth/v1/token',
       method: 'POST',
       headers: {
-        accept: 'application/json',
+        Accept: 'application/json',
         'content-type': 'application/x-www-form-urlencoded',
       },
       auth: {

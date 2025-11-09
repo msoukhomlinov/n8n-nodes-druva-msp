@@ -190,6 +190,7 @@ export const REPORT_FIELD_NAMES = {
   USAGE_DESCRIPTION: 'usageDescription',
   EDITION_NAME: 'editionName',
   SERVICE_PLAN_ID: 'servicePlanId',
+  WORKLOAD_NAME: 'workloadName',
 } as const;
 
 // Define a type for report field names

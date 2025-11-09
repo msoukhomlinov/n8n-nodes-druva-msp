@@ -40,7 +40,7 @@ export async function executeTenantOperation(
         const customerId = await getTenantCustomerId.call(this, tenantId);
 
         // Use the correct API endpoint that includes both customer ID and tenant ID
-        const endpoint = `/msp/v2/customers/${customerId}/tenants/${tenantId}`;
+        const endpoint = `/msp/v3/customers/${customerId}/tenants/${tenantId}`;
         let response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as IDataObject;
 
         // Enrich the response with human-readable labels
@@ -79,7 +79,7 @@ export async function executeTenantOperation(
         ? (this.getNodeParameter('productFilter', i, undefined) as number)
         : undefined;
 
-      const endpoint = '/msp/v2/tenants';
+      const endpoint = '/msp/v3/tenants';
 
       const qs: IDataObject = {};
 
@@ -91,7 +91,8 @@ export async function executeTenantOperation(
       }
 
       if (!returnAll) {
-        qs.pageSize = limit;
+        // v3 API expects pageSize as a string
+        qs.pageSize = limit.toString();
       }
 
       // Use the global responseData variable, don't redeclare it locally
@@ -186,6 +187,226 @@ export async function executeTenantOperation(
       logger.debug(
         `Tenant: End of getMany operation, responseData has ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : 'unknown'} items`,
       );
+    } else if (operation === 'create') {
+      const customerId = this.getNodeParameter('customerId', i, '') as string;
+      if (!customerId) {
+        throw new Error('Customer ID is required for the create operation.');
+      }
+
+      const productID = this.getNodeParameter('productID', i, '') as string;
+      const servicePlanID = this.getNodeParameter('servicePlanID', i, '') as string;
+      const tenantType = this.getNodeParameter('tenantType', i, '') as string;
+      const licenseExpiryDate = this.getNodeParameter('licenseExpiryDate', i, '') as string;
+      const storageRegionsStr = this.getNodeParameter('storageRegions', i, '') as string;
+      const quota = this.getNodeParameter('quota', i, undefined) as number | undefined;
+      const quotaStartDate = this.getNodeParameter('quotaStartDate', i, undefined) as
+        | string
+        | undefined;
+      const quotaEndDate = this.getNodeParameter('quotaEndDate', i, undefined) as
+        | string
+        | undefined;
+      const featuresData = this.getNodeParameter('features', i, {}) as IDataObject;
+      const waitForCompletion = this.getNodeParameter('waitForCompletion', i, false) as boolean;
+
+      // Parse storage regions from comma-separated string to array
+      const storageRegions = storageRegionsStr
+        .split(',')
+        .map((region) => region.trim())
+        .filter((region) => region.length > 0);
+
+      if (storageRegions.length === 0) {
+        throw new Error('At least one storage region is required.');
+      }
+
+      // Build features array from fixedCollection format
+      const features: IDataObject[] = [];
+      if (featuresData && featuresData.feature && Array.isArray(featuresData.feature)) {
+        for (const featureItem of featuresData.feature as IDataObject[]) {
+          const feature: IDataObject = {
+            name: featureItem.name as string,
+          };
+
+          // Build attrs array if present
+          const attrsData = featureItem.attrs as IDataObject | undefined;
+          if (attrsData && attrsData.attr && Array.isArray(attrsData.attr)) {
+            const attrs: IDataObject[] = [];
+            for (const attrItem of attrsData.attr as IDataObject[]) {
+              attrs.push({
+                name: attrItem.name as string,
+                value: attrItem.value as number,
+              });
+            }
+            feature.attrs = attrs;
+          } else {
+            feature.attrs = [];
+          }
+
+          features.push(feature);
+        }
+      }
+
+      if (features.length === 0) {
+        throw new Error('At least one feature is required.');
+      }
+
+      // Build request body
+      const body: IDataObject = {
+        productID: Number.parseInt(productID, 10),
+        servicePlanID: Number.parseInt(servicePlanID, 10),
+        tenantType: Number.parseInt(tenantType, 10),
+        licenseExpiryDate,
+        storageRegions,
+        features,
+      };
+
+      // Add optional fields if provided
+      if (quota !== undefined && quota > 0) {
+        body.quota = quota;
+      }
+      if (quotaStartDate) {
+        body.quotaStartDate = quotaStartDate;
+      }
+      if (quotaEndDate) {
+        body.quotaEndDate = quotaEndDate;
+      }
+
+      try {
+        const endpoint = `/msp/v3/customers/${customerId}/tenants`;
+        logger.debug(`Tenant: Creating tenant at endpoint: ${endpoint}`);
+
+        const createResponse = (await druvaMspApiRequest.call(
+          this,
+          'POST',
+          endpoint,
+          body,
+        )) as IDataObject;
+
+        // If we should wait for task completion
+        if (waitForCompletion && createResponse.task && (createResponse.task as IDataObject).id) {
+          const taskId = (createResponse.task as IDataObject).id as string;
+          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
+
+          const taskResponse = await waitForTaskCompletion.call(this, taskId);
+          responseData = taskResponse;
+        } else {
+          responseData = createResponse;
+        }
+      } catch (error) {
+        throw new Error(`Failed to create tenant: ${(error as Error).message}`);
+      }
+    } else if (operation === 'update') {
+      const tenantId = this.getNodeParameter('tenantId', i, '') as string;
+      if (!tenantId) {
+        throw new Error('Tenant ID is required for the update operation.');
+      }
+
+      const productID = this.getNodeParameter('productID', i, '') as string;
+      const servicePlanID = this.getNodeParameter('servicePlanID', i, '') as string;
+      const tenantType = this.getNodeParameter('tenantType', i, '') as string;
+      const licenseExpiryDate = this.getNodeParameter('licenseExpiryDate', i, '') as string;
+      const storageRegionsStr = this.getNodeParameter('storageRegions', i, '') as string;
+      const quota = this.getNodeParameter('quota', i, undefined) as number | undefined;
+      const quotaStartDate = this.getNodeParameter('quotaStartDate', i, undefined) as
+        | string
+        | undefined;
+      const quotaEndDate = this.getNodeParameter('quotaEndDate', i, undefined) as
+        | string
+        | undefined;
+      const featuresData = this.getNodeParameter('features', i, {}) as IDataObject;
+      const waitForCompletion = this.getNodeParameter('waitForCompletion', i, false) as boolean;
+
+      // Get the customer ID for this tenant
+      const customerId = await getTenantCustomerId.call(this, tenantId);
+      if (!customerId) {
+        throw new Error(`Could not find customer ID for tenant ${tenantId}`);
+      }
+
+      // Parse storage regions from comma-separated string to array
+      const storageRegions = storageRegionsStr
+        .split(',')
+        .map((region) => region.trim())
+        .filter((region) => region.length > 0);
+
+      if (storageRegions.length === 0) {
+        throw new Error('At least one storage region is required.');
+      }
+
+      // Build features array from fixedCollection format
+      const features: IDataObject[] = [];
+      if (featuresData && featuresData.feature && Array.isArray(featuresData.feature)) {
+        for (const featureItem of featuresData.feature as IDataObject[]) {
+          const feature: IDataObject = {
+            name: featureItem.name as string,
+          };
+
+          // Build attrs array if present
+          const attrsData = featureItem.attrs as IDataObject | undefined;
+          if (attrsData && attrsData.attr && Array.isArray(attrsData.attr)) {
+            const attrs: IDataObject[] = [];
+            for (const attrItem of attrsData.attr as IDataObject[]) {
+              attrs.push({
+                name: attrItem.name as string,
+                value: attrItem.value as number,
+              });
+            }
+            feature.attrs = attrs;
+          } else {
+            feature.attrs = [];
+          }
+
+          features.push(feature);
+        }
+      }
+
+      if (features.length === 0) {
+        throw new Error('At least one feature is required.');
+      }
+
+      // Build request body
+      const body: IDataObject = {
+        productID: Number.parseInt(productID, 10),
+        servicePlanID: Number.parseInt(servicePlanID, 10),
+        tenantType: Number.parseInt(tenantType, 10),
+        licenseExpiryDate,
+        storageRegions,
+        features,
+      };
+
+      // Add optional fields if provided
+      if (quota !== undefined && quota > 0) {
+        body.quota = quota;
+      }
+      if (quotaStartDate) {
+        body.quotaStartDate = quotaStartDate;
+      }
+      if (quotaEndDate) {
+        body.quotaEndDate = quotaEndDate;
+      }
+
+      try {
+        const endpoint = `/msp/v3/customers/${customerId}/tenants/${tenantId}`;
+        logger.debug(`Tenant: Updating tenant at endpoint: ${endpoint}`);
+
+        const updateResponse = (await druvaMspApiRequest.call(
+          this,
+          'PATCH',
+          endpoint,
+          body,
+        )) as IDataObject;
+
+        // If we should wait for task completion
+        if (waitForCompletion && updateResponse.task && (updateResponse.task as IDataObject).id) {
+          const taskId = (updateResponse.task as IDataObject).id as string;
+          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
+
+          const taskResponse = await waitForTaskCompletion.call(this, taskId);
+          responseData = taskResponse;
+        } else {
+          responseData = updateResponse;
+        }
+      } catch (error) {
+        throw new Error(`Failed to update tenant: ${(error as Error).message}`);
+      }
     } else if (operation === 'suspend') {
       // Parameter
       const tenantId = this.getNodeParameter('tenantId', i, '') as string;

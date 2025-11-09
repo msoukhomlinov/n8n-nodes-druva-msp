@@ -744,7 +744,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
         customersEndpoint,
         'customers',
         {},
-        { pageSize: 500 },
+        { pageSize: 100 },
       )) as IDataObject[];
 
       // Create a lookup object for quick customer reference
@@ -754,11 +754,11 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       // Fetch Consumption Data
       logger.info('Consumption: Fetching consumption data...');
-      const consumptionEndpoint = '/msp/reporting/v1/reports/consumptionItemized';
+      const consumptionEndpoint = '/msp/v2/reports/consumption/itemized/v2';
 
       // Prepare request body with the correct structure - always fetch all data with maximum page size
       const body: IDataObject = {
-        filters: createReportFilters(500, filterBy), // Always use maximum page size to get all data
+        filters: createReportFilters(100, filterBy), // Always use maximum page size to get all data
         // Zero usage filtering handled in post-processing
       };
 

@@ -116,8 +116,8 @@ export async function executeReportUsageOperation(
       // Set endpoint based on operation
       const endpoint =
         operation === 'getItemizedConsumption'
-          ? '/msp/reporting/v1/reports/consumptionItemized'
-          : '/msp/reporting/v1/reports/quotaItemized';
+          ? '/msp/v2/reports/consumption/itemized/v2'
+          : '/msp/v2/reports/quota/itemized/v2';
 
       // Create filters array for all filters
       const filterBy: IReportFilter[] = [];
@@ -198,7 +198,7 @@ export async function executeReportUsageOperation(
 
       // Prepare request body with the correct structure using helper function
       const body: IDataObject = {
-        filters: createReportFilters(returnAll ? 500 : limit, filterBy),
+        filters: createReportFilters(returnAll ? 100 : limit, filterBy),
       };
 
       // Debug logging to show request details

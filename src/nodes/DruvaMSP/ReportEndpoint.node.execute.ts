@@ -124,7 +124,7 @@ export async function executeReportEndpointOperation(
           ...(body.userStatus ? { userStatus: body.userStatus } : {}),
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };
@@ -257,7 +257,7 @@ export async function executeReportEndpointOperation(
           ...(body.rolloutStatus ? { rolloutStatus: body.rolloutStatus } : {}),
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };
@@ -390,7 +390,7 @@ export async function executeReportEndpointOperation(
           ...(body.provisioningStatus ? { provisioningStatus: body.provisioningStatus } : {}),
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };
@@ -453,6 +453,10 @@ export async function executeReportEndpointOperation(
       }
     } else if (operation === 'getLicenseUsage') {
       // Get License Usage Report
+      // API Endpoint: POST /msp/reporting/v1/reports/mspEPLicenseUsage
+      // API Reference: https://developer.druva.com/reference/getlicenseusagereportdatarequest
+      // This report provides details of total users added and deleted, total Endpoints active
+      // and preserve licenses allocated for MSP customers.
       const endpoint = '/msp/reporting/v1/reports/mspEPLicenseUsage';
 
       if (returnAll) {
@@ -469,7 +473,8 @@ export async function executeReportEndpointOperation(
           });
         }
 
-        // Add date filters if specified - using lastUpdatedTime instead of fromDate/toDate
+        // Add date filters if specified - using lastUpdatedTime field name
+        // Note: Date filtering uses 'lastUpdatedTime' field, consistent with other endpoint reports
         if (body.startTime) {
           filterBy.push({
             fieldName: 'lastUpdatedTime',
@@ -490,7 +495,7 @@ export async function executeReportEndpointOperation(
         const requestBody: IDataObject = {
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };
@@ -517,7 +522,8 @@ export async function executeReportEndpointOperation(
           });
         }
 
-        // Add date filters if specified - using lastUpdatedTime instead of fromDate/toDate
+        // Add date filters if specified - using lastUpdatedTime field name
+        // Note: Date filtering uses 'lastUpdatedTime' field, consistent with other endpoint reports
         if (body.startTime) {
           filterBy.push({
             fieldName: 'lastUpdatedTime',
@@ -587,7 +593,7 @@ export async function executeReportEndpointOperation(
         // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy: filterByArray,
           },
         };
@@ -727,7 +733,7 @@ export async function executeReportEndpointOperation(
       }
 
       // Create the request body
-      const pageSize = returnAll ? 500 : (this.getNodeParameter('limit', i, 100) as number);
+      const pageSize = returnAll ? 100 : (this.getNodeParameter('limit', i, 100) as number);
       const requestBody: IDataObject = {
         filters: {
           pageSize,
@@ -753,6 +759,10 @@ export async function executeReportEndpointOperation(
       }
     } else if (operation === 'getStorageStatistics') {
       // Get Storage Statistics Report
+      // API Endpoint: POST /msp/reporting/v1/reports/mspEPStorageStatistics
+      // API Reference: https://developer.druva.com/reference/getstoragestatisticsdatarequest
+      // This report provides storage details of customers of MSP.
+      // Note: This report does not support date filtering (snapshot data only)
       const endpoint = '/msp/reporting/v1/reports/mspEPStorageStatistics';
 
       if (returnAll) {
@@ -769,13 +779,13 @@ export async function executeReportEndpointOperation(
           });
         }
 
-        // Note: No date filters for Storage Statistics as they don't apply
+        // Note: No date filters for Storage Statistics as they don't apply (snapshot data)
 
         // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };
@@ -802,7 +812,7 @@ export async function executeReportEndpointOperation(
           });
         }
 
-        // Note: No date filters for Storage Statistics as they don't apply
+        // Note: No date filters for Storage Statistics as they don't apply (snapshot data)
 
         // Create a new body without customerIds and dates to avoid duplication
         const requestBody: IDataObject = {
@@ -858,7 +868,7 @@ export async function executeReportEndpointOperation(
         const requestBody: IDataObject = {
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };
@@ -956,7 +966,7 @@ export async function executeReportEndpointOperation(
         const requestBody: IDataObject = {
           // Add filters object with proper structure
           filters: {
-            pageSize: 500,
+            pageSize: 100,
             filterBy,
           },
         };

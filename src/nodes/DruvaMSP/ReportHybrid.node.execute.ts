@@ -165,6 +165,12 @@ function addDateFilters(
       filters.push(createFilter('ended', 'LTE', endDate));
     }
   }
+  // M365 Storage Consumption report does not support date filters
+  else if (operation === 'getM365StorageConsumptionReport') {
+    // Skip date filters for M365 Storage Consumption report
+    // It provides a snapshot of current storage consumption, not time-series data
+    return;
+  }
   // Default behavior for other reports - use lastUpdatedTime
   else {
     if (startDate) {
@@ -193,7 +199,7 @@ export async function executeReportHybridOperation(
       // Common filters that might be used across operations
       const customerIds = getCustomerIds.call(this);
       const dateRange = getDateRange.call(this);
-      const pageSize = limit || 500;
+      const pageSize = limit || 100;
 
       // Create filters array for the structured request format
       const filters: IDataObject[] = [];
@@ -296,9 +302,14 @@ export async function executeReportHybridOperation(
           }
         }
       } else if (operation === 'getStorageConsumptionByBackupSetsReport') {
+        // API Reference: https://developer.druva.com/reference/getstorageconsumptionbybackupsetsreportdatarequest
+        // Endpoint: POST /msp/reporting/v1/reports/mspEWStorageConsumptionbyBackupSets
+        // Lists the Backup Set wise storage consumption details for individual resources in the organization of MSP customers
         endpoint = '/msp/reporting/v1/reports/mspEWStorageConsumptionbyBackupSets';
 
         // Add additional filters specific to this operation using the structured format
+        // Note: This report uses 'backupContent' field for filtering workload types (not 'workloadTypes')
+        // This is consistent with the Resource Status report and aligns with the API response structure
         const filterByWorkloadTypes = this.getNodeParameter(
           'filterByWorkloadTypes',
           0,
@@ -390,6 +401,24 @@ export async function executeReportHybridOperation(
             filterBy.push(createFilter('backupContent', 'CONTAINS', workloadTypes));
           }
         }
+      } else if (operation === 'getM365StorageConsumptionReport') {
+        endpoint = '/msp/reporting/v1/reports/mspM365StorageConsumption';
+
+        // Add workload name filter if specified
+        const filterByWorkloadName = this.getNodeParameter(
+          'filterByWorkloadName',
+          0,
+          false,
+        ) as boolean;
+        if (filterByWorkloadName) {
+          const workloadNames = this.getNodeParameter('workloadName', 0, []) as string[];
+          if (workloadNames.length > 0) {
+            filterBy.push(createFilter('workloadName', 'CONTAINS', workloadNames));
+          }
+        }
+
+        // Note: M365 Storage Consumption report does not support date filters
+        // It provides a snapshot of current storage consumption, not time-series data
       }
 
       // Execute API request with pagination handling

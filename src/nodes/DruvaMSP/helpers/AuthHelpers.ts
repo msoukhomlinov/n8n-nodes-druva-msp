@@ -24,7 +24,7 @@ async function getAccessToken(this: IExecuteFunctions): Promise<string> {
 
   const options: IHttpRequestOptions = {
     headers: {
-      accept: 'application/json',
+      Accept: 'application/json',
       'content-type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${encodedCredentials}`,
     },
@@ -77,7 +77,7 @@ export async function getDruvaMspAccessToken(
     // Get access token
     const tokenResponse = await this.helpers.request({
       headers: {
-        accept: 'application/json',
+        Accept: 'application/json',
         'content-type': 'application/x-www-form-urlencoded',
         Authorization: `Basic ${encodedCredentials}`,
       },
