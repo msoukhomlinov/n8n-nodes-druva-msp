@@ -203,8 +203,8 @@ export async function druvaMspApiRequestAllItemsForOptions(
   body?: IDataObject,
   initialQs?: IDataObject,
 ): Promise<IDataObject[]> {
-  logger.debug(`Options: Starting paginated request to ${endpoint}`);
-  logger.debug(`Options: Looking for items under key ${itemsKey}`);
+  await logger.debug(`Options: Starting paginated request to ${endpoint}`, this);
+  await logger.debug(`Options: Looking for items under key ${itemsKey}`, this);
 
   // Get credentials for API access
   const credentials = await this.getCredentials('druvaMspApi');
@@ -227,7 +227,7 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
   do {
     pageCount++;
-    logger.debug(`Options: Fetching page ${pageCount}`);
+    await logger.debug(`Options: Fetching page ${pageCount}`, this);
 
     // Safety check - limit total pages to prevent excessive API calls
     if (pageCount > MAX_TOTAL_PAGES) {
@@ -240,9 +240,10 @@ export async function druvaMspApiRequestAllItemsForOptions(
     if (pageToken) {
       // For subsequent requests, ONLY include pageToken parameter with no other parameters
       qs = { pageToken };
-      logger.debug(`Options: Using pageToken: ${pageToken}`);
-      logger.debug(
+      await logger.debug(`Options: Using pageToken: ${pageToken}`, this);
+      await logger.debug(
         'Options: IMPORTANT: Using only pageToken with no other parameters as per API requirements',
+        this,
       );
 
       // Check for repeat tokens to prevent infinite loops
@@ -265,13 +266,16 @@ export async function druvaMspApiRequestAllItemsForOptions(
         qs.pageSize = pageSize;
       }
 
-      logger.debug(`Options: First request includes initial parameters: ${JSON.stringify(qs)}`);
+      await logger.debug(
+        `Options: First request includes initial parameters: ${JSON.stringify(qs)}`,
+        this,
+      );
     }
 
     try {
       // Make the API request
       const url = `${baseUrl}${endpoint}`;
-      logger.debug(`Options: Making request to: ${url}`);
+      await logger.debug(`Options: Making request to: ${url}`, this);
 
       const response = (await this.helpers.request({
         method: method as IHttpRequestOptions['method'],
@@ -285,8 +289,8 @@ export async function druvaMspApiRequestAllItemsForOptions(
         json: true,
       })) as IDataObject;
 
-      logger.debug(`Options: Response received for page ${pageCount}`);
-      logger.debug(`Options: Response keys: ${Object.keys(response).join(', ')}`);
+      await logger.debug(`Options: Response received for page ${pageCount}`, this);
+      await logger.debug(`Options: Response keys: ${Object.keys(response).join(', ')}`, this);
 
       const items = response[itemsKey] as IDataObject[] | undefined;
       // API returns nextPageToken but expects pageToken in requests
@@ -294,7 +298,7 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
       // Process the retrieved items
       if (Array.isArray(items)) {
-        logger.debug(`Options: Found ${items.length} items on this page`);
+        await logger.debug(`Options: Found ${items.length} items on this page`, this);
 
         // Check if we're getting inefficient pagination (single items per page)
         if (items.length === 1) {
@@ -316,18 +320,18 @@ export async function druvaMspApiRequestAllItemsForOptions(
         logger.warn(
           `Options: Expected an array under key ${itemsKey} but received: ${JSON.stringify(items)}`,
         );
-        logger.debug(`Options: Response structure: ${JSON.stringify(response)}`);
+        await logger.debug(`Options: Response structure: ${JSON.stringify(response)}`, this);
         pageToken = null;
       }
 
       if (pageToken) {
-        logger.debug(`Options: Next page token found: ${pageToken}`);
+        await logger.debug(`Options: Next page token found: ${pageToken}`, this);
       } else {
-        logger.debug('Options: No next page token found, this is the last page');
+        await logger.debug('Options: No next page token found, this is the last page', this);
       }
 
       if (items === undefined || items.length === 0) {
-        logger.debug('Options: No items found on this page, stopping pagination');
+        await logger.debug('Options: No items found on this page, stopping pagination', this);
         pageToken = null;
       }
     } catch (error) {
@@ -336,8 +340,9 @@ export async function druvaMspApiRequestAllItemsForOptions(
     }
   } while (pageToken);
 
-  logger.debug(
+  await logger.debug(
     `Options: Complete. Retrieved ${allItems.length} items total across ${pageCount} pages`,
+    this,
   );
   return allItems;
 }
@@ -381,7 +386,7 @@ export async function druvaMspApiRequestAllReportItems(
       // For Druva API: "You can query using the pageToken/nextPageToken or filters; you cannot provide both simultaneously."
       // For report endpoints, API returns "nextPageToken" but expects "pageToken" in requests
       requestBody = { pageToken: nextPageToken };
-      logger.debug(`Report: Using only pageToken for pagination: ${nextPageToken}`);
+      await logger.debug(`Report: Using only pageToken for pagination: ${nextPageToken}`, this);
 
       // Check for token loop - if detected, stop pagination
       if (!paginationHelper.trackToken(nextPageToken)) {
@@ -390,7 +395,7 @@ export async function druvaMspApiRequestAllReportItems(
     } else {
       // For the first request, use the initial body with all filters
       requestBody = firstRequestBody;
-      logger.debug('Report: Using initial request body with filters for first page');
+      await logger.debug('Report: Using initial request body with filters for first page', this);
 
       // Even without a token, increment the loop counter for safety limits
       if (!paginationHelper.incrementCounter()) {
@@ -399,7 +404,10 @@ export async function druvaMspApiRequestAllReportItems(
     }
 
     // Debug logging to show request structure
-    logger.debug(`Report: Request body for ${endpoint}: ${JSON.stringify(requestBody, null, 2)}`);
+    await logger.debug(
+      `Report: Request body for ${endpoint}: ${JSON.stringify(requestBody, null, 2)}`,
+      this,
+    );
 
     // Make the request
     const response = (await druvaMspApiRequest.call(
@@ -414,8 +422,11 @@ export async function druvaMspApiRequestAllReportItems(
     nextPageToken = response.nextPageToken as string | null | undefined;
 
     // Debug logging for response
-    logger.debug(`Report: Response from ${endpoint} has nextPageToken: ${nextPageToken}`);
-    logger.debug(`Report: Response contains ${items ? items.length : 0} items`);
+    await logger.debug(
+      `Report: Response from ${endpoint} has nextPageToken: ${nextPageToken}`,
+      this,
+    );
+    await logger.debug(`Report: Response contains ${items ? items.length : 0} items`, this);
 
     // Add items to our result array if we have any
     if (paginationHelper.hasItems(items)) {
@@ -472,7 +483,7 @@ export async function druvaMspApiRequestAllReportV2Items(
       requestBody = { pageToken: nextPageToken };
 
       // Debug logging
-      logger.debug(`ReportV2: Using only pageToken for pagination: ${nextPageToken}`);
+      await logger.debug(`ReportV2: Using only pageToken for pagination: ${nextPageToken}`, this);
 
       // Loop detection - check if we've seen this token before
       if (seenTokens.has(nextPageToken)) {
@@ -487,11 +498,14 @@ export async function druvaMspApiRequestAllReportV2Items(
     } else {
       // For the first request, use the initial body with all filters
       requestBody = firstRequestBody;
-      logger.debug('ReportV2: Using initial request body with filters for first page');
+      await logger.debug('ReportV2: Using initial request body with filters for first page', this);
     }
 
     // Debug logging to show request structure
-    logger.debug(`ReportV2: Request body for ${endpoint}: ${JSON.stringify(requestBody, null, 2)}`);
+    await logger.debug(
+      `ReportV2: Request body for ${endpoint}: ${JSON.stringify(requestBody, null, 2)}`,
+      this,
+    );
 
     // Increment request counter
     loopCounter++;
@@ -517,8 +531,11 @@ export async function druvaMspApiRequestAllReportV2Items(
     nextPageToken = response.nextPageToken as string | null | undefined;
 
     // Debug logging for response
-    logger.debug(`ReportV2: Response from ${endpoint} has nextPageToken: ${nextPageToken}`);
-    logger.debug(`ReportV2: Response contains ${items ? items.length : 0} items`);
+    await logger.debug(
+      `ReportV2: Response from ${endpoint} has nextPageToken: ${nextPageToken}`,
+      this,
+    );
+    await logger.debug(`ReportV2: Response contains ${items ? items.length : 0} items`, this);
 
     // Add items to our result array
     if (Array.isArray(items) && items.length > 0) {

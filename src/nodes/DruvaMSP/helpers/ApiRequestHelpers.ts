@@ -77,7 +77,7 @@ export async function druvaMspApiRequest(
 
     // If API call is to a Reports endpoint, add detailed debug logging
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
-      logger.debug(
+      await logger.debug(
         `API Request: ${method} ${options.uri}${
           method === 'POST' || method === 'PUT'
             ? ` with ${Object.keys(body).length} parameters`
@@ -85,6 +85,7 @@ export async function druvaMspApiRequest(
               ? ` with ${Object.keys(qs).length} query params`
               : ''
         }`,
+        this,
       );
     }
 
@@ -94,15 +95,16 @@ export async function druvaMspApiRequest(
     // If API call is to a Reports endpoint, add summary debug logging for response
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
       if (typeof response === 'object') {
-        logger.debug(
+        await logger.debug(
           `API Response: Success. ${
             Array.isArray(response.data)
               ? `Received ${response.data?.length || 0} records`
               : `Response keys: ${Object.keys(response).join(', ')}`
           }${response.nextPageToken ? ' (has more pages)' : ''}`,
+          this,
         );
       } else {
-        logger.debug(`API Response: Success. Response type: ${typeof response}`);
+        await logger.debug(`API Response: Success. Response type: ${typeof response}`, this);
       }
     }
 

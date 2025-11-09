@@ -2,6 +2,24 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.3.0] - 2025-11-10
+
+### Added
+
+- **Output Options**
+  - Wrap Output Items - New option to wrap all output items into a single item containing an array. When enabled, this prevents the multiplier effect when chaining nodes that perform getMany operations (e.g., get all tenants → get all service plans → get all customers). The wrapped output contains an `items` array with all results and a `count` field indicating the number of items. This ensures the next node in sequence only executes once, regardless of how many items were returned.
+- **Credentials**
+  - Enable Debug Logging - New toggle option in credentials to control debug logging. When enabled, detailed debug messages are logged to the console for troubleshooting API requests and responses.
+
+### Changed
+
+- Refactored debug logging to be controlled via credentials instead of hardcoded constant. Debug logging is now disabled by default and can be toggled on/off in the credentials section.
+
+### Fixed
+
+- Fixed exponential item multiplication issue when chaining multiple getMany operations in sequence. Previously, each node would execute once per item from the previous node, causing exponential growth (e.g., 5 tenants → 5 executions → 15 total items if each returned 3 items). The new Wrap Output Items option resolves this by ensuring a single output item is always produced when enabled.
+
+
 ## [0.2.0] - 2025-11-09
 
 ### Added

@@ -69,8 +69,9 @@ export async function executeServicePlanOperation(
       if (filterByName && nameContains) activeFilters.push(`name contains: ${nameContains}`);
 
       if (activeFilters.length > 0) {
-        logger.debug(
+        await logger.debug(
           `[INFO-START] Druva MSP API - Post-processing filters applied: ${activeFilters.join('; ')}`,
+          this,
         );
       }
 
@@ -150,8 +151,9 @@ export async function executeServicePlanOperation(
       }
 
       // Add a summary message about the number of service plans found after filtering
-      logger.debug(
+      await logger.debug(
         `[INFO-END] Druva MSP API - Filter summary: ${filteredServicePlans.length}/${servicePlans.length} service plans match criteria`,
+        this,
       );
 
       responseData = this.helpers.returnJsonArray(filteredServicePlans);

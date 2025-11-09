@@ -32,6 +32,14 @@ export class DruvaMspApi implements ICredentialType {
       default: '',
       required: true,
     },
+    {
+      displayName: 'Enable Debug Logging',
+      name: 'enableDebug',
+      type: 'boolean',
+      default: false,
+      description:
+        'Enable detailed debug logging to console. Useful for troubleshooting API requests and responses.',
+    },
   ];
 
   test: ICredentialTestRequest = {

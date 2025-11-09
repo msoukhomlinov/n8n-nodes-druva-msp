@@ -60,7 +60,7 @@ export async function executeCustomerOperation(
       accountName = this.getNodeParameter('accountName', i, '') as string;
     } else {
       accountName = customerName;
-      logger.debug(`Customer: Using customer name as account name: ${accountName}`);
+      await logger.debug(`Customer: Using customer name as account name: ${accountName}`, this);
     }
 
     const tenantAdmins = this.getNodeParameter('tenantAdmins', i, []) as string[];
@@ -77,8 +77,9 @@ export async function executeCustomerOperation(
 
     // Only add tenantAdmins if any admins are specified
     if (tenantAdmins && Array.isArray(tenantAdmins) && tenantAdmins.length > 0) {
-      logger.debug(
+      await logger.debug(
         `Customer: Processing ${tenantAdmins.length} tenant admins for customer creation`,
+        this,
       );
 
       // Convert string IDs to numbers if they are numeric strings
@@ -94,12 +95,13 @@ export async function executeCustomerOperation(
         return id;
       });
 
-      logger.debug(
+      await logger.debug(
         `Customer: Tenant admins processing complete: ${tenantAdminIds.length} IDs processed`,
+        this,
       );
       body.tenantAdmins = tenantAdminIds;
     } else {
-      logger.debug('Customer: No tenant admins specified for customer creation');
+      await logger.debug('Customer: No tenant admins specified for customer creation', this);
     }
 
     // Handle features if enabled
@@ -123,7 +125,7 @@ export async function executeCustomerOperation(
       // Add features array to body (empty array is valid per API spec)
       body.features = features;
 
-      logger.debug(`Customer: Adding features for customer creation: ${JSON.stringify(features)}`);
+      await logger.debug(`Customer: Adding features for customer creation: ${JSON.stringify(features)}`, this);
     }
 
     const endpoint = '/msp/v3/customers';
@@ -272,7 +274,7 @@ export async function executeCustomerOperation(
 
     // Only add tenantAdmins if any admins are specified
     if (tenantAdmins && Array.isArray(tenantAdmins) && tenantAdmins.length > 0) {
-      logger.debug(`Customer: Processing ${tenantAdmins.length} tenant admins for customer update`);
+      await logger.debug(`Customer: Processing ${tenantAdmins.length} tenant admins for customer update`, this);
 
       // Convert string IDs to numbers if they are numeric strings
       const tenantAdminIds = tenantAdmins.map((id) => {
@@ -287,12 +289,13 @@ export async function executeCustomerOperation(
         return id;
       });
 
-      logger.debug(
+      await logger.debug(
         `Customer: Tenant admins processing complete: ${tenantAdminIds.length} IDs processed`,
+        this,
       );
       body.tenantAdmins = tenantAdminIds;
     } else {
-      logger.debug('Customer: No tenant admins specified for customer update');
+      await logger.debug('Customer: No tenant admins specified for customer update', this);
     }
 
     // Handle features update if enabled
@@ -319,7 +322,7 @@ export async function executeCustomerOperation(
       // An empty array will disable all features
       body.features = features;
 
-      logger.debug(`Customer: Updating features for customer: ${JSON.stringify(features)}`);
+      await logger.debug(`Customer: Updating features for customer: ${JSON.stringify(features)}`, this);
     }
 
     const endpoint = `/msp/v3/customers/${customerId}`;

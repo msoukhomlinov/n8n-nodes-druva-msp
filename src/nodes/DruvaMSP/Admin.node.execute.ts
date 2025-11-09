@@ -95,8 +95,9 @@ export async function executeAdminOperation(
       // Get all admins with proper pagination handling
       // IMPORTANT: Druva API requires that pageToken and filters cannot be used simultaneously
       // For subsequent requests, we must use ONLY the pageToken parameter
-      logger.debug(
+      await logger.debug(
         `Admin: Fetching all admins from ${endpoint} (max page size: ${initialQueryParams.pageSize})`,
+        this,
       );
 
       do {
@@ -148,10 +149,11 @@ export async function executeAdminOperation(
         }
 
         // Log progress for debugging
-        logger.debug(
+        await logger.debug(
           `Admin: Page progress: +${pageAdmins.length} admins (total: ${admins.length})${
             nextPageToken ? ', more pages available' : ''
           }`,
+          this,
         );
       } while (nextPageToken);
     } else {

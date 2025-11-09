@@ -137,14 +137,16 @@ export async function executeReportCyberOperation(
         };
 
         // Debug log to see the structure
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
+          this,
         );
 
         const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+          this,
         );
 
         responseData = this.helpers.returnJsonArray(allItems);
@@ -200,15 +202,17 @@ export async function executeReportCyberOperation(
           };
         }
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
+          this,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
+          this,
         );
 
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
@@ -343,14 +347,16 @@ export async function executeReportCyberOperation(
         };
 
         // Debug log to see the structure
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
+          this,
         );
 
         const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+          this,
         );
 
         responseData = this.helpers.returnJsonArray(allItems);
@@ -407,15 +413,17 @@ export async function executeReportCyberOperation(
           };
         }
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
+          this,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
         const items = (response as IDataObject)?.items ?? [];
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
+          this,
         );
 
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);

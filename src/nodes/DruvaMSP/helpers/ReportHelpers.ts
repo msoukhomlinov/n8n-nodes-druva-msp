@@ -99,9 +99,9 @@ export function createUsageDescriptionFilter(usageDescriptions: string[]): IRepo
 /**
  * Create a service plan filter for Druva MSP report APIs
  * @param servicePlanIds Array of service plan IDs to filter by
- * @returns Filter object for service plans
+ * @returns Promise<Filter object for service plans>
  */
-export function createServicePlanFilter(servicePlanIds: string[]): IReportFilter {
+export async function createServicePlanFilter(servicePlanIds: string[]): Promise<IReportFilter> {
   // Convert first ID to a number as the API expects a single numeric value
   // Druva API expects servicePlanId to be a single integer, not an array
   if (servicePlanIds.length === 0) {
@@ -114,7 +114,9 @@ export function createServicePlanFilter(servicePlanIds: string[]): IReportFilter
     throw new Error('Invalid service plan ID: cannot be converted to a number');
   }
 
-  logger.debug(
+  // Note: This function doesn't have execution context, so debug will use fallback (disabled by default)
+  // If debug logging is needed here, consider passing context parameter or removing this debug call
+  await logger.debug(
     `Report: Creating service plan filter: ID ${servicePlanIds[0]} → ${numericId} (numeric)`,
   );
 

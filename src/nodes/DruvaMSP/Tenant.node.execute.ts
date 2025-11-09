@@ -165,27 +165,31 @@ export async function executeTenantOperation(
       );
 
       // Add detailed debugging of the final data being returned
-      logger.debug(
+      await logger.debug(
         `Tenant: Final response data structure: ${JSON.stringify(Array.isArray(responseData) && (responseData as IDataObject[]).length > 0 ? (responseData as IDataObject[])[0] : 'No data')}`,
+        this,
       );
-      logger.debug(
+      await logger.debug(
         `Tenant: First 3 items in response: ${JSON.stringify(Array.isArray(responseData) ? (responseData as IDataObject[]).slice(0, 3) : 'Not an array')}`,
+        this,
       );
 
       // Make sure responseData is correctly assigned for the return statement
       if (Array.isArray(responseData)) {
-        logger.debug(
+        await logger.debug(
           `Tenant: responseData is properly an array of length ${(responseData as IDataObject[]).length}`,
+          this,
         );
       } else {
         // Convert to array if not already
-        logger.debug('Tenant: responseData is NOT an array, converting to array');
+        await logger.debug('Tenant: responseData is NOT an array, converting to array', this);
         responseData = [responseData as IDataObject];
       }
 
       // Important debug statement right before moving to the next operation
-      logger.debug(
+      await logger.debug(
         `Tenant: End of getMany operation, responseData has ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : 'unknown'} items`,
+        this,
       );
     } else if (operation === 'create') {
       const customerId = this.getNodeParameter('customerId', i, '') as string;
@@ -272,7 +276,7 @@ export async function executeTenantOperation(
 
       try {
         const endpoint = `/msp/v3/customers/${customerId}/tenants`;
-        logger.debug(`Tenant: Creating tenant at endpoint: ${endpoint}`);
+        await logger.debug(`Tenant: Creating tenant at endpoint: ${endpoint}`, this);
 
         const createResponse = (await druvaMspApiRequest.call(
           this,
@@ -284,7 +288,7 @@ export async function executeTenantOperation(
         // If we should wait for task completion
         if (waitForCompletion && createResponse.task && (createResponse.task as IDataObject).id) {
           const taskId = (createResponse.task as IDataObject).id as string;
-          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
+          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
 
           const taskResponse = await waitForTaskCompletion.call(this, taskId);
           responseData = taskResponse;
@@ -385,7 +389,7 @@ export async function executeTenantOperation(
 
       try {
         const endpoint = `/msp/v3/customers/${customerId}/tenants/${tenantId}`;
-        logger.debug(`Tenant: Updating tenant at endpoint: ${endpoint}`);
+        await logger.debug(`Tenant: Updating tenant at endpoint: ${endpoint}`, this);
 
         const updateResponse = (await druvaMspApiRequest.call(
           this,
@@ -397,7 +401,7 @@ export async function executeTenantOperation(
         // If we should wait for task completion
         if (waitForCompletion && updateResponse.task && (updateResponse.task as IDataObject).id) {
           const taskId = (updateResponse.task as IDataObject).id as string;
-          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
+          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
 
           const taskResponse = await waitForTaskCompletion.call(this, taskId);
           responseData = taskResponse;
@@ -426,7 +430,7 @@ export async function executeTenantOperation(
 
         // Use the correct API endpoint that includes both customer ID and tenant ID
         const endpoint = `/msp/v2/customers/${customerId}/tenants/${tenantId}/suspend`;
-        logger.debug(`Tenant: Suspending tenant at endpoint: ${endpoint}`);
+        await logger.debug(`Tenant: Suspending tenant at endpoint: ${endpoint}`, this);
 
         // POST request with no body
         const suspendResponse = (await druvaMspApiRequest.call(
@@ -438,7 +442,7 @@ export async function executeTenantOperation(
         // If we should wait for task completion
         if (waitForCompletion && suspendResponse.task && (suspendResponse.task as IDataObject).id) {
           const taskId = (suspendResponse.task as IDataObject).id as string;
-          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
+          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
 
           // Wait for the task to complete
           const taskResponse = await waitForTaskCompletion.call(this, taskId);
@@ -469,7 +473,7 @@ export async function executeTenantOperation(
 
         // Use the correct API endpoint that includes both customer ID and tenant ID
         const endpoint = `/msp/v2/customers/${customerId}/tenants/${tenantId}/unsuspend`;
-        logger.debug(`Tenant: Unsuspending tenant at endpoint: ${endpoint}`);
+        await logger.debug(`Tenant: Unsuspending tenant at endpoint: ${endpoint}`, this);
 
         // POST request with no body
         const unsuspendResponse = (await druvaMspApiRequest.call(
@@ -485,7 +489,7 @@ export async function executeTenantOperation(
           (unsuspendResponse.task as IDataObject).id
         ) {
           const taskId = (unsuspendResponse.task as IDataObject).id as string;
-          logger.debug(`Tenant: Waiting for task ${taskId} to complete`);
+          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
 
           // Wait for the task to complete
           const taskResponse = await waitForTaskCompletion.call(this, taskId);
@@ -509,23 +513,25 @@ export async function executeTenantOperation(
   }
 
   // Return the final data
-  logger.debug(
+  await logger.debug(
     `Tenant: Finalizing execution, responseData has ${Array.isArray(responseData) ? responseData.length : 'unknown'} items`,
+    this,
   );
-  logger.debug(
+  await logger.debug(
     `Tenant: responseData type: ${typeof responseData}, isArray: ${Array.isArray(responseData)}`,
+    this,
   );
 
   // Force the correct structure for responseData
   let returnItems: INodeExecutionData[] = [];
 
   if (Array.isArray(responseData)) {
-    logger.debug(`Tenant: Processing array response with ${responseData.length} items`);
+    await logger.debug(`Tenant: Processing array response with ${responseData.length} items`, this);
     returnItems = responseData.map((item) => ({
       json: item,
     }));
   } else {
-    logger.debug('Tenant: Processing single item response');
+    await logger.debug('Tenant: Processing single item response', this);
     returnItems = [
       {
         json: responseData as IDataObject,
@@ -533,6 +539,6 @@ export async function executeTenantOperation(
     ];
   }
 
-  logger.debug(`Tenant: Final return contains ${returnItems.length} items`);
+  await logger.debug(`Tenant: Final return contains ${returnItems.length} items`, this);
   return returnItems;
 }

@@ -202,8 +202,11 @@ export async function executeReportUsageOperation(
       };
 
       // Debug logging to show request details
-      logger.debug(`ReportUsage.${operation}: Making API request to ${endpoint}`);
-      logger.debug(`ReportUsage.${operation}: Request body: ${JSON.stringify(body, null, 2)}`);
+      await logger.debug(`ReportUsage.${operation}: Making API request to ${endpoint}`, this);
+      await logger.debug(
+        `ReportUsage.${operation}: Request body: ${JSON.stringify(body, null, 2)}`,
+        this,
+      );
 
       if (returnAll) {
         // For POST requests with pagination in the body, use our centralized function
@@ -214,8 +217,9 @@ export async function executeReportUsageOperation(
           'data',
         );
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-DRUVA-MSP] ReportUsage.${operation}: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} total items across all pages`,
+          this,
         );
 
         responseData = this.helpers.returnJsonArray(allItems);
@@ -226,13 +230,15 @@ export async function executeReportUsageOperation(
           ? ((response as IDataObject).data as IDataObject[]).length
           : 0;
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-DRUVA-MSP] ReportUsage.${operation}: Retrieved ${itemCount} items from first page`,
+          this,
         );
 
         if ((response as IDataObject).nextPageToken) {
-          logger.debug(
+          await logger.debug(
             `[DEBUG-DRUVA-MSP] ReportUsage.${operation}: More items available in subsequent pages`,
+            this,
           );
         }
 

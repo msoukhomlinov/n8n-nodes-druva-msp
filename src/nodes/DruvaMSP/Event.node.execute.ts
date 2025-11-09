@@ -412,14 +412,16 @@ async function fetchEvents(
 
         if (pageEvents.length > 0 && pageEvents.length < lowEventThreshold) {
           consecutiveLowCountPages++;
-          logger.debug(
+          await logger.debug(
             `Page with low event count: ${pageEvents.length} events (threshold: ${lowEventThreshold})`,
+            this,
           );
 
           // If we've had multiple consecutive pages with very few events, assume we've got all meaningful data
           if (consecutiveLowCountPages >= MAX_CONSECUTIVE_LOW_COUNT) {
-            logger.debug(
+            await logger.debug(
               `Stopping pagination after ${MAX_CONSECUTIVE_LOW_COUNT} consecutive low-count pages`,
+              this,
             );
             break;
           }
@@ -435,23 +437,25 @@ async function fetchEvents(
         nextPageToken = responseData.nextPageToken as string;
 
         // Log progress for debugging
-        logger.debug(
+        await logger.debug(
           `Page progress: +${pageEvents.length} events (total: ${events.length})${
             nextPageToken ? ', more pages available' : ''
           }`,
+          this,
         );
 
         // Track the token and check for loops or max count
         if (!paginationHelper.trackToken(nextPageToken)) {
-          logger.debug('Pagination stopped: loop detected or max count reached');
+          await logger.debug('Pagination stopped: loop detected or max count reached', this);
           break;
         }
 
         // Special case: If we got exactly 0 events but have a next token, this is likely an API quirk
         // In this case, we should stop pagination to avoid unnecessary requests
         if (pageEvents.length === 0 && nextPageToken) {
-          logger.debug(
+          await logger.debug(
             'Stopping pagination: received 0 events but have a next token (likely API quirk)',
+            this,
           );
           break;
         }
@@ -529,10 +533,11 @@ async function fetchEvents(
     }
 
     events = applyRemainingFilters(events, filters);
-    logger.debug(
+    await logger.debug(
       `Events filtered: ${originalCount} → ${events.length} (${Math.round(
         (events.length / originalCount || 0) * 100,
       )}% retained)`,
+      this,
     );
   }
 

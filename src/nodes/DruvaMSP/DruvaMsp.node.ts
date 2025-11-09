@@ -200,6 +200,28 @@ export class DruvaMsp implements INodeType {
       ...reportCyberFields,
       ...reportEndpointFields,
       ...reportHybridFields,
+
+      {
+        displayName: 'Wrap Output Items',
+        name: 'wrapOutputItems',
+        type: 'boolean',
+        default: false,
+        description:
+          'When enabled, wraps all output items into a single item containing an array. This prevents the next node from executing multiple times.',
+      },
+      {
+        displayName: 'Wrapper Property Name',
+        name: 'wrapperPropertyName',
+        type: 'string',
+        default: 'items',
+        displayOptions: {
+          show: {
+            wrapOutputItems: [true],
+          },
+        },
+        description:
+          'The property name to use for the wrapped array of items in the output. Default is "items".',
+      },
     ],
   };
 
@@ -377,14 +399,17 @@ export class DruvaMsp implements INodeType {
           );
 
           // Log the service plans response for debugging
-          logger.debug(`Service Plans: Retrieved ${servicePlans.length} plans from API`);
+          await logger.debug(
+            `Service Plans: Retrieved ${servicePlans.length} plans from API`,
+            this,
+          );
 
           if (servicePlans.length > 0) {
             // Only log critical info about the first plan (ID and name fields)
             const plan = servicePlans[0];
             const planId = plan.id || plan.servicePlanId || plan.servicePlanID;
             const planName = plan.name || plan.servicePlanName;
-            logger.debug(`Sample plan: ID=${planId}, Name=${planName}`);
+            await logger.debug(`Sample plan: ID=${planId}, Name=${planName}`, this);
           }
 
           // Format the options for the UI
@@ -399,14 +424,20 @@ export class DruvaMsp implements INodeType {
                 value: planId.toString(),
               });
             } else {
-              logger.debug(`Skipping plan with missing data: ID=${planId}, Name=${planName}`);
+              await logger.debug(
+                `Skipping plan with missing data: ID=${planId}, Name=${planName}`,
+                this,
+              );
             }
           }
 
           // Sort the service plans alphabetically by name
           returnData.sort((a, b) => a.name.localeCompare(b.name));
 
-          logger.debug(`Service Plans: Prepared ${returnData.length} options for UI dropdown`);
+          await logger.debug(
+            `Service Plans: Prepared ${returnData.length} options for UI dropdown`,
+            this,
+          );
           return returnData;
         } catch (error) {
           logger.error('Error retrieving service plans:', error);
@@ -499,6 +530,10 @@ export class DruvaMsp implements INodeType {
     let responseData: INodeExecutionData[] | INodeExecutionData[][] = [];
     const resource = this.getNodeParameter('resource', 0) as string;
 
+    // Check if wrapOutputItems option is enabled
+    const wrapOutputItems = this.getNodeParameter('wrapOutputItems', 0, false) as boolean;
+    const wrapperPropertyName = this.getNodeParameter('wrapperPropertyName', 0, 'items') as string;
+
     for (let i = 0; i < length; i++) {
       try {
         if (resource === 'customer') {
@@ -562,6 +597,22 @@ export class DruvaMsp implements INodeType {
         }
         throw error;
       }
+    }
+
+    // If wrapOutputItems is enabled, wrap all items into a single output item
+    if (wrapOutputItems && returnData.length > 0) {
+      // Extract JSON data from all items
+      const itemsArray = returnData.map((item) => item.json);
+
+      // Create a single wrapped item with the user-specified property name
+      const wrappedItem: INodeExecutionData = {
+        json: {
+          [wrapperPropertyName]: itemsArray,
+          count: returnData.length,
+        },
+      };
+
+      return [[wrappedItem]];
     }
 
     return [returnData];

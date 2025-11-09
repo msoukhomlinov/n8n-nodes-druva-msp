@@ -15,7 +15,7 @@ export async function getTenantCustomerId(
   this: IExecuteFunctions,
   tenantId: string,
 ): Promise<string> {
-  logger.debug(`Tenant: Looking up customer ID for tenant: ${tenantId}`);
+  await logger.debug(`Tenant: Looking up customer ID for tenant: ${tenantId}`, this);
 
   // Get all tenants and find the matching one
   try {
@@ -32,15 +32,16 @@ export async function getTenantCustomerId(
 
     if (response.tenants && Array.isArray(response.tenants)) {
       const tenants = response.tenants as IDataObject[];
-      logger.debug(
+      await logger.debug(
         `Tenant: Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`,
+        this,
       );
 
       const targetTenant = tenants.find((tenant) => tenant.id === tenantId);
 
       if (targetTenant?.customerID) {
         const customerId = targetTenant.customerID as string;
-        logger.debug(`Tenant: Found customer ID ${customerId} for tenant ${tenantId}`);
+        await logger.debug(`Tenant: Found customer ID ${customerId} for tenant ${tenantId}`, this);
         return customerId;
       }
     }

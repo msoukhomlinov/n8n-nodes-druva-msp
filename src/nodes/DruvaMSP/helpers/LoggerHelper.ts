@@ -10,23 +10,85 @@
  * log levels), consider switching to LoggerProxy from n8n-workflow.
  */
 
-// Global debug flag to control detailed logging
-// In a production environment, this would typically be false
-export const DEBUG_ENABLED = true;
+import type { IExecuteFunctions, ILoadOptionsFunctions, IHookFunctions } from 'n8n-workflow';
 
 // Standard log prefix for easy identification in console
 const LOG_PREFIX = '[DruvaMSP]';
+
+// Cache to store debug state per execution context
+// Uses WeakMap for automatic cleanup when contexts are garbage collected
+const debugCache = new WeakMap<
+  IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions,
+  boolean
+>();
+
+// Fallback debug state for when context is not provided (defaults to false)
+let fallbackDebugEnabled = false;
+
+/**
+ * Get debug enabled state from credentials for a given execution context
+ * Caches the result to avoid repeated credential lookups
+ * @param context The n8n execution context (IExecuteFunctions, ILoadOptionsFunctions, or IHookFunctions)
+ * @returns Promise<boolean> The debug enabled state from credentials
+ */
+export async function getDebugEnabled(
+  context: IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions,
+): Promise<boolean> {
+  // Check cache first
+  const cached = debugCache.get(context);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  try {
+    // Get credentials and read enableDebug setting
+    const credentials = await context.getCredentials('druvaMspApi');
+    const enabled = (credentials?.enableDebug as boolean) ?? false;
+
+    // Cache the result
+    debugCache.set(context, enabled);
+    fallbackDebugEnabled = enabled;
+
+    return enabled;
+  } catch (error) {
+    // If credential lookup fails, default to false and cache that
+    debugCache.set(context, false);
+    return false;
+  }
+}
 
 /**
  * Logger utility for standardised formatting and controlled debug output
  */
 export const logger = {
   /**
-   * Log debug message - only shown when DEBUG_ENABLED is true
+   * Log debug message - only shown when debug is enabled in credentials
    * @param message The message to log
+   * @param context Optional n8n execution context to check credentials for debug setting
    */
-  debug: (message: string): void => {
-    if (DEBUG_ENABLED) console.log(`[DEBUG] ${LOG_PREFIX} ${message}`);
+  debug: async (
+    message: string,
+    context?: IExecuteFunctions | ILoadOptionsFunctions | IHookFunctions,
+  ): Promise<void> => {
+    let enabled = false;
+
+    if (context) {
+      // Check cache synchronously first (for performance)
+      const cached = debugCache.get(context);
+      if (cached !== undefined) {
+        enabled = cached;
+      } else {
+        // Cache miss - get from credentials (async)
+        enabled = await getDebugEnabled(context);
+      }
+    } else {
+      // No context provided - use fallback (last known state or false)
+      enabled = fallbackDebugEnabled;
+    }
+
+    if (enabled) {
+      console.log(`[DEBUG] ${LOG_PREFIX} ${message}`);
+    }
   },
 
   /**

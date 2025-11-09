@@ -32,24 +32,25 @@ export async function waitForTaskCompletion(
     enrichApiResponseWithDates,
   } = await import('./ValueConverters');
 
-  logger.debug(
+  await logger.debug(
     `Task: Starting to poll task ${taskId} (max ${maxWaitTime}s, interval ${pollInterval}s)`,
+    this,
   );
 
   while (!taskComplete && attempts < maxAttempts) {
     attempts++;
-    logger.debug(`Task: Polling task ${taskId}, attempt ${attempts}/${maxAttempts}`);
+    await logger.debug(`Task: Polling task ${taskId}, attempt ${attempts}/${maxAttempts}`, this);
 
     const response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as IDataObject;
 
     // Log the field names for debugging on first attempt
     if (attempts === 1) {
-      logger.debug(`Task: API Response Fields: ${Object.keys(response).join(', ')}`);
+      await logger.debug(`Task: API Response Fields: ${Object.keys(response).join(', ')}`, this);
     }
 
     // Check if task is complete (status 4 = Finished)
     if (response?.status === 4) {
-      logger.debug(`Task: Task ${taskId} completed successfully`);
+      await logger.debug(`Task: Task ${taskId} completed successfully`, this);
       taskComplete = true;
 
       // 1. First enrich the response with human-readable labels for status
@@ -67,7 +68,7 @@ export async function waitForTaskCompletion(
       if ('createdOn' in response) dateFields.push('createdOn');
       if ('updatedOn' in response) dateFields.push('updatedOn');
 
-      logger.debug(`Task: Date fields to enrich: ${dateFields.join(', ')}`);
+      await logger.debug(`Task: Date fields to enrich: ${dateFields.join(', ')}`, this);
 
       const enrichedWithDates = enrichApiResponseWithDates(enrichedWithLabels, dateFields);
 
@@ -95,8 +96,9 @@ export async function waitForTaskCompletion(
 
     // Wait for next poll
     if (!taskComplete && attempts < maxAttempts) {
-      logger.debug(
+      await logger.debug(
         `Task: Task ${taskId} not complete yet (status: ${response?.status}), waiting ${pollInterval}s before next poll`,
+        this,
       );
       await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
     }

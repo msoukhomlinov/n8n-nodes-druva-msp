@@ -130,8 +130,9 @@ export async function executeReportEndpointOperation(
         };
 
         // Debug log to see the structure
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
+          this,
         );
 
         // The Users report returns data in the 'data' key, not 'items'
@@ -142,8 +143,9 @@ export async function executeReportEndpointOperation(
           'data',
         );
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+          this,
         );
 
         responseData = this.helpers.returnJsonArray(allItems);
@@ -189,8 +191,9 @@ export async function executeReportEndpointOperation(
           },
         };
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
+          this,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
@@ -198,7 +201,7 @@ export async function executeReportEndpointOperation(
         // Extract data from the 'data' key instead of 'items'
         const items = (response as IDataObject)?.data ?? [];
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
         );
 
@@ -263,8 +266,9 @@ export async function executeReportEndpointOperation(
         };
 
         // Debug log to see the structure
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (pagination enabled, filters: ${filterBy.length})`,
+          this,
         );
 
         // The User Rollout report returns data in the 'data' key, not 'items'
@@ -275,8 +279,9 @@ export async function executeReportEndpointOperation(
           'data',
         );
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
+          this,
         );
 
         responseData = this.helpers.returnJsonArray(allItems);
@@ -322,8 +327,9 @@ export async function executeReportEndpointOperation(
           },
         };
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
+          this,
         );
 
         const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
@@ -331,7 +337,7 @@ export async function executeReportEndpointOperation(
         // Extract data from the 'data' key instead of 'items'
         const items = (response as IDataObject)?.data ?? [];
 
-        logger.debug(
+        await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
         );
 
