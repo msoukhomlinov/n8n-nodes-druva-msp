@@ -2,6 +2,13 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.40.0] - 2025-11-12
+
+### Fixed
+
+- Fixed ReportUsage itemized consumption endpoint from `/msp/v2/reports/consumption/itemized/v2` to `/msp/reporting/v2/reports/consumptionItemized`
+- Fixed ReportUsage itemized quota endpoint from `/msp/v2/reports/quota/itemized/v2` to `/msp/reporting/v2/reports/quotaItemized`
+
 ## [0.3.0] - 2025-11-10
 
 ### Added

@@ -125,7 +125,10 @@ export async function executeCustomerOperation(
       // Add features array to body (empty array is valid per API spec)
       body.features = features;
 
-      await logger.debug(`Customer: Adding features for customer creation: ${JSON.stringify(features)}`, this);
+      await logger.debug(
+        `Customer: Adding features for customer creation: ${JSON.stringify(features)}`,
+        this,
+      );
     }
 
     const endpoint = '/msp/v3/customers';
@@ -274,7 +277,10 @@ export async function executeCustomerOperation(
 
     // Only add tenantAdmins if any admins are specified
     if (tenantAdmins && Array.isArray(tenantAdmins) && tenantAdmins.length > 0) {
-      await logger.debug(`Customer: Processing ${tenantAdmins.length} tenant admins for customer update`, this);
+      await logger.debug(
+        `Customer: Processing ${tenantAdmins.length} tenant admins for customer update`,
+        this,
+      );
 
       // Convert string IDs to numbers if they are numeric strings
       const tenantAdminIds = tenantAdmins.map((id) => {
@@ -322,7 +328,10 @@ export async function executeCustomerOperation(
       // An empty array will disable all features
       body.features = features;
 
-      await logger.debug(`Customer: Updating features for customer: ${JSON.stringify(features)}`, this);
+      await logger.debug(
+        `Customer: Updating features for customer: ${JSON.stringify(features)}`,
+        this,
+      );
     }
 
     const endpoint = `/msp/v3/customers/${customerId}`;

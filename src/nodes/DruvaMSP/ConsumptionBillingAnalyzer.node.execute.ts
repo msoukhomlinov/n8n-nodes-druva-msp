@@ -754,7 +754,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       // Fetch Consumption Data
       logger.info('Consumption: Fetching consumption data...');
-      const consumptionEndpoint = '/msp/v2/reports/consumption/itemized/v2';
+      const consumptionEndpoint = '/msp/reporting/v2/reports/consumptionItemized';
 
       // Prepare request body with the correct structure - always fetch all data with maximum page size
       const body: IDataObject = {
