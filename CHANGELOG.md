@@ -2,7 +2,17 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
-## [0.40.0] - 2025-11-12
+## [0.5.0] - 2025-11-12
+
+### Added
+
+- **Consumption Billing Analyzer**
+  - Add Auto-Generated Key option to generate deterministic IDs for database storage. Uses SHA-256 hash based on: customerGlobalId, tenantId, startDate, endDate, productName, productModuleName, editionName, usageDescription
+  - Key Field Name option to customise the auto-generated key field name (default: 'id')
+  - Field name validation to prevent conflicts with existing record fields
+  - All key generation fields are required and validated
+
+## [0.4.0] - 2025-11-12
 
 ### Fixed
 

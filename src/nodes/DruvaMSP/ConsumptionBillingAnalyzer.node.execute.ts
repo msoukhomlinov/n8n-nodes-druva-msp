@@ -10,6 +10,7 @@ import { logger } from './helpers/LoggerHelper';
 
 import type { IExecuteFunctions } from 'n8n-workflow';
 import type { IDataObject, INodeExecutionData } from 'n8n-workflow';
+import * as crypto from 'crypto';
 
 // Define interfaces for the hierarchical data structure
 interface IUsageItem {
@@ -268,6 +269,71 @@ function convertBytesToUnit(bytes: number, targetUnit: 'GB' | 'TB'): number {
 
   // Convert bytes to terabytes (1 TB = 1,099,511,627,776 bytes)
   return bytes / 1099511627776;
+}
+
+/**
+ * Generates a deterministic key based on the specified key fields
+ * @param customerGlobalId Customer global ID (required)
+ * @param tenantId Tenant ID (required)
+ * @param startDate Start date in ISO format (required)
+ * @param endDate End date in ISO format (required)
+ * @param productName Product name (required)
+ * @param productModuleName Product module name (required)
+ * @param editionName Edition name (required)
+ * @param usageDescription Usage description (required)
+ * @returns A 32-character hex string hash of the concatenated fields
+ * @throws Error if any required field is missing or empty
+ */
+function generateDeterministicKey(
+  customerGlobalId: string,
+  tenantId: string,
+  startDate: string,
+  endDate: string,
+  productName: string,
+  productModuleName: string,
+  editionName: string,
+  usageDescription: string,
+): string {
+  // Validate all required fields are present and not empty
+  const requiredFields = [
+    { name: 'customerGlobalId', value: customerGlobalId },
+    { name: 'tenantId', value: tenantId },
+    { name: 'startDate', value: startDate },
+    { name: 'endDate', value: endDate },
+    { name: 'productName', value: productName },
+    { name: 'productModuleName', value: productModuleName },
+    { name: 'editionName', value: editionName },
+    { name: 'usageDescription', value: usageDescription },
+  ];
+
+  const missingFields: string[] = [];
+  for (const field of requiredFields) {
+    if (field.value === null || field.value === undefined || String(field.value).trim() === '') {
+      missingFields.push(field.name);
+    }
+  }
+
+  if (missingFields.length > 0) {
+    throw new Error(
+      `Cannot generate deterministic key: missing required fields: ${missingFields.join(', ')}`,
+    );
+  }
+
+  // Concatenate fields with delimiter
+  const concatenated = [
+    String(customerGlobalId),
+    String(tenantId),
+    String(startDate),
+    String(endDate),
+    String(productName),
+    String(productModuleName),
+    String(editionName),
+    String(usageDescription),
+  ].join('|');
+
+  // Generate SHA-256 hash and return first 32 characters
+  const hash = crypto.createHash('sha256').update(concatenated).digest('hex');
+  return hash.substring(0, 32);
 }
 
 /**
@@ -611,10 +677,18 @@ function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; i
  * Flattens the hierarchical consumption data structure into a simple array
  * where each item contains all information from all levels.
  * @param data Hierarchical customer consumption data
+ * @param addKey Whether to add an auto-generated deterministic key field
+ * @param keyFieldName Name of the key field to add (only used if addKey is true)
  * @returns Flattened array of consumption records
+ * @throws Error if keyFieldName conflicts with existing record fields
  */
-function flattenConsumptionData(data: ICustomerConsumption[]): IDataObject[] {
+function flattenConsumptionData(
+  data: ICustomerConsumption[],
+  addKey = false,
+  keyFieldName = 'id',
+): IDataObject[] {
   const flattened: IDataObject[] = [];
+  let fieldNameValidated = false;
 
   // Iterate through each customer
   for (const customer of data) {
@@ -631,7 +705,7 @@ function flattenConsumptionData(data: ICustomerConsumption[]): IDataObject[] {
         // Iterate through each usage item
         for (const usageItem of usageItems) {
           // Create a fully flattened record with all properties
-          flattened.push({
+          const record: IDataObject = {
             customerGlobalId,
             customerName,
             accountName,
@@ -650,7 +724,55 @@ function flattenConsumptionData(data: ICustomerConsumption[]): IDataObject[] {
             usageAmount: usageItem.usageAmount,
             usageUnit: usageItem.usageUnit,
             cuConsumed: usageItem.cuConsumed,
-          });
+          };
+
+          // Add auto-generated key if enabled
+          if (addKey) {
+            // Validate field name doesn't conflict (only need to check once)
+            if (!fieldNameValidated) {
+              if (keyFieldName in record) {
+                throw new Error(
+                  `Key field name "${keyFieldName}" conflicts with an existing field in the record. Please choose a different field name.`,
+                );
+              }
+              fieldNameValidated = true;
+            }
+
+            try {
+              const key = generateDeterministicKey(
+                customerGlobalId,
+                tenantId,
+                startDate,
+                endDate,
+                productName,
+                productModuleName,
+                usageItem.editionName,
+                usageItem.usageDescription,
+              );
+
+              // Insert key as first property
+              const recordWithKey: IDataObject = {};
+              recordWithKey[keyFieldName] = key;
+              Object.assign(recordWithKey, record);
+              flattened.push(recordWithKey);
+            } catch (error) {
+              // Log error and rethrow with context
+              logger.error(
+                `Consumption: Failed to generate key for record: ${JSON.stringify({
+                  customerGlobalId,
+                  tenantId,
+                  productName,
+                  productModuleName,
+                  editionName: usageItem.editionName,
+                  usageDescription: usageItem.usageDescription,
+                })}`,
+                error,
+              );
+              throw error;
+            }
+          } else {
+            flattened.push(record);
+          }
         }
       }
     }
@@ -714,6 +836,10 @@ export async function executeConsumptionBillingAnalyzerOperation(
       const byteConversionUnit = this.getNodeParameter('byteConversionUnit', i, 'TB') as
         | 'GB'
         | 'TB';
+
+      // Get key generation parameters
+      const addAutoGeneratedKey = this.getNodeParameter('addAutoGeneratedKey', i, false) as boolean;
+      const keyFieldName = this.getNodeParameter('keyFieldName', i, 'id') as string;
 
       // Create filters array for all filters
       const filterBy: IReportFilter[] = [];
@@ -834,7 +960,11 @@ export async function executeConsumptionBillingAnalyzerOperation(
       }
 
       // Flatten the hierarchical structure to a simpler format
-      const flattenedData = flattenConsumptionData(processedData);
+      const flattenedData = flattenConsumptionData(
+        processedData,
+        addAutoGeneratedKey,
+        keyFieldName,
+      );
       logger.info(`Consumption: Flattened data into ${flattenedData.length} records`);
 
       // Return the flattened data
