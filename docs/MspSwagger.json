@@ -1274,7 +1274,7 @@
       "get": {
         "tags": ["Reports"],
         "summary": "Get global usage report summary",
-        "description": "Returns consumption units usage for a defined period.",
+        "description": "⚠ **Warning**: This API version will be deprecated on February 12, 2026. \n Upgrade to v2 API now to experience enhanced functionality and performance.\n - Returns consumption units usage for a defined period.",
         "operationId": "GetGlobalUsageReportSummary",
         "parameters": [
           {
@@ -1325,12 +1325,12 @@
         "security": [{ "Bearer": [] }]
       }
     },
-    "/msp/reporting/v1/reports/consumptionItemized": {
+    "/msp/reporting/v2/reports/mspCommitAndBalance": {
       "post": {
         "tags": ["Reports"],
-        "summary": "Get Itemized Tenant Consumption Report v2.0",
-        "description": "⚠ **Warning**: This API version will be deprecated on October 30, 2025. \n Upgrade to v2 API now to experience enhanced functionality and performance.\n - Returns a detailed, daily, report on the consumption units consumed by the MSP tenants.",
-        "operationId": "GetTenantConsumptionItemizedV2",
+        "summary": "Get MSP Commit and Balance Report",
+        "description": "Returns a detailed report on consumption units commitment, consumption, and balance for the MSP account.",
+        "operationId": "GetMspCommitAndBalanceReport",
         "parameters": [
           {
             "name": "Authorization",
@@ -1341,11 +1341,11 @@
           }
         ],
         "requestBody": {
-          "description": "Specify the desired page size or filters to be applied to generate a detailed report of tenant consumption. \n :fa-info-circle: Sorting is currently not available for columns.",
+          "description": "Specify the desired page size or filters to be applied to generate the MSP commit and balance report.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GetTenantItemizedReportV2Request"
+                "$ref": "#/components/schemas/GetMspCommitAndBalanceRequest"
               }
             }
           }
@@ -1356,7 +1356,58 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TenantItemizedReportV2Response"
+                  "$ref": "#/components/schemas/GetMspCommitAndBalanceResponse"
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad Request", "content": {} },
+          "401": {
+            "description": "The request did not include an authentication token or an expired authentication token was supplied.",
+            "content": {}
+          },
+          "500": {
+            "description": "The request was not processed due to an internal error.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/APIError" }
+              }
+            }
+          }
+        },
+        "security": [{ "Bearer": [] }]
+      }
+    },
+    "/msp/reporting/v2/reports/mspGlobalUsage": {
+      "post": {
+        "tags": ["Reports"],
+        "summary": "Get Global Usage Report",
+        "description": "Returns a detailed report on consumption units usage across all customers and products.",
+        "operationId": "GetGlobalUsageReport",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "description": "Specify the Bearer access token",
+            "schema": { "type": "string" },
+            "in": "header",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "description": "Specify the desired page size or filters to be applied to generate the global usage report.",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GetGlobalUsageRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetGlobalUsageResponse"
                 }
               }
             }
@@ -1410,59 +1461,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetTenantItemizedReportV2Response"
-                }
-              }
-            }
-          },
-          "400": { "description": "Bad Request", "content": {} },
-          "401": {
-            "description": "The request did not include an authentication token or an expired authentication token was supplied.",
-            "content": {}
-          },
-          "500": {
-            "description": "The request was not processed due to an internal error.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/APIError" }
-              }
-            }
-          }
-        },
-        "security": [{ "Bearer": [] }]
-      }
-    },
-    "/msp/reporting/v1/reports/quotaItemized": {
-      "post": {
-        "tags": ["Reports"],
-        "summary": "Get Itemized Tenant Quota Report v2.0",
-        "description": "⚠ **Warning**: This API version will be deprecated on October 30, 2025. \n Upgrade to v2 API now to experience enhanced functionality and performance.\n - Returns a detailed, daily, report on the quota usage by MSP tenants. It displays consumption based on the currently active quota. \n If there is no active quota defined, the report will show consumption from the last active quota. \n If the quota that needs to be reported is set to 0, it will be excluded from the report.",
-        "operationId": "GetTenantQuotaItemizedV2",
-        "parameters": [
-          {
-            "name": "Authorization",
-            "description": "Specify the Bearer access token",
-            "schema": { "type": "string" },
-            "in": "header",
-            "required": true
-          }
-        ],
-        "requestBody": {
-          "description": "Specify the desired page size or filters to be applied to generate a report on the quota usage by MSP tenants. \n :fa-info-circle: Sorting is currently not available for columns.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetTenantItemizedReportV2Request"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TenantItemizedReportV2Response"
                 }
               }
             }
@@ -9545,6 +9543,193 @@
           }
         },
         "description": "The response schema containing global usage report summary."
+      },
+      "GetMspCommitAndBalanceRequest": {
+        "description": "Specify the details for getting MSP commit and balance report.",
+        "type": "object",
+        "properties": {
+          "pageToken": {
+            "description": "The token to access the next page of results. Use the token value received in the previous response's parameter 'nextPageToken'.\n- Keep this field blank in the first request.\n",
+            "type": "string",
+            "example": "eyJwYWdlTnVtYmVyIjoyLCJwYWdlU2l6ZSI6NTAwLCAiZmlsdGVycyI6bnVsbH0="
+          },
+          "filters": { "$ref": "#/components/schemas/FilterType" }
+        }
+      },
+      "GetMspCommitAndBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "The list contains details about MSP consumption unit commitment, consumption, and balance.",
+            "items": { "$ref": "#/components/schemas/MspCommitAndBalanceItem" }
+          },
+          "filters": {
+            "type": "object",
+            "description": "All filters passed in request are returned in response.",
+            "properties": {
+              "pageSize": {
+                "type": "integer",
+                "description": "Maximum number of records that can be returned in the response.",
+                "example": 5
+              },
+              "filterBy": {
+                "type": "array",
+                "description": "Filters applied in the request.",
+                "items": { "$ref": "#/components/schemas/FilterAttribute" }
+              }
+            }
+          },
+          "lastSyncTimestamp": {
+            "type": "string",
+            "description": "Last time sync up timestamp date. Sync up time does not guarantee that consumption stats till this time are included in reported stats. Reported consumption stats may be stale upto 48 hours.",
+            "format": "date-time",
+            "example": "2025-10-20T04:53:06Z"
+          },
+          "nextPageToken": {
+            "type": "string",
+            "description": "The token to access the next page of results. This parameter will be empty for the last page of results.",
+            "example": "NjEzZGJiYTctNmU4Ni00OTc0LTkzNjUtYjE4ZWNmNjFkYTRk"
+          }
+        }
+      },
+      "MspCommitAndBalanceItem": {
+        "type": "object",
+        "properties": {
+          "cuCommit": {
+            "type": "number",
+            "description": "The consumption unit commitment for the period.",
+            "format": "double",
+            "nullable": true,
+            "example": 1000
+          },
+          "cuConsumption": {
+            "type": "number",
+            "description": "The consumption units consumed during the period.",
+            "format": "double",
+            "example": 1.10326
+          },
+          "cuEndingBalance": {
+            "type": "number",
+            "description": "The ending balance of consumption units.",
+            "format": "double",
+            "example": 653.28342
+          },
+          "cuStartingBalance": {
+            "type": "number",
+            "description": "The starting balance of consumption units.",
+            "format": "double",
+            "example": 654.1408
+          },
+          "date": {
+            "type": "string",
+            "description": "The date for this record.",
+            "format": "date-time",
+            "example": "2024-12-22T00:00:00.000Z"
+          },
+          "dcpUniqueKey": {
+            "type": "string",
+            "description": "The unique key identifier of the record.",
+            "example": "380cee0972ed3f2286c03749ffc235d0cc52250121c2d3fac6c6b4f0b14d7875"
+          }
+        },
+        "description": "MSP commit and balance item details."
+      },
+      "GetGlobalUsageRequest": {
+        "description": "Specify the details for getting global usage report.",
+        "type": "object",
+        "properties": {
+          "pageToken": {
+            "description": "The token to access the next page of results. Use the token value received in the previous response's parameter 'nextPageToken'.\n- Keep this field blank in the first request.\n",
+            "type": "string",
+            "example": "eyJwYWdlTnVtYmVyIjoyLCJwYWdlU2l6ZSI6NTAwLCAiZmlsdGVycyI6bnVsbH0="
+          },
+          "filters": { "$ref": "#/components/schemas/FilterType" }
+        }
+      },
+      "GetGlobalUsageResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "The list contains global usage details about consumption units usage across all customers and products.",
+            "items": { "$ref": "#/components/schemas/GlobalUsageItem" }
+          },
+          "filters": {
+            "type": "object",
+            "description": "All filters passed in request are returned in response.",
+            "properties": {
+              "pageSize": {
+                "type": "integer",
+                "description": "Maximum number of records that can be returned in the response.",
+                "example": 5
+              },
+              "filterBy": {
+                "type": "array",
+                "description": "Filters applied in the request.",
+                "items": { "$ref": "#/components/schemas/FilterAttribute" }
+              }
+            }
+          },
+          "lastSyncTimestamp": {
+            "type": "string",
+            "description": "Last time sync up timestamp date. Sync up time does not guarantee that consumption stats till this time are included in reported stats. Reported consumption stats may be stale upto 48 hours.",
+            "format": "date-time",
+            "example": "2025-10-20T04:53:06Z"
+          },
+          "nextPageToken": {
+            "type": "string",
+            "description": "The token to access the next page of results. This parameter will be empty for the last page of results.",
+            "example": "OTdjOGM1NTYtMWYyMC00ODBhLWIxNzUtODFmOWY5YzY0MGM3"
+          }
+        }
+      },
+      "GlobalUsageItem": {
+        "type": "object",
+        "properties": {
+          "accountName": {
+            "type": "string",
+            "description": "Account name defined for the customer",
+            "example": "Customer_51"
+          },
+          "cuConsumption": {
+            "type": "number",
+            "description": "The consumption units consumed.",
+            "format": "double",
+            "example": 279.48909
+          },
+          "customerName": {
+            "type": "string",
+            "description": "Customer name defined for the customer",
+            "example": "Customer_5"
+          },
+          "dcpUniqueKey": {
+            "type": "string",
+            "description": "The unique key identifier of the record.",
+            "example": "8ab1417529fa5a5c8d244db4554a163b05418b0bc8564abd47612332a9fd2d66"
+          },
+          "edition": {
+            "type": "string",
+            "description": "The edition of the product.",
+            "example": "enterprise"
+          },
+          "productModule": {
+            "type": "string",
+            "description": "The product module name.",
+            "example": "Google Workspace"
+          },
+          "servicePlan": {
+            "type": "string",
+            "description": "The service plan name.",
+            "example": "ins_ent_plain"
+          },
+          "tenantType": {
+            "type": "string",
+            "description": "The type of tenant (Commercial/Evaluation).",
+            "example": "Commercial"
+          }
+        },
+        "description": "Global usage item details."
       },
       "GetTenantItemizedReportV2Request": {
         "description": "Specify the details for getting itemized report details.",

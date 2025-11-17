@@ -2,6 +2,21 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.6.0] - 2025-11-17
+
+### Changed
+
+- **Report Usage - Get Global Usage Report**
+  - Migrated from deprecated GET endpoint `/msp/v2/reports/usage/summary` to new POST endpoint `/msp/reporting/v2/reports/mspGlobalUsage`
+  - Operation now returns itemized consumption records instead of aggregated summary data
+  - Added pagination support with `returnAll` and `limit` parameters
+  - Date filtering now uses filter-based approach consistent with other v2 reporting endpoints
+  - Removed synthetic fields (`balanceDifference`, `commitDifference`) as they are not applicable to itemized data
+
+### Removed
+
+- Druva are deprecating endpoint `/msp/v2/reports/usage/summary` Feb 2026, removing support for now it.
+
 ## [0.5.0] - 2025-11-12
 
 ### Added

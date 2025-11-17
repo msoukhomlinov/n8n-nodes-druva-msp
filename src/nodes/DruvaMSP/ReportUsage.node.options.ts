@@ -14,9 +14,9 @@ export const reportUsageOperations: INodeProperties[] = [
     },
     options: [
       {
-        name: 'Get Global Usage Summary',
-        value: 'getGlobalSummary',
-        action: 'Get global usage summary across all customers',
+        name: 'Get Global Usage Report',
+        value: 'getGlobalReport',
+        action: 'Get global usage report across all customers',
         description: 'Retrieve consumption unit usage data for all customers',
       },
       {
@@ -32,7 +32,7 @@ export const reportUsageOperations: INodeProperties[] = [
         description: 'Retrieve detailed daily quota allocation and usage by tenant',
       },
     ],
-    default: 'getGlobalSummary',
+    default: 'getGlobalReport',
   },
 ];
 
@@ -65,7 +65,7 @@ export const reportUsageFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['reportUsage'],
-        operation: ['getGlobalSummary', 'getItemizedConsumption', 'getItemizedQuota'],
+        operation: ['getGlobalReport', 'getItemizedConsumption', 'getItemizedQuota'],
       },
     },
   },
@@ -73,17 +73,16 @@ export const reportUsageFields: INodeProperties[] = [
     displayName: 'Start Date',
     name: 'startDate',
     type: 'dateTime',
-    required: false,
+    required: true,
     displayOptions: {
       show: {
         resource: ['reportUsage'],
-        operation: ['getGlobalSummary'],
+        operation: ['getGlobalReport'],
         dateSelectionMethod: ['specificDates'],
       },
     },
     default: '',
-    description:
-      'Start date for the usage report period (defaults to 30 days ago if not specified)',
+    description: 'Start date for the usage report period',
   },
   {
     displayName: 'Start Date',
@@ -104,16 +103,16 @@ export const reportUsageFields: INodeProperties[] = [
     displayName: 'End Date',
     name: 'endDate',
     type: 'dateTime',
-    required: false,
+    required: true,
     displayOptions: {
       show: {
         resource: ['reportUsage'],
-        operation: ['getGlobalSummary'],
+        operation: ['getGlobalReport'],
         dateSelectionMethod: ['specificDates'],
       },
     },
     default: '',
-    description: 'End date for the usage report period (defaults to current date if not specified)',
+    description: 'End date for the usage report period',
   },
   {
     displayName: 'End Date',
@@ -137,7 +136,7 @@ export const reportUsageFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['reportUsage'],
-        operation: ['getGlobalSummary', 'getItemizedConsumption', 'getItemizedQuota'],
+        operation: ['getGlobalReport', 'getItemizedConsumption', 'getItemizedQuota'],
         dateSelectionMethod: ['relativeDates'],
       },
     },
@@ -352,7 +351,7 @@ export const reportUsageFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['reportUsage'],
-        operation: ['getItemizedConsumption', 'getItemizedQuota'],
+        operation: ['getGlobalReport', 'getItemizedConsumption', 'getItemizedQuota'],
       },
     },
     default: false,
@@ -368,7 +367,7 @@ export const reportUsageFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['reportUsage'],
-        operation: ['getItemizedConsumption', 'getItemizedQuota'],
+        operation: ['getGlobalReport', 'getItemizedConsumption', 'getItemizedQuota'],
         returnAll: [false],
       },
     },
