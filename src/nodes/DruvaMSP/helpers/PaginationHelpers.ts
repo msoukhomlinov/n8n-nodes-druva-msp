@@ -130,13 +130,28 @@ export async function druvaMspApiRequestAllItems(
   let loopCounter = 0;
   const MAX_LOOP_COUNT = 100; // Reasonable upper limit for pagination requests
 
+  // Store initial query parameters for first request
+  const initialQuery = { ...query };
+  let pageToken: string | undefined | null = undefined;
+
   do {
+    // Prepare query parameters for this request
+    // IMPORTANT: For Druva API, "You can query using the pageToken or filters; you cannot provide both simultaneously."
+    let requestQuery: IDataObject;
+    if (pageToken) {
+      // For subsequent requests, ONLY include pageToken parameter with no other parameters
+      requestQuery = { pageToken };
+    } else {
+      // First request, include all initial parameters
+      requestQuery = { ...initialQuery };
+    }
+
     responseData = (await druvaMspApiRequest.call(
       this,
       method,
       endpoint,
       body,
-      query,
+      requestQuery,
     )) as IDataObject;
     const items = responseData[responseKey] as IDataObject[];
 
@@ -151,20 +166,21 @@ export async function druvaMspApiRequestAllItems(
     returnData.push(...items);
 
     // Handle pagination if there's a nextPageToken
-    query.nextPageToken = responseData.nextPageToken as string;
+    // API returns "nextPageToken" but expects "pageToken" in subsequent requests
+    pageToken = responseData.nextPageToken as string | undefined | null;
 
     // Loop detection
-    if (query.nextPageToken) {
+    if (pageToken) {
       // Check if we've seen this token before (loop detection)
-      if (seenTokens.has(query.nextPageToken as string)) {
+      if (seenTokens.has(pageToken)) {
         logger.warn(
-          `AllItems: Detected pagination loop with token: ${query.nextPageToken}. Stopping pagination.`,
+          `AllItems: Detected pagination loop with token: ${pageToken}. Stopping pagination.`,
         );
         break;
       }
 
       // Add token to seen set
-      seenTokens.add(query.nextPageToken as string);
+      seenTokens.add(pageToken);
 
       // Increment request counter
       loopCounter++;
@@ -177,7 +193,7 @@ export async function druvaMspApiRequestAllItems(
         break;
       }
     }
-  } while (query.nextPageToken);
+  } while (pageToken);
 
   return returnData;
 }

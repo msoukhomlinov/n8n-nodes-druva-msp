@@ -2,6 +2,13 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.7.0] - 2025-11-23
+
+### Fixed
+
+- **Pagination**: Fixed critical bug in `druvaMspApiRequestAllItems` that affected all operations using pagination (Customer Get Many, Tenant Get Many, Service Plan Get Many, and Consumption Billing Analyzer). Now correctly uses `pageToken` parameter (instead of `nextPageToken`) and respects API requirement that `pageToken` and other query parameters are mutually exclusive. This prevents duplicate results and pagination failures.
+
+
 ## [0.6.0] - 2025-11-17
 
 ### Changed
