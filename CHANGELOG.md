@@ -2,6 +2,12 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.9.2] - 2025-12-08
+
+### Fixed
+
+- Fixed ESLint violation in TimeHelpers by using `node:timers/promises` instead of global `setTimeout` to comply with `@n8n/community-nodes/no-restricted-globals` rule
+
 ## [0.9.1] - 2025-12-08
 
 ### Changed
