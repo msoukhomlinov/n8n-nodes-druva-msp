@@ -78,7 +78,7 @@ export async function druvaMspApiRequest(
     // If API call is to a Reports endpoint, add detailed debug logging
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
       await logger.debug(
-        `API Request: ${method} ${options.uri}${
+        `API Request: ${method} ${options.url}${
           method === 'POST' || method === 'PUT'
             ? ` with ${Object.keys(body).length} parameters`
             : Object.keys(qs).length > 0
