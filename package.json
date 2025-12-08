@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-druva-msp",
-  "version": "0.7.0",
+  "version": "0.9.0",
   "description": "n8n node for Druva MSP API integration",
   "keywords": [
     "n8n-community-node-package",
@@ -60,9 +60,7 @@
     "ts-jest": "^29.3.0",
     "typescript": "^5.3.3"
   },
-  "dependencies": {
-    "i18n-iso-countries": "^7.14.0"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "n8n-workflow": ">=1.0.0"
   }

@@ -1,4 +1,5 @@
 import type { INodeProperties } from 'n8n-workflow';
+import { RELATIVE_DATE_RANGE_OPTIONS } from './helpers/Constants';
 
 // Define event categories centrally for reuse
 export const EVENT_CATEGORIES = [
@@ -580,21 +581,8 @@ export const eventFields: INodeProperties[] = [
         dateSelectionMethod: ['relativeDates'],
       },
     },
-    options: [
-      { name: 'Current Month', value: 'currentMonth' },
-      { name: 'Previous Month', value: 'previousMonth' },
-      { name: 'Current Quarter', value: 'currentQuarter' },
-      { name: 'Previous Quarter', value: 'previousQuarter' },
-      { name: 'Current Year', value: 'currentYear' },
-      { name: 'Previous Year', value: 'previousYear' },
-      { name: 'Last 30 Days', value: 'last30Days' },
-      { name: 'Last 60 Days', value: 'last60Days' },
-      { name: 'Last 90 Days', value: 'last90Days' },
-      { name: 'Last 6 Months', value: 'last6Months' },
-      { name: 'Last 12 Months', value: 'last12Months' },
-      { name: 'Year To Date', value: 'yearToDate' },
-    ],
-    default: 'currentMonth',
+    options: [...RELATIVE_DATE_RANGE_OPTIONS],
+    default: 'previousMonth1',
     description: 'Select a predefined date range for filtering events',
   },
 

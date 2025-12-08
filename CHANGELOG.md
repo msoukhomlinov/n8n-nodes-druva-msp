@@ -2,6 +2,22 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.9.0] - 2025-12-08
+
+### Changed
+
+- Swapped deprecated `this.helpers.request` calls to `this.helpers.httpRequest` across customer token, shared API, auth, and pagination helpers for compliance with n8n workflow APIs.
+- Replaced `setTimeout` polling with `this.helpers.wait` in task polling utilities to satisfy restricted globals rule.
+- Moved custom logger to use n8n `LoggerProxy` (debug/info/warn/error) instead of `console` to meet linting requirements.
+
+## [0.8.0] - 2025-12-08
+
+### Changed
+
+- Relative date ranges are now centralised in `helpers/Constants.ts` and reused across all nodes.
+- Relative date ranges expanded: `currentMonth` retained; added granular `previousMonth1`-`previousMonth12` options (full calendar months), replacing the old single `previousMonth` entry. Node defaults now point to `previousMonth1`.
+- Removed unused dependency `i18n-iso-countries` to reduce install footprint.
+
 ## [0.7.0] - 2025-11-23
 
 ### Fixed

@@ -59,7 +59,7 @@ export function getRelativeDateRange(relativeDateRange: string): {
   endDate: string;
 } {
   const now = new Date();
-  const endDate = new Date(now);
+  let endDate = new Date(now);
   let startDate: Date;
 
   // Reset time to end of day for end date (23:59:59.999)
@@ -72,11 +72,25 @@ export function getRelativeDateRange(relativeDateRange: string): {
       break;
     }
 
-    case 'previousMonth': {
-      // Start: 1st day of previous month
-      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      // End: Last day of previous month
-      endDate.setDate(0); // Sets to last day of previous month
+    case 'previousMonth1':
+    case 'previousMonth2':
+    case 'previousMonth3':
+    case 'previousMonth4':
+    case 'previousMonth5':
+    case 'previousMonth6':
+    case 'previousMonth7':
+    case 'previousMonth8':
+    case 'previousMonth9':
+    case 'previousMonth10':
+    case 'previousMonth11':
+    case 'previousMonth12': {
+      // N months ago as full calendar month
+      const monthsBack = Number(relativeDateRange.replace('previousMonth', ''));
+      const targetStart = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
+      const targetEnd = new Date(targetStart.getFullYear(), targetStart.getMonth() + 1, 0);
+      startDate = targetStart;
+      endDate = new Date(targetEnd);
+      endDate.setHours(23, 59, 59, 999);
       break;
     }
 

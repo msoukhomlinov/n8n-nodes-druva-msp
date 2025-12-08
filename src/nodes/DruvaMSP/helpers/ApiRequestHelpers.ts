@@ -3,7 +3,7 @@ import type {
   IDataObject,
   ILoadOptionsFunctions,
   IHookFunctions,
-  IRequestOptions,
+  IHttpRequestOptions,
   IHttpRequestMethods,
   JsonObject,
 } from 'n8n-workflow';
@@ -52,7 +52,7 @@ export async function druvaMspApiRequest(
     const accessToken = await getDruvaMspAccessToken.call(this);
 
     // Now make the actual API request with the token
-    let options: IRequestOptions = {
+    let options: IHttpRequestOptions = {
       method,
       headers: {
         Accept: 'application/json',
@@ -61,7 +61,7 @@ export async function druvaMspApiRequest(
       },
       qs,
       body,
-      uri: uri || buildApiUrl(endpoint, baseUrl),
+      url: uri || buildApiUrl(endpoint, baseUrl),
       json: true,
     };
 
@@ -90,7 +90,7 @@ export async function druvaMspApiRequest(
     }
 
     // Make the actual API request
-    const response = await this.helpers.request(options);
+    const response = await this.helpers.httpRequest(options);
 
     // If API call is to a Reports endpoint, add summary debug logging for response
     if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {

@@ -100,7 +100,7 @@ export async function waitForTaskCompletion(
         `Task: Task ${taskId} not complete yet (status: ${response?.status}), waiting ${pollInterval}s before next poll`,
         this,
       );
-      await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+      await this.helpers.wait(pollInterval * 1000);
     }
   }
 

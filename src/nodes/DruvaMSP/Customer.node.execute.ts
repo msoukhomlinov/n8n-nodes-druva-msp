@@ -348,7 +348,7 @@ export async function executeCustomerOperation(
     const baseUrl = (credentials.apiBaseUrl as string) || 'https://apis.druva.com';
 
     // Make request with form-urlencoded body
-    const response = await this.helpers.request({
+    const response = await this.helpers.httpRequest({
       method: 'POST',
       url: `${baseUrl}${endpoint}`,
       headers: {

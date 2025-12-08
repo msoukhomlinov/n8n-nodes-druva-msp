@@ -293,7 +293,7 @@ export async function druvaMspApiRequestAllItemsForOptions(
       const url = `${baseUrl}${endpoint}`;
       await logger.debug(`Options: Making request to: ${url}`, this);
 
-      const response = (await this.helpers.request({
+      const response = (await this.helpers.httpRequest({
         method: method as IHttpRequestOptions['method'],
         url,
         headers: {

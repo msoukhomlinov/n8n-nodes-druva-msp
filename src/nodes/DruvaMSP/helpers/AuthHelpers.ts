@@ -35,7 +35,7 @@ async function getAccessToken(this: IExecuteFunctions): Promise<string> {
   };
 
   try {
-    const response = await this.helpers.request(options);
+    const response = await this.helpers.httpRequest(options);
     if (
       typeof response === 'object' &&
       response !== null &&
@@ -75,7 +75,7 @@ export async function getDruvaMspAccessToken(
 
   try {
     // Get access token
-    const tokenResponse = await this.helpers.request({
+    const tokenResponse = await this.helpers.httpRequest({
       headers: {
         Accept: 'application/json',
         'content-type': 'application/x-www-form-urlencoded',

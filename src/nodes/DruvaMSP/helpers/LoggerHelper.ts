@@ -11,6 +11,7 @@
  */
 
 import type { IExecuteFunctions, ILoadOptionsFunctions, IHookFunctions } from 'n8n-workflow';
+import { LoggerProxy } from 'n8n-workflow';
 
 // Standard log prefix for easy identification in console
 const LOG_PREFIX = '[DruvaMSP]';
@@ -87,7 +88,7 @@ export const logger = {
     }
 
     if (enabled) {
-      console.log(`[DEBUG] ${LOG_PREFIX} ${message}`);
+      LoggerProxy.debug(`${LOG_PREFIX} ${message}`);
     }
   },
 
@@ -96,7 +97,7 @@ export const logger = {
    * @param message The message to log
    */
   info: (message: string): void => {
-    console.log(`[INFO] ${LOG_PREFIX} ${message}`);
+    LoggerProxy.info(`${LOG_PREFIX} ${message}`);
   },
 
   /**
@@ -104,7 +105,7 @@ export const logger = {
    * @param message The message to log
    */
   warn: (message: string): void => {
-    console.warn(`[WARN] ${LOG_PREFIX} ${message}`);
+    LoggerProxy.warn(`${LOG_PREFIX} ${message}`);
   },
 
   /**
@@ -113,7 +114,6 @@ export const logger = {
    * @param error Optional Error object for stack trace
    */
   error: (message: string, error?: Error): void => {
-    console.error(`[ERROR] ${LOG_PREFIX} ${message}`);
-    if (error) console.error(error);
+    LoggerProxy.error(`${LOG_PREFIX} ${message}`, { error });
   },
 };

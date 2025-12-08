@@ -237,3 +237,32 @@ export interface IReportFilter {
   operator: ReportOperator;
   value: string | number | boolean | string[] | number[];
 }
+
+/**
+ * Shared options list for relative date ranges across nodes
+ */
+export const RELATIVE_DATE_RANGE_OPTIONS = [
+  { name: 'Current Month', value: 'currentMonth' },
+  { name: 'Previous Month 1', value: 'previousMonth1' },
+  { name: 'Previous Month 2', value: 'previousMonth2' },
+  { name: 'Previous Month 3', value: 'previousMonth3' },
+  { name: 'Previous Month 4', value: 'previousMonth4' },
+  { name: 'Previous Month 5', value: 'previousMonth5' },
+  { name: 'Previous Month 6', value: 'previousMonth6' },
+  { name: 'Previous Month 7', value: 'previousMonth7' },
+  { name: 'Previous Month 8', value: 'previousMonth8' },
+  { name: 'Previous Month 9', value: 'previousMonth9' },
+  { name: 'Previous Month 10', value: 'previousMonth10' },
+  { name: 'Previous Month 11', value: 'previousMonth11' },
+  { name: 'Previous Month 12', value: 'previousMonth12' },
+  { name: 'Current Quarter', value: 'currentQuarter' },
+  { name: 'Previous Quarter', value: 'previousQuarter' },
+  { name: 'Current Year', value: 'currentYear' },
+  { name: 'Previous Year', value: 'previousYear' },
+  { name: 'Last 30 Days', value: 'last30Days' },
+  { name: 'Last 60 Days', value: 'last60Days' },
+  { name: 'Last 90 Days', value: 'last90Days' },
+  { name: 'Last 6 Months', value: 'last6Months' },
+  { name: 'Last 12 Months', value: 'last12Months' },
+  { name: 'Year To Date', value: 'yearToDate' },
+] as const;

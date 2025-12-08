@@ -192,7 +192,7 @@ export async function executeTaskOperation(
 
         // Wait for next poll
         if (!taskComplete && attempts < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+          await this.helpers.wait(pollInterval * 1000);
         }
       }
 
