@@ -2,11 +2,18 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
-## [0.9.2] - 2025-12-08
+## [0.9.4] - 2025-12-08
 
-### Fixed
+### Removed
+- **BREAKING**: Removed Task \"Wait for Completion\" operation due to n8n Cloud restrictions on timers in community nodes
+- Removed `TimeHelpers` and `TaskHelpers` utilities (timer-based helpers no longer allowed)
 
-- Fixed ESLint violation in TimeHelpers by using `node:timers/promises` instead of global `setTimeout` to comply with `@n8n/community-nodes/no-restricted-globals` rule
+### Migration Guide
+- Use the existing **Task → Get** operation in a workflow loop with the Wait node:
+  1. Call **Task → Get** with `taskId`
+  2. Check `status` equals `4` (Finished)
+  3. If not finished, add a Wait node (e.g. 5–10 seconds) then loop back to step 1
+  4. Continue when `status` is 4
 
 ## [0.9.1] - 2025-12-08
 

@@ -54,6 +54,23 @@ The following resources are available but require additional testing before prod
   - Endpoint Reports (User metrics, License usage, Backup status, Storage statistics)
   - Hybrid Workloads Reports (Backup activity, DR operations, Resource status)
 
+## Task polling (workflow-level)
+
+The Task resource exposes **Get Task** to check task status. n8n Cloud restricts timers inside community nodes, so waiting/polling must be done at the workflow level:
+
+**Pattern**
+1. **Get Task** – fetch the task by `taskId`
+2. **IF** – check `status === 4` (Finished)
+   - If yes: continue
+   - If no: Wait 5–10 seconds
+3. Loop back to step 1 until finished
+
+**Status values**
+- 1: Queued
+- 2: Running
+- 3: Failed
+- 4: Finished
+
 ## Authentication
 
 This node requires Druva MSP API credentials to authenticate:

@@ -13,7 +13,6 @@ import {
   druvaMspApiRequestAllPagedItems,
 } from './helpers/PaginationHelpers';
 import { getTenantCustomerId } from './helpers/EntityHelpers';
-import { waitForTaskCompletion } from './helpers/TaskHelpers';
 
 // Re-export everything
 export {
@@ -33,7 +32,4 @@ export {
 
   // Entity helpers
   getTenantCustomerId,
-
-  // Task helpers
-  waitForTaskCompletion,
 };

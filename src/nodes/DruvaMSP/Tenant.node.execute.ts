@@ -9,8 +9,7 @@ import {
   druvaMspApiRequest,
   druvaMspApiRequestAllItems,
   getTenantCustomerId,
-  waitForTaskCompletion,
-} from './GenericFunctions'; // Added import for waitForTaskCompletion
+} from './GenericFunctions';
 import {
   enrichApiResponse,
   enrichApiResponseArray,
@@ -210,7 +209,6 @@ export async function executeTenantOperation(
         | string
         | undefined;
       const featuresData = this.getNodeParameter('features', i, {}) as IDataObject;
-      const waitForCompletion = this.getNodeParameter('waitForCompletion', i, false) as boolean;
 
       // Parse storage regions from comma-separated string to array
       const storageRegions = storageRegionsStr
@@ -285,16 +283,10 @@ export async function executeTenantOperation(
           body,
         )) as IDataObject;
 
-        // If we should wait for task completion
-        if (waitForCompletion && createResponse.task && (createResponse.task as IDataObject).id) {
-          const taskId = (createResponse.task as IDataObject).id as string;
-          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
-
-          const taskResponse = await waitForTaskCompletion.call(this, taskId);
-          responseData = taskResponse;
-        } else {
-          responseData = createResponse;
-        }
+        // Return the create response with task information
+        // Note: To wait for task completion, use the Task resource "Get Task" operation
+        // in a workflow loop with a Wait node
+        responseData = createResponse;
       } catch (error) {
         throw new Error(`Failed to create tenant: ${(error as Error).message}`);
       }
@@ -398,16 +390,10 @@ export async function executeTenantOperation(
           body,
         )) as IDataObject;
 
-        // If we should wait for task completion
-        if (waitForCompletion && updateResponse.task && (updateResponse.task as IDataObject).id) {
-          const taskId = (updateResponse.task as IDataObject).id as string;
-          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
-
-          const taskResponse = await waitForTaskCompletion.call(this, taskId);
-          responseData = taskResponse;
-        } else {
-          responseData = updateResponse;
-        }
+        // Return the update response with task information
+        // Note: To wait for task completion, use the Task resource "Get Task" operation
+        // in a workflow loop with a Wait node
+        responseData = updateResponse;
       } catch (error) {
         throw new Error(`Failed to update tenant: ${(error as Error).message}`);
       }
@@ -417,9 +403,6 @@ export async function executeTenantOperation(
       if (!tenantId) {
         throw new Error('Tenant ID is required for the suspend operation.');
       }
-
-      // Check if we should wait for task completion
-      const waitForCompletion = this.getNodeParameter('waitForCompletion', i, false) as boolean;
 
       // Get the customer ID for this tenant
       try {
@@ -439,18 +422,10 @@ export async function executeTenantOperation(
           endpoint,
         )) as IDataObject;
 
-        // If we should wait for task completion
-        if (waitForCompletion && suspendResponse.task && (suspendResponse.task as IDataObject).id) {
-          const taskId = (suspendResponse.task as IDataObject).id as string;
-          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
-
-          // Wait for the task to complete
-          const taskResponse = await waitForTaskCompletion.call(this, taskId);
-          responseData = taskResponse;
-        } else {
-          // Just return the initial response
-          responseData = suspendResponse;
-        }
+        // Return the suspend response with task information
+        // Note: To wait for task completion, use the Task resource "Get Task" operation
+        // in a workflow loop with a Wait node
+        responseData = suspendResponse;
       } catch (error) {
         throw new Error(`Failed to suspend tenant: ${(error as Error).message}`);
       }
@@ -460,9 +435,6 @@ export async function executeTenantOperation(
       if (!tenantId) {
         throw new Error('Tenant ID is required for the unsuspend operation.');
       }
-
-      // Check if we should wait for task completion
-      const waitForCompletion = this.getNodeParameter('waitForCompletion', i, false) as boolean;
 
       // Get the customer ID for this tenant
       try {
@@ -483,21 +455,10 @@ export async function executeTenantOperation(
         )) as IDataObject;
 
         // If we should wait for task completion
-        if (
-          waitForCompletion &&
-          unsuspendResponse.task &&
-          (unsuspendResponse.task as IDataObject).id
-        ) {
-          const taskId = (unsuspendResponse.task as IDataObject).id as string;
-          await logger.debug(`Tenant: Waiting for task ${taskId} to complete`, this);
-
-          // Wait for the task to complete
-          const taskResponse = await waitForTaskCompletion.call(this, taskId);
-          responseData = taskResponse;
-        } else {
-          // Just return the initial response
-          responseData = unsuspendResponse;
-        }
+        // Return the unsuspend response with task information
+        // Note: To wait for task completion, use the Task resource "Get Task" operation
+        // in a workflow loop with a Wait node
+        responseData = unsuspendResponse;
       } catch (error) {
         throw new Error(`Failed to unsuspend tenant: ${(error as Error).message}`);
       }

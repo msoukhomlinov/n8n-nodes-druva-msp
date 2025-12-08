@@ -403,20 +403,6 @@ export const tenantFields: INodeProperties[] = [
       },
     ],
   },
-  {
-    displayName: 'Wait for Completion',
-    name: 'waitForCompletion',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['create'],
-      },
-    },
-    default: true,
-    description: 'Whether to wait for the create operation to complete before returning the result',
-  },
-
   /* -------------------------------------------------------------------------- */
   /*                                tenant:update                              */
   /* -------------------------------------------------------------------------- */
@@ -627,57 +613,13 @@ export const tenantFields: INodeProperties[] = [
       },
     ],
   },
-  {
-    displayName: 'Wait for Completion',
-    name: 'waitForCompletion',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['update'],
-      },
-    },
-    default: true,
-    description: 'Whether to wait for the update operation to complete before returning the result',
-  },
-
   /* -------------------------------------------------------------------------- */
   /*                             tenant:suspend                               */
   /* -------------------------------------------------------------------------- */
   // Suspend uses only the Tenant ID field, already defined above
 
-  {
-    displayName: 'Wait for Completion',
-    name: 'waitForCompletion',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['suspend'],
-      },
-    },
-    default: true,
-    description:
-      'Whether to wait for the suspend operation to complete before returning the result',
-  },
-
   /* -------------------------------------------------------------------------- */
   /*                            tenant:unsuspend                              */
   /* -------------------------------------------------------------------------- */
   // Unsuspend uses only the Tenant ID field, already defined above
-
-  {
-    displayName: 'Wait for Completion',
-    name: 'waitForCompletion',
-    type: 'boolean',
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['unsuspend'],
-      },
-    },
-    default: true,
-    description:
-      'Whether to wait for the unsuspend operation to complete before returning the result',
-  },
 ];
