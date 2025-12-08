@@ -2,6 +2,12 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [0.9.1] - 2025-12-08
+
+### Changed
+
+- Replaced direct `setTimeout` usage in task polling with shared `sleep` helper to satisfy `@n8n/community-nodes/no-restricted-globals` lint rule and keep wait logic centralised.
+
 ## [0.9.0] - 2025-12-08
 
 ### Changed

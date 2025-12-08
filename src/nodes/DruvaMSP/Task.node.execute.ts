@@ -16,6 +16,7 @@ import {
 
 // First, import the logger at the top of the file
 import { logger } from './helpers/LoggerHelper';
+import { sleep } from './helpers/TimeHelpers';
 
 /**
  * Task response interface
@@ -192,7 +193,7 @@ export async function executeTaskOperation(
 
         // Wait for next poll
         if (!taskComplete && attempts < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+          await sleep(pollInterval * 1000);
         }
       }
 

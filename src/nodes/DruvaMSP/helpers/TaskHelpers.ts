@@ -2,6 +2,7 @@ import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 
 import { druvaMspApiRequest } from './ApiRequestHelpers';
 import { logger } from './LoggerHelper';
+import { sleep } from './TimeHelpers';
 
 /**
  * Polls a task until it completes or reaches the timeout.
@@ -100,7 +101,7 @@ export async function waitForTaskCompletion(
         `Task: Task ${taskId} not complete yet (status: ${response?.status}), waiting ${pollInterval}s before next poll`,
         this,
       );
-      await new Promise((resolve) => setTimeout(resolve, pollInterval * 1000));
+      await sleep(pollInterval * 1000);
     }
   }
 
