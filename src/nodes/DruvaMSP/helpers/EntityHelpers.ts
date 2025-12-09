@@ -1,6 +1,6 @@
 import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 
-import { druvaMspApiRequest } from './ApiRequestHelpers';
+import { druvaMspApiRequestAllItems } from './PaginationHelpers';
 import { logger } from './LoggerHelper';
 
 /**
@@ -14,39 +14,37 @@ import { logger } from './LoggerHelper';
 export async function getTenantCustomerId(
   this: IExecuteFunctions,
   tenantId: string,
-): Promise<string> {
+): Promise<string | undefined> {
   await logger.debug(`Tenant: Looking up customer ID for tenant: ${tenantId}`, this);
 
-  // Get all tenants and find the matching one
   try {
-    const endpoint = '/msp/v2/tenants';
-    const qs = { pageSize: 100 };
-
-    const response = (await druvaMspApiRequest.call(
+    const tenants = (await druvaMspApiRequestAllItems.call(
       this,
       'GET',
-      endpoint,
-      undefined,
-      qs,
-    )) as IDataObject;
+      '/msp/v3/tenants',
+      'tenants',
+      {},
+      {
+        pageSize: '100',
+      },
+    )) as IDataObject[];
 
-    if (response.tenants && Array.isArray(response.tenants)) {
-      const tenants = response.tenants as IDataObject[];
-      await logger.debug(
-        `Tenant: Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`,
-        this,
-      );
+    await logger.debug(
+      `Tenant: Retrieved ${tenants.length} tenants, searching for tenant ID: ${tenantId}`,
+      this,
+    );
 
-      const targetTenant = tenants.find((tenant) => tenant.id === tenantId);
+    const targetTenant = tenants.find((tenant) => tenant.id === tenantId);
 
-      if (targetTenant?.customerID) {
-        const customerId = targetTenant.customerID as string;
-        await logger.debug(`Tenant: Found customer ID ${customerId} for tenant ${tenantId}`, this);
-        return customerId;
-      }
+    const customerId = targetTenant?.customerID as string | undefined;
+
+    if (customerId) {
+      await logger.debug(`Tenant: Found customer ID ${customerId} for tenant ${tenantId}`, this);
+      return customerId;
     }
 
-    throw new Error(`Tenant with ID ${tenantId} not found or missing customer ID`);
+    logger.warn(`Tenant: Tenant ${tenantId} not found in v3 list`);
+    return undefined;
   } catch (error) {
     logger.error(`Tenant: Failed to retrieve customer ID for tenant ${tenantId}`, error as Error);
     throw new Error(

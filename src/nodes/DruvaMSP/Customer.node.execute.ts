@@ -146,23 +146,36 @@ export async function executeCustomerOperation(
   } else if (operation === 'getMany') {
     const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
     const limit = this.getNodeParameter('limit', i, 50) as number;
+    const includeFeatures = this.getNodeParameter('includeFeatures', i, false) as boolean;
     const endpoint = '/msp/v3/customers';
 
     let customers: IDataObject[] = [];
 
     // Retrieve customers from API
     if (returnAll) {
+      const queryParams: IDataObject = {};
+      if (includeFeatures) {
+        queryParams.includeFeatures = true;
+      }
+
       customers = (await druvaMspApiRequestAllItems.call(
         this,
         'GET',
         endpoint,
         'customers',
+        {},
+        queryParams,
       )) as IDataObject[];
     } else {
       // API spec requires pageSize as string
-      const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, {
+      const queryParams: IDataObject = {
         pageSize: limit.toString(),
-      });
+      };
+      if (includeFeatures) {
+        queryParams.includeFeatures = true;
+      }
+
+      const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, queryParams);
       customers = ((response as IDataObject)?.customers as IDataObject[]) || [];
     }
 

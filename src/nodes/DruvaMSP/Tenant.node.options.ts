@@ -281,7 +281,10 @@ export const tenantFields: INodeProperties[] = [
   {
     displayName: 'Storage Regions',
     name: 'storageRegions',
-    type: 'string',
+    type: 'fixedCollection',
+    typeOptions: {
+      multipleValues: true,
+    },
     required: true,
     displayOptions: {
       show: {
@@ -289,10 +292,37 @@ export const tenantFields: INodeProperties[] = [
         operation: ['create'],
       },
     },
-    default: '',
+    default: {},
     description:
-      'Comma-separated list of AWS storage regions (e.g., us-east-1,us-east-2). Storage regions once added cannot be removed.',
-    placeholder: 'us-east-1,us-east-2',
+      'List of storage regions where tenant data is stored. Each entry must include a region name and provider (1=AWS, 2=Azure).',
+    options: [
+      {
+        displayName: 'Region',
+        name: 'region',
+        values: [
+          {
+            displayName: 'Name',
+            name: 'name',
+            type: 'string',
+            default: '',
+            placeholder: 'us-east-1',
+            description: 'Storage region name.',
+            required: true,
+          },
+          {
+            displayName: 'Storage Provider',
+            name: 'storageProvider',
+            type: 'options',
+            options: [
+              { name: 'AWS', value: 1 },
+              { name: 'Azure', value: 2 },
+            ],
+            default: 1,
+            description: 'Storage provider: 1 for AWS, 2 for Azure.',
+          },
+        ],
+      },
+    ],
   },
   {
     displayName: 'Quota',
@@ -350,7 +380,8 @@ export const tenantFields: INodeProperties[] = [
       },
     },
     default: {},
-    description: 'List of features that must be enabled for the tenant',
+    description:
+      'List of features to enable. Attribute fields apply only to M365, Google Workspace, and Endpoints features.',
     options: [
       {
         displayName: 'Feature',
@@ -360,11 +391,32 @@ export const tenantFields: INodeProperties[] = [
             displayName: 'Feature Name',
             name: 'name',
             type: 'options',
-            typeOptions: {
-              loadOptionsMethod: 'getServicePlanFeatureOptions',
-            },
             default: '',
-            description: 'Name of the feature (e.g., M365, Hybrid Workloads)',
+            options: [
+              { name: 'Enterprise Workloads', value: 'Enterprise Workloads' },
+              {
+                name: 'Enterprise Workloads Accelerated Ransomware Recovery',
+                value: 'Enterprise Workloads Accelerated Ransomware Recovery',
+              },
+              { name: 'Long Term Retention', value: 'Long Term Retention' },
+              { name: 'M365', value: 'M365' },
+              { name: 'Google Workspace', value: 'Google Workspace' },
+              { name: 'Endpoints', value: 'Endpoints' },
+              {
+                name: 'M365 Accelerated Ransomware Recovery',
+                value: 'M365 Accelerated Ransomware Recovery',
+              },
+              {
+                name: 'Endpoints Accelerated Ransomware Recovery',
+                value: 'Endpoints Accelerated Ransomware Recovery',
+              },
+              {
+                name: 'Google Workspace Accelerated Ransomware Recovery',
+                value: 'Google Workspace Accelerated Ransomware Recovery',
+              },
+            ],
+            description:
+              'Feature to enable. ARR/LTR/Enterprise features are boolean. SaaS/Endpoints features accept numeric attributes.',
           },
           {
             displayName: 'Attributes',
@@ -383,10 +435,15 @@ export const tenantFields: INodeProperties[] = [
                   {
                     displayName: 'Attribute Name',
                     name: 'name',
-                    type: 'string',
-                    default: '',
-                    description: 'Name of the attribute (e.g., userCount, preservedUserCount)',
-                    placeholder: 'userCount',
+                    type: 'options',
+                    options: [
+                      { name: 'userCount', value: 'userCount' },
+                      { name: 'preservedUserCount', value: 'preservedUserCount' },
+                      { name: 'educationLicenseState', value: 'educationLicenseState' },
+                    ],
+                    default: 'userCount',
+                    description:
+                      'Applicable to M365/Google Workspace (all three) and Endpoints (userCount, preservedUserCount).',
                   },
                   {
                     displayName: 'Attribute Value',
@@ -421,31 +478,13 @@ export const tenantFields: INodeProperties[] = [
     description: 'Unique identifier of the tenant to update',
   },
   {
-    displayName: 'Product ID',
-    name: 'productID',
-    type: 'options',
-    typeOptions: {
-      loadOptionsMethod: 'getProductIds',
-    },
-    required: true,
-    displayOptions: {
-      show: {
-        resource: ['tenant'],
-        operation: ['update'],
-      },
-    },
-    default: '',
-    description:
-      'The product ID: 1 for Hybrid Workloads (Enterprise Workloads), 2 for SaaS Apps and Endpoints',
-  },
-  {
     displayName: 'Service Plan ID',
     name: 'servicePlanID',
     type: 'options',
     typeOptions: {
       loadOptionsMethod: 'getServicePlans',
     },
-    required: true,
+    required: false,
     displayOptions: {
       show: {
         resource: ['tenant'],
@@ -462,7 +501,7 @@ export const tenantFields: INodeProperties[] = [
     typeOptions: {
       loadOptionsMethod: 'getTenantTypeOptions',
     },
-    required: true,
+    required: false,
     displayOptions: {
       show: {
         resource: ['tenant'],
@@ -476,7 +515,7 @@ export const tenantFields: INodeProperties[] = [
     displayName: 'License Expiry Date',
     name: 'licenseExpiryDate',
     type: 'dateTime',
-    required: true,
+    required: false,
     displayOptions: {
       show: {
         resource: ['tenant'],
@@ -490,18 +529,48 @@ export const tenantFields: INodeProperties[] = [
   {
     displayName: 'Storage Regions',
     name: 'storageRegions',
-    type: 'string',
-    required: true,
+    type: 'fixedCollection',
+    typeOptions: {
+      multipleValues: true,
+    },
+    required: false,
     displayOptions: {
       show: {
         resource: ['tenant'],
         operation: ['update'],
       },
     },
-    default: '',
+    default: {},
     description:
-      'Comma-separated list of AWS storage regions (e.g., us-east-1,us-east-2). Storage regions once added cannot be removed.',
-    placeholder: 'us-east-1,us-east-2',
+      'List of storage regions where tenant data is stored. Each entry must include a region name and provider (1=AWS, 2=Azure).',
+    options: [
+      {
+        displayName: 'Region',
+        name: 'region',
+        values: [
+          {
+            displayName: 'Name',
+            name: 'name',
+            type: 'string',
+            default: '',
+            placeholder: 'us-east-1',
+            description: 'Storage region name.',
+            required: true,
+          },
+          {
+            displayName: 'Storage Provider',
+            name: 'storageProvider',
+            type: 'options',
+            options: [
+              { name: 'AWS', value: 1 },
+              { name: 'Azure', value: 2 },
+            ],
+            default: 1,
+            description: 'Storage provider: 1 for AWS, 2 for Azure.',
+          },
+        ],
+      },
+    ],
   },
   {
     displayName: 'Quota',
@@ -552,7 +621,7 @@ export const tenantFields: INodeProperties[] = [
     typeOptions: {
       multipleValues: true,
     },
-    required: true,
+    required: false,
     displayOptions: {
       show: {
         resource: ['tenant'],
@@ -560,7 +629,7 @@ export const tenantFields: INodeProperties[] = [
       },
     },
     default: {},
-    description: 'Updated list of features that need to be enabled for the tenant',
+    description: 'Updated list of features that need to be enabled or disabled for the tenant',
     options: [
       {
         displayName: 'Feature',
@@ -570,11 +639,39 @@ export const tenantFields: INodeProperties[] = [
             displayName: 'Feature Name',
             name: 'name',
             type: 'options',
-            typeOptions: {
-              loadOptionsMethod: 'getServicePlanFeatureOptions',
-            },
             default: '',
-            description: 'Name of the feature (e.g., M365, Hybrid Workloads)',
+            options: [
+              { name: 'Enterprise Workloads', value: 'Enterprise Workloads' },
+              {
+                name: 'Enterprise Workloads Accelerated Ransomware Recovery',
+                value: 'Enterprise Workloads Accelerated Ransomware Recovery',
+              },
+              { name: 'Long Term Retention', value: 'Long Term Retention' },
+              { name: 'M365', value: 'M365' },
+              { name: 'Google Workspace', value: 'Google Workspace' },
+              { name: 'Endpoints', value: 'Endpoints' },
+              {
+                name: 'M365 Accelerated Ransomware Recovery',
+                value: 'M365 Accelerated Ransomware Recovery',
+              },
+              {
+                name: 'Endpoints Accelerated Ransomware Recovery',
+                value: 'Endpoints Accelerated Ransomware Recovery',
+              },
+              {
+                name: 'Google Workspace Accelerated Ransomware Recovery',
+                value: 'Google Workspace Accelerated Ransomware Recovery',
+              },
+            ],
+            description:
+              'Feature to enable. ARR/LTR/Enterprise features are boolean. SaaS/Endpoints features accept numeric attributes.',
+          },
+          {
+            displayName: 'Enabled',
+            name: 'isEnabled',
+            type: 'boolean',
+            default: true,
+            description: 'Whether this feature should be enabled (required by API).',
           },
           {
             displayName: 'Attributes',
@@ -593,10 +690,15 @@ export const tenantFields: INodeProperties[] = [
                   {
                     displayName: 'Attribute Name',
                     name: 'name',
-                    type: 'string',
-                    default: '',
-                    description: 'Name of the attribute (e.g., userCount, preservedUserCount)',
-                    placeholder: 'userCount',
+                    type: 'options',
+                    options: [
+                      { name: 'userCount', value: 'userCount' },
+                      { name: 'preservedUserCount', value: 'preservedUserCount' },
+                      { name: 'educationLicenseState', value: 'educationLicenseState' },
+                    ],
+                    default: 'userCount',
+                    description:
+                      'Applicable to M365/Google Workspace (all three) and Endpoints (userCount, preservedUserCount).',
                   },
                   {
                     displayName: 'Attribute Value',

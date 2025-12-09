@@ -332,9 +332,24 @@ export const customerFields: INodeProperties[] = [
     },
     typeOptions: {
       minValue: 1,
+      maxValue: 100,
     },
     default: 50,
     description: 'Max number of results to return',
+  },
+  {
+    displayName: 'Include Features',
+    name: 'includeFeatures',
+    type: 'boolean',
+    displayOptions: {
+      show: {
+        resource: ['customer'],
+        operation: ['getMany'],
+      },
+    },
+    default: false,
+    description: 'Whether to include customer features in the response',
+    hint: 'Druva API allows includeFeatures only on the first request (no pageToken).',
   },
   {
     displayName: 'Filter by Customer Name',

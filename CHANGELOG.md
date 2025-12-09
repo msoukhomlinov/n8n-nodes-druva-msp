@@ -2,6 +2,13 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+## [1.0.0] - 2025-12-09
+### Changed
+- Tenant get now auto-discovers customer ID via v3 tenant list instead of requiring caller input, returning empty when not found.
+- Tenant getMany/query aligns with v3 params (pageSize as string, includeFeatures default false, customerIds filter).
+- Customer getMany now exposes includeFeatures toggle (first-page only per API), enforces v3 pageSize cap (1–100), and keeps n8n-standard returnAll/limit without user-facing page tokens.
+- **Tenant Update**: Aligned with PATCH API - removed productID, made all fields optional, added isEnabled flag per feature, allows empty attrs arrays, builds conditional payload.
+
 ## [0.9.4] - 2025-12-08
 
 ### Removed
