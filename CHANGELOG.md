@@ -2,6 +2,11 @@
 
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
+
+## [1.1.0] - 2025-12-09
+### Fixed
+- Consumption Billing Analyzer now reports `cuConsumed` as total credits over the period (no averaging/high-water), while keeping existing rounding.
+
 ## [1.0.0] - 2025-12-09
 ### Changed
 - Tenant get now auto-discovers customer ID via v3 tenant list instead of requiring caller input, returning empty when not found.

@@ -426,16 +426,12 @@ function processCustomerConsumptionData(
           params.applyRounding,
         );
 
-        // Calculate CU consumed (if available) and apply rounding
+        // Calculate CU consumed (total over the period) and apply rounding
         let cuConsumed = 0;
-        if (firstUsageRecord.cuConsumed) {
-          cuConsumed = calculateUsageValue(
-            usageData.map((record) => ({
-              usageAmount: record.cuConsumed,
-            })),
-            params.calculationMethod,
-            startDate,
-            endDate,
+        if (firstUsageRecord.cuConsumed !== undefined && firstUsageRecord.cuConsumed !== null) {
+          cuConsumed = usageData.reduce(
+            (total, record) => total + Number(record.cuConsumed || 0),
+            0,
           );
 
           cuConsumed = roundValue(
