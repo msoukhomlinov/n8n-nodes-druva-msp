@@ -3,6 +3,10 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.2.0] - 2025-12-13
+### Fixed
+- Updated Consumption Billing Analyzer and getTenants load options to use v3 customer API endpoints (v2 endpoints returning 403 errors)
+
 ## [1.1.0] - 2025-12-09
 ### Fixed
 - Consumption Billing Analyzer now reports `cuConsumed` as total credits over the period (no averaging/high-water), while keeping existing rounding.

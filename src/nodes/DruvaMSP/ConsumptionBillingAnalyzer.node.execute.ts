@@ -859,14 +859,14 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       // Fetch Customer data for enrichment
       logger.info('Consumption: Fetching customer data for enrichment...');
-      const customersEndpoint = '/msp/v2/customers';
+      const customersEndpoint = '/msp/v3/customers';
       const customers = (await druvaMspApiRequestAllItems.call(
         this,
         'GET',
         customersEndpoint,
         'customers',
         {},
-        { pageSize: 100 },
+        { pageSize: '100' },
       )) as IDataObject[];
 
       // Create a lookup object for quick customer reference

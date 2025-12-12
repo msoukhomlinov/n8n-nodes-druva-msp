@@ -6,10 +6,11 @@ import type {
   INodeTypeDescription,
   ILoadOptionsFunctions,
   INodePropertyOptions,
+  NodeConnectionType,
 } from 'n8n-workflow';
 
 // Import values and types used as values
-import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 
 // Import helper functions
 // Import Customer resource
@@ -104,8 +105,8 @@ export class DruvaMsp implements INodeType {
     defaults: {
       name: 'Druva MSP',
     },
-    inputs: [NodeConnectionTypes.Main],
-    outputs: [NodeConnectionTypes.Main],
+    inputs: ['main' as NodeConnectionType],
+    outputs: ['main' as NodeConnectionType],
     credentials: [
       {
         name: 'druvaMspApi',
@@ -296,7 +297,7 @@ export class DruvaMsp implements INodeType {
           customerId = '';
         }
 
-        const endpoint = customerId ? `/msp/v2/customers/${customerId}/tenants` : '/msp/v2/tenants';
+        const endpoint = customerId ? `/msp/v3/customers/${customerId}/tenants` : '/msp/v3/tenants';
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
