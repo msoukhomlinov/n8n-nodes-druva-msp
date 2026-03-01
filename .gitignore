@@ -47,3 +47,8 @@ coverage/
 /.cursor-rules
 /.docs
 /CLAUDE.md
+
+# AI / Cursor / docs configs (managed by private repo)
+/.cursor*
+/AGENT.md
+/.agent*
