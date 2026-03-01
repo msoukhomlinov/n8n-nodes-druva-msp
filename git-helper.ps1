@@ -21,9 +21,13 @@
 
 .NOTES
     Author: Max Soukhomlinov
-    Version: 2.3.1
+    Version: 2.3.2
 
     Changelog:
+    2.3.2 - fix: Step 5 private push now compares local HEAD SHA vs remote SHA via ls-remote
+            instead of rev-list "refs/remotes/origin/<branch>..HEAD". Bare repos have no remote
+            tracking refs so the rev-list range silently returned nothing, causing the push to
+            be skipped on subsequent runs (e.g. docs committed locally but never pushed).
     2.3.1 - fix: Invoke-PrivateMigration now also pushes the public repo after committing the
             cleanup (git rm --cached + .gitignore). Previously the public cleanup commit was
             only made locally, leaving docs/AI files visible on the remote until a manual push.
@@ -782,16 +786,18 @@ function Invoke-PrivateMigration {
     }
 
     # --- Step 5: Push private repo if local is ahead of remote ---
+    # Use ls-remote for the SHA comparison — bare repos often have no remote tracking refs,
+    # so rev-list "refs/remotes/origin/<branch>..HEAD" silently returns nothing.
     $branch = Get-PrivateDefaultBranch
-    $remoteHead = & git --git-dir="$gitDir" ls-remote origin $branch 2>$null
-    if ([string]::IsNullOrWhiteSpace($remoteHead)) {
+    $localHead  = (& git --git-dir="$gitDir" rev-parse HEAD 2>$null).Trim()
+    $remoteInfo = & git --git-dir="$gitDir" ls-remote origin $branch 2>$null
+    if ([string]::IsNullOrWhiteSpace($remoteInfo)) {
         # Remote branch doesn't exist yet — push if we have any local commits
-        $localHead = & git --git-dir="$gitDir" rev-parse HEAD 2>$null
         $shouldPush = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrEmpty($localHead))
     } else {
-        # Remote exists — push only if local is ahead
-        $ahead = & git --git-dir="$gitDir" rev-list --count "refs/remotes/origin/$branch..HEAD" 2>$null
-        $shouldPush = ($ahead -match '^\d+$' -and [int]$ahead -gt 0)
+        # Remote exists — push only if local SHA differs from remote SHA
+        $remoteSha = ($remoteInfo -split '\s+')[0].Trim()
+        $shouldPush = ($localHead -ne $remoteSha)
     }
     if ($shouldPush) {
         Write-Info "  Pushing private config to remote (origin/$branch)..."
