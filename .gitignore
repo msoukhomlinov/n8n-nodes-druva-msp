@@ -41,3 +41,9 @@ coverage/
 .cursorignore
 .cursorrules
 .cursor/
+
+# AI / Cursor tool configs (managed by private repo)
+/.claude
+/.cursor-rules
+/.docs
+/CLAUDE.md
