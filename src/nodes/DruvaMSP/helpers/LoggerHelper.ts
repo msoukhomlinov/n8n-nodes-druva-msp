@@ -10,11 +10,15 @@
  * log levels), consider switching to LoggerProxy from n8n-workflow.
  */
 
-import type { IExecuteFunctions, ILoadOptionsFunctions, IHookFunctions } from 'n8n-workflow';
-import { LoggerProxy } from 'n8n-workflow';
+import type {
+  IExecuteFunctions,
+  ILoadOptionsFunctions,
+  IHookFunctions,
+} from "n8n-workflow";
+import { LoggerProxy } from "n8n-workflow";
 
 // Standard log prefix for easy identification in console
-const LOG_PREFIX = '[DruvaMSP]';
+const LOG_PREFIX = "[DruvaMSP]";
 
 // Cache to store debug state per execution context
 // Uses WeakMap for automatic cleanup when contexts are garbage collected
@@ -43,7 +47,7 @@ export async function getDebugEnabled(
 
   try {
     // Get credentials and read enableDebug setting
-    const credentials = await context.getCredentials('druvaMspApi');
+    const credentials = await context.getCredentials("druvaMspApi");
     const enabled = (credentials?.enableDebug as boolean) ?? false;
 
     // Cache the result

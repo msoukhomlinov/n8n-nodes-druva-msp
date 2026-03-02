@@ -4,8 +4,8 @@ import type {
   JsonObject,
   ILoadOptionsFunctions,
   IHookFunctions,
-} from 'n8n-workflow';
-import { NodeApiError } from 'n8n-workflow';
+} from "n8n-workflow";
+import { NodeApiError } from "n8n-workflow";
 
 /**
  * Retrieves an access token using Basic Auth with Client ID and Secret Key.
@@ -13,38 +13,40 @@ import { NodeApiError } from 'n8n-workflow';
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getAccessToken(this: IExecuteFunctions): Promise<string> {
-  const credentials = await this.getCredentials('druvaMspApi');
+  const credentials = await this.getCredentials("druvaMspApi");
   const clientId = credentials.clientId as string;
   const clientSecret = credentials.clientSecret as string;
-  const baseUrl = credentials.baseUrl || 'https://apis.druva.com';
+  const baseUrl = credentials.baseUrl || "https://apis.druva.com";
   const authUrl = `${baseUrl}/msp/auth/v1/token`;
 
   // Encode credentials for Basic Auth
-  const encodedCredentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const encodedCredentials = Buffer.from(
+    `${clientId}:${clientSecret}`,
+  ).toString("base64");
 
   const options: IHttpRequestOptions = {
     headers: {
-      Accept: 'application/json',
-      'content-type': 'application/x-www-form-urlencoded',
+      Accept: "application/json",
+      "content-type": "application/x-www-form-urlencoded",
       Authorization: `Basic ${encodedCredentials}`,
     },
-    method: 'POST',
+    method: "POST",
     url: authUrl,
-    body: 'grant_type=client_credentials',
+    body: "grant_type=client_credentials",
     json: true,
   };
 
   try {
     const response = await this.helpers.httpRequest(options);
     if (
-      typeof response === 'object' &&
+      typeof response === "object" &&
       response !== null &&
-      typeof response.access_token === 'string'
+      typeof response.access_token === "string"
     ) {
       return response.access_token;
     }
     throw new NodeApiError(this.getNode(), {
-      message: 'Invalid response format received from token endpoint',
+      message: "Invalid response format received from token endpoint",
     } as JsonObject);
   } catch (error) {
     throw new NodeApiError(this.getNode(), error as JsonObject, {
@@ -64,32 +66,34 @@ export async function getDruvaMspAccessToken(
   this: IHookFunctions | IExecuteFunctions | ILoadOptionsFunctions,
 ): Promise<string> {
   // Get credentials for API access
-  const credentials = await this.getCredentials('druvaMspApi');
-  const baseUrl = (credentials.baseUrl as string) || 'https://apis.druva.com';
+  const credentials = await this.getCredentials("druvaMspApi");
+  const baseUrl = (credentials.baseUrl as string) || "https://apis.druva.com";
   const clientId = credentials.clientId as string;
   const clientSecret = credentials.clientSecret as string;
   const authUrl = `${baseUrl}/msp/auth/v1/token`;
 
   // Encode credentials for Basic Auth
-  const encodedCredentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const encodedCredentials = Buffer.from(
+    `${clientId}:${clientSecret}`,
+  ).toString("base64");
 
   try {
     // Get access token
     const tokenResponse = await this.helpers.httpRequest({
       headers: {
-        Accept: 'application/json',
-        'content-type': 'application/x-www-form-urlencoded',
+        Accept: "application/json",
+        "content-type": "application/x-www-form-urlencoded",
         Authorization: `Basic ${encodedCredentials}`,
       },
-      method: 'POST',
+      method: "POST",
       url: authUrl,
-      body: 'grant_type=client_credentials',
+      body: "grant_type=client_credentials",
       json: true,
     });
 
     const accessToken = tokenResponse.access_token as string;
     if (!accessToken) {
-      throw new Error('Failed to obtain access token from Druva MSP API');
+      throw new Error("Failed to obtain access token from Druva MSP API");
     }
 
     return accessToken;

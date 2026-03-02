@@ -1,7 +1,8 @@
-import type { IExecuteFunctions, IDataObject } from 'n8n-workflow';
+import type { IExecuteFunctions, IDataObject } from "n8n-workflow";
 
-import { druvaMspApiRequestAllItems } from './PaginationHelpers';
-import { logger } from './LoggerHelper';
+import { druvaMspApiRequestAllItems } from "./PaginationHelpers";
+import { logger } from "./LoggerHelper";
+import { API_MAX_PAGE_SIZE } from "./Constants";
 
 /**
  * Retrieves the customer ID for a specific tenant.
@@ -15,17 +16,20 @@ export async function getTenantCustomerId(
   this: IExecuteFunctions,
   tenantId: string,
 ): Promise<string | undefined> {
-  await logger.debug(`Tenant: Looking up customer ID for tenant: ${tenantId}`, this);
+  await logger.debug(
+    `Tenant: Looking up customer ID for tenant: ${tenantId}`,
+    this,
+  );
 
   try {
     const tenants = (await druvaMspApiRequestAllItems.call(
       this,
-      'GET',
-      '/msp/v3/tenants',
-      'tenants',
+      "GET",
+      "/msp/v3/tenants",
+      "tenants",
       {},
       {
-        pageSize: '100',
+        pageSize: String(API_MAX_PAGE_SIZE),
       },
     )) as IDataObject[];
 
@@ -39,14 +43,20 @@ export async function getTenantCustomerId(
     const customerId = targetTenant?.customerID as string | undefined;
 
     if (customerId) {
-      await logger.debug(`Tenant: Found customer ID ${customerId} for tenant ${tenantId}`, this);
+      await logger.debug(
+        `Tenant: Found customer ID ${customerId} for tenant ${tenantId}`,
+        this,
+      );
       return customerId;
     }
 
     logger.warn(`Tenant: Tenant ${tenantId} not found in v3 list`);
     return undefined;
   } catch (error) {
-    logger.error(`Tenant: Failed to retrieve customer ID for tenant ${tenantId}`, error as Error);
+    logger.error(
+      `Tenant: Failed to retrieve customer ID for tenant ${tenantId}`,
+      error as Error,
+    );
     throw new Error(
       `Failed to retrieve customer ID for tenant ${tenantId}: ${(error as Error).message}`,
     );

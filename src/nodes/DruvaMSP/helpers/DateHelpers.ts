@@ -9,14 +9,14 @@
  */
 export function formatDate(
   dateTime: string,
-  format: 'iso' | 'date-only' | 'report' = 'iso',
+  format: "iso" | "date-only" | "report" = "iso",
 ): string {
   const date = new Date(dateTime);
 
   switch (format) {
-    case 'date-only':
+    case "date-only":
       // Format as YYYY-MM-DD for some request bodies
-      return date.toISOString().split('T')[0];
+      return date.toISOString().split("T")[0];
     // Remove redundant cases and use default
     default:
       // Full ISO string (RFC3339 format) for most API requests
@@ -30,7 +30,7 @@ export function formatDate(
  * @returns Formatted date string in RFC3339 format (e.g., "2023-01-01T00:00:00Z")
  */
 export function formatReportDate(dateTime: string): string {
-  return formatDate(dateTime, 'report');
+  return formatDate(dateTime, "report");
 }
 
 /**
@@ -66,42 +66,50 @@ export function getRelativeDateRange(relativeDateRange: string): {
   endDate.setHours(23, 59, 59, 999);
 
   switch (relativeDateRange) {
-    case 'currentMonth': {
+    case "currentMonth": {
       // Start: 1st day of current month
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
     }
 
-    case 'previousMonth1':
-    case 'previousMonth2':
-    case 'previousMonth3':
-    case 'previousMonth4':
-    case 'previousMonth5':
-    case 'previousMonth6':
-    case 'previousMonth7':
-    case 'previousMonth8':
-    case 'previousMonth9':
-    case 'previousMonth10':
-    case 'previousMonth11':
-    case 'previousMonth12': {
+    case "previousMonth1":
+    case "previousMonth2":
+    case "previousMonth3":
+    case "previousMonth4":
+    case "previousMonth5":
+    case "previousMonth6":
+    case "previousMonth7":
+    case "previousMonth8":
+    case "previousMonth9":
+    case "previousMonth10":
+    case "previousMonth11":
+    case "previousMonth12": {
       // N months ago as full calendar month
-      const monthsBack = Number(relativeDateRange.replace('previousMonth', ''));
-      const targetStart = new Date(now.getFullYear(), now.getMonth() - monthsBack, 1);
-      const targetEnd = new Date(targetStart.getFullYear(), targetStart.getMonth() + 1, 0);
+      const monthsBack = Number(relativeDateRange.replace("previousMonth", ""));
+      const targetStart = new Date(
+        now.getFullYear(),
+        now.getMonth() - monthsBack,
+        1,
+      );
+      const targetEnd = new Date(
+        targetStart.getFullYear(),
+        targetStart.getMonth() + 1,
+        0,
+      );
       startDate = targetStart;
       endDate = new Date(targetEnd);
       endDate.setHours(23, 59, 59, 999);
       break;
     }
 
-    case 'currentQuarter': {
+    case "currentQuarter": {
       // Start: 1st day of current quarter
       const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
       startDate = new Date(now.getFullYear(), quarterStartMonth, 1);
       break;
     }
 
-    case 'previousQuarter': {
+    case "previousQuarter": {
       // Get current quarter
       const currentQuarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
       // Start: 1st day of previous quarter
@@ -111,13 +119,13 @@ export function getRelativeDateRange(relativeDateRange: string): {
       break;
     }
 
-    case 'currentYear': {
+    case "currentYear": {
       // Start: January 1st of current year
       startDate = new Date(now.getFullYear(), 0, 1);
       break;
     }
 
-    case 'previousYear': {
+    case "previousYear": {
       // Start: January 1st of previous year
       startDate = new Date(now.getFullYear() - 1, 0, 1);
       // End: December 31st of previous year
@@ -125,42 +133,42 @@ export function getRelativeDateRange(relativeDateRange: string): {
       break;
     }
 
-    case 'last30Days': {
+    case "last30Days": {
       // Start: 30 days ago
       startDate = new Date(now);
       startDate.setDate(startDate.getDate() - 30);
       break;
     }
 
-    case 'last60Days': {
+    case "last60Days": {
       // Start: 60 days ago
       startDate = new Date(now);
       startDate.setDate(startDate.getDate() - 60);
       break;
     }
 
-    case 'last90Days': {
+    case "last90Days": {
       // Start: 90 days ago
       startDate = new Date(now);
       startDate.setDate(startDate.getDate() - 90);
       break;
     }
 
-    case 'last6Months': {
+    case "last6Months": {
       // Start: 6 months ago
       startDate = new Date(now);
       startDate.setMonth(startDate.getMonth() - 6);
       break;
     }
 
-    case 'last12Months': {
+    case "last12Months": {
       // Start: 12 months ago
       startDate = new Date(now);
       startDate.setMonth(startDate.getMonth() - 12);
       break;
     }
 
-    case 'yearToDate': {
+    case "yearToDate": {
       // Start: January 1st of current year
       startDate = new Date(now.getFullYear(), 0, 1);
       break;

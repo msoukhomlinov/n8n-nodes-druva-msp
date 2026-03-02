@@ -1,28 +1,28 @@
-import type { INodeProperties } from 'n8n-workflow';
-import { RELATIVE_DATE_RANGE_OPTIONS } from './helpers/Constants';
+import type { INodeProperties } from "n8n-workflow";
+import { RELATIVE_DATE_RANGE_OPTIONS } from "./helpers/Constants";
 
 // Define the operations for the Consumption Billing Analyzer resource
 export const consumptionBillingAnalyzerOperations: INodeProperties[] = [
   {
-    displayName: 'Operation',
-    name: 'operation',
-    type: 'options',
+    displayName: "Operation",
+    name: "operation",
+    type: "options",
     noDataExpression: true,
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
+        resource: ["consumptionBillingAnalyzer"],
       },
     },
     options: [
       {
-        name: 'Analyze Consumption for Billing',
-        value: 'analyzeConsumption',
-        action: 'Analyze consumption for billing',
+        name: "Analyze Consumption for Billing",
+        value: "analyzeConsumption",
+        action: "Analyze consumption for billing",
         description:
-          'Process consumption data with custom calculation methods for billing purposes',
+          "Process consumption data with custom calculation methods for billing purposes",
       },
     ],
-    default: 'analyzeConsumption',
+    default: "analyzeConsumption",
   },
 ];
 
@@ -32,135 +32,136 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
   /*                             Date Selection Fields                          */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Date Selection Method',
-    name: 'dateSelectionMethod',
-    type: 'options',
+    displayName: "Date Selection Method",
+    name: "dateSelectionMethod",
+    type: "options",
     options: [
       {
-        name: 'Specific Dates',
-        value: 'specificDates',
+        name: "Specific Dates",
+        value: "specificDates",
       },
       {
-        name: 'Relative Date Range',
-        value: 'relativeDates',
+        name: "Relative Date Range",
+        value: "relativeDates",
       },
     ],
-    default: 'relativeDates',
-    description: 'Choose whether to use specific dates or relative date ranges',
+    default: "relativeDates",
+    description: "Choose whether to use specific dates or relative date ranges",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
       },
     },
   },
   {
-    displayName: 'Start Date',
-    name: 'startDate',
-    type: 'dateTime',
+    displayName: "Start Date",
+    name: "startDate",
+    type: "dateTime",
     required: true,
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
-        dateSelectionMethod: ['specificDates'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
+        dateSelectionMethod: ["specificDates"],
       },
     },
-    default: '',
-    description: 'Start date for the billing period',
+    default: "",
+    description: "Start date for the billing period",
   },
   {
-    displayName: 'End Date',
-    name: 'endDate',
-    type: 'dateTime',
+    displayName: "End Date",
+    name: "endDate",
+    type: "dateTime",
     required: true,
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
-        dateSelectionMethod: ['specificDates'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
+        dateSelectionMethod: ["specificDates"],
       },
     },
-    default: '',
-    description: 'End date for the billing period',
+    default: "",
+    description: "End date for the billing period",
   },
   {
-    displayName: 'Date Range',
-    name: 'relativeDateRange',
-    type: 'options',
+    displayName: "Date Range",
+    name: "relativeDateRange",
+    type: "options",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
-        dateSelectionMethod: ['relativeDates'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
+        dateSelectionMethod: ["relativeDates"],
       },
     },
     options: [...RELATIVE_DATE_RANGE_OPTIONS],
-    default: 'previousMonth1',
+    default: "previousMonth1",
     required: true,
-    description: 'Select a predefined date range for billing period analysis',
+    description: "Select a predefined date range for billing period analysis",
   },
 
   /* -------------------------------------------------------------------------- */
   /*                        Customer Selection Fields                           */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Filter by Customers',
-    name: 'filterByCustomers',
-    type: 'boolean',
+    displayName: "Filter by Customers",
+    name: "filterByCustomers",
+    type: "boolean",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
       },
     },
     default: false,
-    description: 'Whether to filter results by specific customer IDs',
+    description: "Whether to filter results by specific customer IDs",
   },
   {
-    displayName: 'Customer IDs',
-    name: 'customerIds',
-    type: 'multiOptions',
+    displayName: "Customer IDs",
+    name: "customerIds",
+    type: "multiOptions",
     typeOptions: {
-      loadOptionsMethod: 'getCustomers',
+      loadOptionsMethod: "getCustomers",
     },
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
         filterByCustomers: [true],
       },
     },
     default: [],
     required: true,
-    description: 'List of customer IDs to include in the analysis',
+    description: "List of customer IDs to include in the analysis",
   },
 
   /* -------------------------------------------------------------------------- */
   /*                        Calculation Method Fields                           */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Calculation Method',
-    name: 'calculationMethod',
-    type: 'options',
+    displayName: "Calculation Method",
+    name: "calculationMethod",
+    type: "options",
     options: [
       {
-        name: 'Average (Total Usage ÷ Period Length)',
-        value: 'average',
-        description: 'Calculate average usage across the entire period',
+        name: "Average (Total Usage ÷ Period Length)",
+        value: "average",
+        description: "Calculate average usage across the entire period",
       },
       {
-        name: 'High Water Mark (Highest Daily Value)',
-        value: 'highWaterMark',
-        description: 'Use the highest daily usage value in the period',
+        name: "High Water Mark (Highest Daily Value)",
+        value: "highWaterMark",
+        description: "Use the highest daily usage value in the period",
       },
     ],
-    default: 'average',
-    description: 'Method to calculate billable values from daily consumption data',
+    default: "average",
+    description:
+      "Method to calculate billable values from daily consumption data",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
       },
     },
   },
@@ -169,60 +170,60 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
   /*                            Rounding Option Fields                          */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Apply Rounding',
-    name: 'applyRounding',
-    type: 'boolean',
+    displayName: "Apply Rounding",
+    name: "applyRounding",
+    type: "boolean",
     default: true,
-    description: 'Whether to apply rounding to the calculated values',
+    description: "Whether to apply rounding to the calculated values",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
       },
     },
   },
   {
-    displayName: 'Rounding Direction',
-    name: 'roundingDirection',
-    type: 'options',
+    displayName: "Rounding Direction",
+    name: "roundingDirection",
+    type: "options",
     options: [
       {
-        name: 'Round Up',
-        value: 'up',
-        description: 'Round up to the specified decimal places',
+        name: "Round Up",
+        value: "up",
+        description: "Round up to the specified decimal places",
       },
       {
-        name: 'Round Down',
-        value: 'down',
-        description: 'Round down to the specified decimal places',
+        name: "Round Down",
+        value: "down",
+        description: "Round down to the specified decimal places",
       },
     ],
-    default: 'up',
-    description: 'Direction for rounding calculated values',
+    default: "up",
+    description: "Direction for rounding calculated values",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
         applyRounding: [true],
       },
     },
   },
   {
-    displayName: 'Decimal Places',
-    name: 'decimalPlaces',
-    type: 'options',
+    displayName: "Decimal Places",
+    name: "decimalPlaces",
+    type: "options",
     options: [
-      { name: '0 (Whole Numbers)', value: 0 },
-      { name: '1 (Tenths)', value: 1 },
-      { name: '2 (Hundredths)', value: 2 },
-      { name: '3 (Thousandths)', value: 3 },
+      { name: "0 (Whole Numbers)", value: 0 },
+      { name: "1 (Tenths)", value: 1 },
+      { name: "2 (Hundredths)", value: 2 },
+      { name: "3 (Thousandths)", value: 3 },
     ],
     default: 1,
-    description: 'Number of decimal places to round to',
+    description: "Number of decimal places to round to",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
         applyRounding: [true],
       },
     },
@@ -232,15 +233,16 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
   /*                            Zero Usage Field                                */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Filter Out Zero Usage',
-    name: 'filterOutZeroUsage',
-    type: 'boolean',
+    displayName: "Filter Out Zero Usage",
+    name: "filterOutZeroUsage",
+    type: "boolean",
     default: true,
-    description: 'Whether to filter out items where both usage amount and CU consumed are zero',
+    description:
+      "Whether to filter out items where both usage amount and CU consumed are zero",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
       },
     },
   },
@@ -249,40 +251,41 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
   /*                        Byte Conversion Fields                              */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Convert Byte Values',
-    name: 'convertByteValues',
-    type: 'boolean',
+    displayName: "Convert Byte Values",
+    name: "convertByteValues",
+    type: "boolean",
     default: true,
-    description: 'Whether to convert raw byte values to a larger unit (GB or TB)',
+    description:
+      "Whether to convert raw byte values to a larger unit (GB or TB)",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
       },
     },
   },
   {
-    displayName: 'Target Unit',
-    name: 'byteConversionUnit',
-    type: 'options',
+    displayName: "Target Unit",
+    name: "byteConversionUnit",
+    type: "options",
     options: [
       {
-        name: 'Gigabytes (GB)',
-        value: 'GB',
-        description: 'Convert byte values to gigabytes',
+        name: "Gigabytes (GB)",
+        value: "GB",
+        description: "Convert byte values to gigabytes",
       },
       {
-        name: 'Terabytes (TB)',
-        value: 'TB',
-        description: 'Convert byte values to terabytes',
+        name: "Terabytes (TB)",
+        value: "TB",
+        description: "Convert byte values to terabytes",
       },
     ],
-    default: 'TB',
-    description: 'Unit to convert byte values to',
+    default: "TB",
+    description: "Unit to convert byte values to",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
         convertByteValues: [true],
       },
     },
@@ -292,29 +295,30 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
   /*                        Auto-Generated Key Fields                          */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Add Auto-Generated Key',
-    name: 'addAutoGeneratedKey',
-    type: 'boolean',
+    displayName: "Add Auto-Generated Key",
+    name: "addAutoGeneratedKey",
+    type: "boolean",
     default: false,
-    description: 'Whether to add a deterministic auto-generated key field to each record',
-    hint: 'Generates a deterministic ID based on: customerGlobalId, tenantId, startDate, endDate, productName, productModuleName, editionName, usageDescription (not provided by Druva API)',
+    description:
+      "Whether to add a deterministic auto-generated key field to each record",
+    hint: "Generates a deterministic ID based on: customerGlobalId, tenantId, startDate, endDate, productName, productModuleName, editionName, usageDescription (not provided by Druva API)",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
       },
     },
   },
   {
-    displayName: 'Key Field Name',
-    name: 'keyFieldName',
-    type: 'string',
-    default: 'id',
-    description: 'Name of the auto-generated key field',
+    displayName: "Key Field Name",
+    name: "keyFieldName",
+    type: "string",
+    default: "id",
+    description: "Name of the auto-generated key field",
     displayOptions: {
       show: {
-        resource: ['consumptionBillingAnalyzer'],
-        operation: ['analyzeConsumption'],
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumption"],
         addAutoGeneratedKey: [true],
       },
     },

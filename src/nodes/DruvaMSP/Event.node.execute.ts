@@ -3,19 +3,23 @@ import type {
   INodeExecutionData,
   IDataObject,
   NodeApiError,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
 // Import the helper functions for API requests and pagination
-import { druvaMspApiRequest, PaginationHelper } from './GenericFunctions';
-import { getSyslogSeverityLabel } from './helpers/ValueConverters';
-import { getRelativeDateRange } from './helpers/DateHelpers';
-import { logger } from './helpers/LoggerHelper';
+import { druvaMspApiRequest, PaginationHelper } from "./GenericFunctions";
+import { getSyslogSeverityLabel } from "./helpers/ValueConverters";
+import { getRelativeDateRange } from "./helpers/DateHelpers";
+import { logger } from "./helpers/LoggerHelper";
+import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
 
 /**
  * Filter events based on provided filters that cannot be handled by the API
  * Or for additional filtering after server-side filtering
  */
-function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDataObject[] {
+function applyRemainingFilters(
+  events: IDataObject[],
+  filters: IDataObject,
+): IDataObject[] {
   if (Object.keys(filters).length === 0) {
     return events;
   }
@@ -26,9 +30,12 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
   if (
     filters.dateRange &&
     (filters.dateRange as IDataObject).dateRangeValues &&
-    Object.keys((filters.dateRange as IDataObject).dateRangeValues as IDataObject).length > 0
+    Object.keys(
+      (filters.dateRange as IDataObject).dateRangeValues as IDataObject,
+    ).length > 0
   ) {
-    const dateRangeValues = (filters.dateRange as IDataObject).dateRangeValues as IDataObject;
+    const dateRangeValues = (filters.dateRange as IDataObject)
+      .dateRangeValues as IDataObject;
     const startDate = dateRangeValues.startDate
       ? new Date(dateRangeValues.startDate as string).getTime()
       : null;
@@ -47,7 +54,7 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
 
         // Handle if the timestamp is already a number (unix epoch) or needs conversion
         let eventDate: number;
-        if (typeof timeStampValue === 'number') {
+        if (typeof timeStampValue === "number") {
           // API returns timestamps in seconds, but JavaScript Date uses milliseconds
           // Convert from seconds to milliseconds by multiplying by 1000
           eventDate = timeStampValue * 1000;
@@ -76,7 +83,11 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
   }
 
   // Filter by category (if not already filtered server-side or if multiple values selected)
-  if (filters.category && Array.isArray(filters.category) && filters.category.length > 1) {
+  if (
+    filters.category &&
+    Array.isArray(filters.category) &&
+    filters.category.length > 1
+  ) {
     // If we have multiple categories, the first one was used for server-side filtering
     // We need to check the remaining categories client-side
     const remainingCategories = [...filters.category];
@@ -91,7 +102,11 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
   }
 
   // Filter by event type (if not already filtered server-side or if multiple values selected)
-  if (filters.eventType && Array.isArray(filters.eventType) && filters.eventType.length > 1) {
+  if (
+    filters.eventType &&
+    Array.isArray(filters.eventType) &&
+    filters.eventType.length > 1
+  ) {
     // If we have multiple event types, the first one was used for server-side filtering
     // We need to check the remaining types client-side
     const remainingTypes = [...filters.eventType];
@@ -106,7 +121,11 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
   }
 
   // Filter by severity (if not already filtered server-side or if multiple values selected)
-  if (filters.severity && Array.isArray(filters.severity) && filters.severity.length > 1) {
+  if (
+    filters.severity &&
+    Array.isArray(filters.severity) &&
+    filters.severity.length > 1
+  ) {
     // If we have multiple severities, the first one was used for server-side filtering
     // We need to check the remaining severities client-side
     const remainingSeverities = [...filters.severity];
@@ -117,7 +136,7 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
       filteredEvents = filteredEvents.filter((event) => {
         // API might return syslogSeverity as either a number or a string
         let severityValue = event.syslogSeverity;
-        if (typeof severityValue === 'number') {
+        if (typeof severityValue === "number") {
           severityValue = severityValue.toString();
         }
         return remainingSeverities.includes(severityValue as string);
@@ -126,27 +145,35 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
   }
 
   // Filter by feature (not supported by API, must be done client-side)
-  if (filters.feature && Array.isArray(filters.feature) && filters.feature.length > 0) {
+  if (
+    filters.feature &&
+    Array.isArray(filters.feature) &&
+    filters.feature.length > 0
+  ) {
     filteredEvents = filteredEvents.filter((event) => {
       return (filters.feature as string[]).includes(event.feature as string);
     });
   }
 
   // Filter by who initiated the event (not supported by API, must be done client-side)
-  if (filters.initiatedBy && (filters.initiatedBy as string).trim() !== '') {
+  if (filters.initiatedBy && (filters.initiatedBy as string).trim() !== "") {
     const initiatedBy = (filters.initiatedBy as string).trim().toLowerCase();
     filteredEvents = filteredEvents.filter((event) => {
       if (
         event.details &&
         (event.details as IDataObject).initiatorName &&
-        ((event.details as IDataObject).initiatorName as string).toLowerCase().includes(initiatedBy)
+        ((event.details as IDataObject).initiatorName as string)
+          .toLowerCase()
+          .includes(initiatedBy)
       ) {
         return true;
       }
       if (
         event.details &&
         (event.details as IDataObject).initiatorId &&
-        ((event.details as IDataObject).initiatorId as string).toLowerCase().includes(initiatedBy)
+        ((event.details as IDataObject).initiatorId as string)
+          .toLowerCase()
+          .includes(initiatedBy)
       ) {
         return true;
       }
@@ -163,7 +190,10 @@ function applyRemainingFilters(events: IDataObject[], filters: IDataObject): IDa
  * @param options The processing options.
  * @returns The processed events.
  */
-function processEvents(events: IDataObject[], options: IDataObject): IDataObject[] {
+function processEvents(
+  events: IDataObject[],
+  options: IDataObject,
+): IDataObject[] {
   if (!events || events.length === 0) {
     return events;
   }
@@ -176,12 +206,13 @@ function processEvents(events: IDataObject[], options: IDataObject): IDataObject
 
     // Process timestamp, check for both timeStamp and timestamp
     if (formatTimestamps) {
-      const timeStampValue = processedEvent.timeStamp || processedEvent.timestamp;
+      const timeStampValue =
+        processedEvent.timeStamp || processedEvent.timestamp;
       if (timeStampValue) {
         let dateTimeObj: Date;
 
         // Handle if the timestamp is a number (unix epoch) or needs conversion
-        if (typeof timeStampValue === 'number') {
+        if (typeof timeStampValue === "number") {
           // API returns timestamps in seconds, convert to milliseconds for JS Date
           dateTimeObj = new Date(timeStampValue * 1000);
 
@@ -211,7 +242,7 @@ function processEvents(events: IDataObject[], options: IDataObject): IDataObject
     if (processedEvent.syslogSeverity !== undefined) {
       // Convert to number if it's a string
       const severityCode =
-        typeof processedEvent.syslogSeverity === 'string'
+        typeof processedEvent.syslogSeverity === "string"
           ? Number(processedEvent.syslogSeverity)
           : (processedEvent.syslogSeverity as number);
 
@@ -282,57 +313,55 @@ async function fetchEvents(
   // Create query parameters with API-supported filters
   const queryParams: IDataObject = {};
 
-  // Always set a page size
+  // Always set a page size — swagger maximum is 500
   if (returnAll) {
-    queryParams.pageSize = 100; // Maximum allowed by API
+    queryParams.pageSize = 500;
   } else {
-    queryParams.pageSize = Math.min(limit, 100);
+    queryParams.pageSize = Math.min(limit, 500);
   }
 
   // Handle date selection based on method
   const dateSelectionMethod = this.getNodeParameter(
-    'dateSelectionMethod',
+    "dateSelectionMethod",
     i,
-    'relativeDates',
+    "relativeDates",
   ) as string;
-  let startDate = '';
-  let endDate = '';
+  let startDate = "";
+  let endDate = "";
 
   // Skip date filter initialization if "All Dates" is selected
-  if (dateSelectionMethod !== 'allDates') {
-    if (dateSelectionMethod === 'specificDates') {
+  if (dateSelectionMethod !== "allDates") {
+    if (dateSelectionMethod === "specificDates") {
       // Use specific dates provided by user
-      startDate = this.getNodeParameter('startDate', i, '') as string;
-      endDate = this.getNodeParameter('endDate', i, '') as string;
+      startDate = this.getNodeParameter("startDate", i, "") as string;
+      endDate = this.getNodeParameter("endDate", i, "") as string;
     } else {
       // Use relative date range
       const relativeDateRange = this.getNodeParameter(
-        'relativeDateRange',
+        "relativeDateRange",
         i,
-        'currentMonth',
+        "currentMonth",
       ) as string;
       const dateRange = getRelativeDateRange(relativeDateRange);
       startDate = dateRange.startDate;
       endDate = dateRange.endDate;
     }
 
-    // Add date filters as query parameters if API supports them
-    // Note: Dates are sent as ISO 8601 strings (RFC3339 format)
-    if (startDate) {
-      queryParams.startDate = startDate;
-    }
-    if (endDate) {
-      queryParams.endDate = endDate;
-    }
+    // startDate/endDate are not documented by the Druva API for event endpoints.
+    // Client-side filtering via applyRemainingFilters handles date filtering instead.
   }
 
   // Check each filter toggle and apply server-side filtering for supported parameters
 
   // Category filtering (API supports single value)
-  const filterByCategory = this.getNodeParameter('filterByCategory', i, false) as boolean;
+  const filterByCategory = this.getNodeParameter(
+    "filterByCategory",
+    i,
+    false,
+  ) as boolean;
   let categoryValues: string[] = [];
   if (filterByCategory) {
-    categoryValues = this.getNodeParameter('category', i, []) as string[];
+    categoryValues = this.getNodeParameter("category", i, []) as string[];
     if (categoryValues.length > 0) {
       // Use first category for server-side filtering
       queryParams.category = categoryValues[0];
@@ -340,10 +369,14 @@ async function fetchEvents(
   }
 
   // Event type filtering (API parameter is 'type')
-  const filterByEventType = this.getNodeParameter('filterByEventType', i, false) as boolean;
+  const filterByEventType = this.getNodeParameter(
+    "filterByEventType",
+    i,
+    false,
+  ) as boolean;
   let eventTypeValues: string[] = [];
   if (filterByEventType) {
-    eventTypeValues = this.getNodeParameter('eventType', i, []) as string[];
+    eventTypeValues = this.getNodeParameter("eventType", i, []) as string[];
     if (eventTypeValues.length > 0) {
       // Use first event type for server-side filtering
       queryParams.type = eventTypeValues[0];
@@ -351,10 +384,14 @@ async function fetchEvents(
   }
 
   // Severity filtering (API parameter is 'syslogSeverity')
-  const filterBySeverity = this.getNodeParameter('filterBySeverity', i, false) as boolean;
+  const filterBySeverity = this.getNodeParameter(
+    "filterBySeverity",
+    i,
+    false,
+  ) as boolean;
   let severityValues: string[] = [];
   if (filterBySeverity) {
-    severityValues = this.getNodeParameter('severity', i, []) as string[];
+    severityValues = this.getNodeParameter("severity", i, []) as string[];
     if (severityValues.length > 0) {
       // Use first severity for server-side filtering, convert to number if needed
       const severityValue = severityValues[0];
@@ -377,18 +414,20 @@ async function fetchEvents(
       const MAX_CONSECUTIVE_LOW_COUNT = 3; // Stop after 3 consecutive low count pages
 
       logger.info(
-        `Events: Fetching from ${endpoint} (max page size: ${queryParams?.pageSize || 100})`,
+        `Events: Fetching from ${endpoint} (max page size: ${queryParams?.pageSize || API_MAX_PAGE_SIZE})`,
       );
 
       do {
         // If we have a nextPageToken, use only that parameter without any filters
         // This is a requirement of the Druva MSP API
-        const requestParams = nextPageToken ? { pageToken: nextPageToken } : { ...queryParams };
+        const requestParams = nextPageToken
+          ? { pageToken: nextPageToken }
+          : { ...queryParams };
 
         // Make the API request
         responseData = (await druvaMspApiRequest.call(
           this,
-          'GET',
+          "GET",
           endpoint,
           undefined,
           requestParams,
@@ -400,15 +439,18 @@ async function fetchEvents(
 
         // Check if we received substantially fewer events than requested
         // This is a strong indicator that we've reached or are near the end of available data
-        let requestedPageSize = 100; // Default value
-        if ('pageToken' in requestParams) {
+        let requestedPageSize = API_MAX_PAGE_SIZE; // Default value
+        if ("pageToken" in requestParams) {
           // If using page token, get the page size from the original query params
-          requestedPageSize = Number(queryParams.pageSize) || 100;
+          requestedPageSize = Number(queryParams.pageSize) || API_MAX_PAGE_SIZE;
         } else {
           // Otherwise get it from the current request params
-          requestedPageSize = Number(requestParams.pageSize) || 100;
+          requestedPageSize =
+            Number(requestParams.pageSize) || API_MAX_PAGE_SIZE;
         }
-        const lowEventThreshold = Math.floor(requestedPageSize * LOW_EVENT_THRESHOLD);
+        const lowEventThreshold = Math.floor(
+          requestedPageSize * LOW_EVENT_THRESHOLD,
+        );
 
         if (pageEvents.length > 0 && pageEvents.length < lowEventThreshold) {
           consecutiveLowCountPages++;
@@ -439,14 +481,17 @@ async function fetchEvents(
         // Log progress for debugging
         await logger.debug(
           `Page progress: +${pageEvents.length} events (total: ${events.length})${
-            nextPageToken ? ', more pages available' : ''
+            nextPageToken ? ", more pages available" : ""
           }`,
           this,
         );
 
         // Track the token and check for loops or max count
         if (!paginationHelper.trackToken(nextPageToken)) {
-          await logger.debug('Pagination stopped: loop detected or max count reached', this);
+          await logger.debug(
+            "Pagination stopped: loop detected or max count reached",
+            this,
+          );
           break;
         }
 
@@ -454,33 +499,53 @@ async function fetchEvents(
         // In this case, we should stop pagination to avoid unnecessary requests
         if (pageEvents.length === 0 && nextPageToken) {
           await logger.debug(
-            'Stopping pagination: received 0 events but have a next token (likely API quirk)',
+            "Stopping pagination: received 0 events but have a next token (likely API quirk)",
             this,
           );
           break;
         }
       } while (nextPageToken);
 
-      logger.info(`Events: Fetch complete - retrieved ${events.length} total events`);
+      logger.info(
+        `Events: Fetch complete - retrieved ${events.length} total events`,
+      );
     } else {
       // For limited results, make a single API request
       // API Response Structure: { events: Event[], nextPageToken?: string }
-      const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, queryParams);
+      const response = await druvaMspApiRequest.call(
+        this,
+        "GET",
+        endpoint,
+        undefined,
+        queryParams,
+      );
       events = ((response as IDataObject)?.events as IDataObject[]) || [];
     }
   } catch (error) {
-    logger.error(`Error retrieving events: ${(error as Error).message}`, error as Error);
+    logger.error(
+      `Error retrieving events: ${(error as Error).message}`,
+      error as Error,
+    );
     throw error;
   }
 
   // Check if we need to apply client-side filtering
-  const filterByFeature = this.getNodeParameter('filterByFeature', i, false) as boolean;
-  const filterByInitiator = this.getNodeParameter('filterByInitiator', i, false) as boolean;
+  const filterByFeature = this.getNodeParameter(
+    "filterByFeature",
+    i,
+    false,
+  ) as boolean;
+  const filterByInitiator = this.getNodeParameter(
+    "filterByInitiator",
+    i,
+    false,
+  ) as boolean;
 
   // Check if we need client-side date filtering
   // Note: Even if dates are sent to API, we may still need client-side filtering
   // if the API doesn't support date filtering or if we need to filter already-fetched results
-  const needsClientSideDateFilter = dateSelectionMethod !== 'allDates' && (startDate || endDate);
+  const needsClientSideDateFilter =
+    dateSelectionMethod !== "allDates" && (startDate || endDate);
 
   const hasRemainingFilters =
     needsClientSideDateFilter ||
@@ -524,12 +589,16 @@ async function fetchEvents(
 
     // Add feature filter if enabled
     if (filterByFeature) {
-      filters.feature = this.getNodeParameter('feature', i, []) as string[];
+      filters.feature = this.getNodeParameter("feature", i, []) as string[];
     }
 
     // Add initiator filter if enabled
     if (filterByInitiator) {
-      filters.initiatedBy = this.getNodeParameter('initiatedBy', i, '') as string;
+      filters.initiatedBy = this.getNodeParameter(
+        "initiatedBy",
+        i,
+        "",
+      ) as string;
     }
 
     events = applyRemainingFilters(events, filters);
@@ -557,41 +626,57 @@ export async function executeEventOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
   try {
-    if (operation === 'getManyMspEvents') {
+    if (operation === "getManyMspEvents") {
       // Get Many MSP Events
       // API: GET https://apis.druva.com/msp/v2/events
       // Reference: https://developer.druva.com/reference/getmspevents
       // Note: Currently using v2 endpoint. Verify if v3 endpoint (/msp/v3/events) is available.
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
-      const options = this.getNodeParameter('options', i, {}) as IDataObject;
-      const endpoint = '/msp/v2/events';
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
+      const options = this.getNodeParameter("options", i, {}) as IDataObject;
+      const endpoint = "/msp/v2/events";
 
       logger.info(`Operation: Retrieving MSP events from ${endpoint}`);
-      const events = await fetchEvents.call(this, endpoint, returnAll, limit, i, options);
+      const events = await fetchEvents.call(
+        this,
+        endpoint,
+        returnAll,
+        limit,
+        i,
+        options,
+      );
       logger.info(`Operation complete: Retrieved ${events.length} MSP events`);
 
       responseData = this.helpers.returnJsonArray(events);
-    } else if (operation === 'getManyCustomerEvents') {
+    } else if (operation === "getManyCustomerEvents") {
       // Get Many Customer Events
       // API: GET https://apis.druva.com/msp/v3/customers/{customerID}/events
       // Reference: https://developer.druva.com/reference/getcustomerevents
       // IMPORTANT: Recommended polling frequency per customer - only once in 30 minutes
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
-      const customerId = this.getNodeParameter('customerId', i) as string;
-      const options = this.getNodeParameter('options', i, {}) as IDataObject;
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
+      const customerId = this.getNodeParameter("customerId", i) as string;
+      const options = this.getNodeParameter("options", i, {}) as IDataObject;
       const endpoint = `/msp/v3/customers/${customerId}/events`;
 
-      logger.info(`Operation: Retrieving customer events for customer ${customerId}`);
       logger.info(
-        'Note: Recommended polling frequency for customer events is once per 30 minutes per customer',
+        `Operation: Retrieving customer events for customer ${customerId}`,
       );
-      const events = await fetchEvents.call(this, endpoint, returnAll, limit, i, options);
+      logger.info(
+        "Note: Recommended polling frequency for customer events is once per 30 minutes per customer",
+      );
+      const events = await fetchEvents.call(
+        this,
+        endpoint,
+        returnAll,
+        limit,
+        i,
+        options,
+      );
       logger.info(
         `Operation complete: Retrieved ${events.length} events for customer ${customerId}`,
       );

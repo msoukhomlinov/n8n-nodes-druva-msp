@@ -8,51 +8,49 @@ This package provides n8n nodes to integrate with Druva MSP APIs, allowing Manag
 
 ## Features
 
-The Druva MSP integration provides access to the following key resources:
-
-### Production-Ready Resources
-
-These resources have been fully tested and are ready for production use:
+The Druva MSP integration provides access to the following resources:
 
 - **Admin Management**
   - List, create, retrieve, update, and delete administrators
-  - Manage admin roles and permissions
+  - Filter by specific admin IDs
 
 - **Customer Management**
-  - Create and manage MSP customers
-  - Update customer details including contact information
+  - Create and manage MSP customers (including custom attributes at creation time)
+  - Update customer details including contact information and custom attributes
   - Generate customer-specific access tokens for API operations
-  - List and filter customers with client-side filtering capabilities
+  - List and filter customers; includes computed `isDruvaProvisioned` field
 
 - **Consumption Billing Analyzer**
   - Process consumption data with custom calculation methods for billing purposes
   - Apply configurable rounding and byte-value conversion
   - Returns a fully flattened data structure for easy processing in n8n workflows
   - Filter by specific customers, date ranges, and service plans
+  - Optional auto-generated deterministic key for database storage
 
-### Additional Resources (In Development)
-
-The following resources are available but require additional testing before production use:
-
-- **Tenant Management**
-  - Create, retrieve, and update tenants
-  - Suspend and unsuspend tenant operations
+- **Event Monitoring**
+  - Access MSP-level and customer-level events with client-side date filtering
 
 - **Service Plan Management**
-  - View available service plans
-  - Retrieve detailed service plan information
+  - View and filter available service plans (by status, name, editions, and features)
+
+- **Storage Region**
+  - Retrieve available storage regions grouped by product (`GET /msp/v2/storage-regions`)
+  - Response flattened to per-region items with `productID`, `name`, and `storageProvider`
 
 - **Task Management**
   - Track task status and progress
 
-- **Event Monitoring**
-  - Access MSP-level and customer-level events
+- **Tenant Management**
+  - Create, retrieve, and update tenants
+  - Suspend and unsuspend tenant operations
+  - Filter tenants by product; includes computed `isDruvaProvisioned` field
+  - Feature entitlement data included by default
 
 - **Comprehensive Reporting**
-  - Usage Reports (Global Summary, Tenant Consumption, Tenant Quota)
-  - Cyber Resilience Reports (Rollback Actions, Data Protection Risk)
-  - Endpoint Reports (User metrics, License usage, Backup status, Storage statistics)
-  - Hybrid Workloads Reports (Backup activity, DR operations, Resource status)
+  - **Usage Reports** — Global Usage, Tenant Consumption/Quota, MSP Commit and Balance, Customer and License (Daily/Monthly), Chargeback Tenant Consumption (Daily/Monthly)
+  - **Cyber Resilience Reports** — Rollback Actions, Data Protection Risk
+  - **Endpoint Reports** — Users, User Rollout, User Provisioning, License Usage, Last Backup Status, Alerts, Storage Statistics, Storage Alert, Cloud Cache Statistics, Restore Activity, Preserved Users Datasources
+  - **Enterprise Workloads Reports** — M365 and Google Workspace operations: Alerts, Groups/Teams/SharePoint/Shared Drive Discovery, License Usage, Preserved Users Datasources, Storage Consumption, User Count and Status, User Last Backup Status, User Provisioning, User Restore/Workload Activity; plus M365 Backup Activity (Groups, Public Folder, SharePoint, Teams)
 
 ## Task polling (workflow-level)
 

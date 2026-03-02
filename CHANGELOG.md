@@ -3,6 +3,70 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.3.0] - 2026-03-02
+
+### Added
+
+- **Constants**: centralised all Druva product and feature display names in two new exported constants — `DRUVA_PRODUCT_NAMES` and `DRUVA_TENANT_FEATURE_NAMES` — so future Druva renames require a single change in `Constants.ts`; includes D365 (Dynamics 365) and SFDC (Salesforce) entries from newer reporting schemas
+- **Report - Enterprise Workloads**: four new M365 backup activity operations aligned with Druva swagger
+  - Get M365 Groups Backup Activity Report (`/msp/reporting/v1/reports/mspGroupsBackupActivity`)
+  - Get M365 Public Folder Backup Activity Report (`/msp/reporting/v1/reports/mspPublicFolderBackupActivity`)
+  - Get M365 SharePoint Backup Activity Report (`/msp/reporting/v1/reports/mspSharePointBackupActivity`)
+  - Get M365 Teams Backup Activity Report (`/msp/reporting/v1/reports/mspTeamsBackupActivity`)
+- **Customer - Create**: optional `Set Attributes` toggle and `Attributes` collection (name/value pairs) to set custom attributes at creation time (e.g. `licenseManagementAllowed`, `dataAccessAllowed`); previously required a separate update call
+- **Storage Region resource** (new) — retrieve available storage regions grouped by product via `GET /msp/v2/storage-regions`; response is flattened to per-region items with `productID`, `name`, and `storageProvider` fields
+- **Report - Usage**: five new operations aligned with Druva reporting v2 API
+  - Get MSP Commit and Balance Report (`/msp/reporting/v2/reports/mspCommitAndBalance`)
+  - Get Customer and License Daily Report (`/msp/reporting/v2/reports/mspChargebackLicenseStateReport`)
+  - Get Customer and License Monthly Report (`/msp/reporting/v2/reports/mspChargebackLicenseStateMonthlyReport`)
+  - Get Chargeback Tenant Consumption Daily Report (`/msp/reporting/v2/reports/mspChargebackTenantConsumptionReport`)
+  - Get Chargeback Tenant Consumption Monthly Report (`/msp/reporting/v2/reports/mspChargebackTenantConsumptionMonthlyReport`)
+- **Report - Endpoint**: two new operations
+  - Get Restore Activity Report (`/msp/reporting/v1/reports/mspEPRestoreActivity`)
+  - Get Preserved Users Datasources Report (`/msp/reporting/v1/reports/mspEPPreservedUsersDataSources`)
+- **Report - Hybrid Workloads**: 22 new M365 and Google Workspace operations
+  - Microsoft 365: Alerts, Groups Discovery, License Usage, Preserved Users Datasources, SharePoint Site Discovery, Storage Consumption, Teams Discovery, User Count and Status, User Last Backup Status, User Provisioning, User Restore Activity, User Workload
+  - Google Workspace: Alerts, License Usage, Preserved Users Datasources, Shared Drive Backup Activity, Shared Drive Restore Activity, Storage Consumption, User Count and Status, User Last Backup Status, User Provisioning, User Restore Activity, User Workload
+- **Customer - Update**: optional `attributes` field (array of name/value pairs) to set custom attributes on the customer record; the v3 API requires the field to be present (sent as empty array by default)
+- **Customer - Get**: `includeFeatures` toggle to include feature entitlement data in the response
+- **Tenant - Get**: `includeFeatures` toggle to include feature entitlement data in the response
+- **Tenant - Get Many**: `filterByProduct` toggle and product ID picker to filter tenants by product
+- **Admin - Get Many**: `filterByIds` toggle and multi-value admin ID input to filter by specific admin IDs
+
+### Changed
+
+- **API page size**: centralised the Druva API maximum page size (`100`) into a single exported constant `API_MAX_PAGE_SIZE` in `helpers/Constants.ts`; all resources (Admin, ConsumptionBillingAnalyzer, Customer, Event, ReportCyber, ReportEndpoint, ReportEnterprise, Tenant, and the shared pagination and report helpers) now reference this constant instead of hard-coding `100`
+
+### Fixed
+
+- **Customer - Get Many**: `returnAll` path was not setting `pageSize` on the initial request, causing the API to use its default page size instead of the maximum (`100`); all customers are now fetched in the fewest possible requests
+
+- **Consumption Billing Analyzer**: byte unit detection now uses exact matching (`"byte"`, `"bytes"`, `"b"`) instead of substring matching; previously any unit containing the letter `"b"` (e.g. `"GB"`, `"TB"`, `"KB"`) incorrectly triggered byte-to-GB/TB conversion on an already-converted value
+- **Consumption Billing Analyzer**: redundant second `roundValue()` call removed for non-byte-conversion paths; rounding after byte conversion is preserved
+- **Consumption Billing Analyzer**: removed phantom `"none"` value from `IProcessingParams.roundingDirection` type union — the UI never exposes this option and it was unreachable
+
+- **Report - Endpoint - Get Users**: date filter field names corrected from `lastUpdatedTime` to `fromDate` (GTE) and `toDate` (LTE) per the `mspEPUsers` swagger filterBy enum; incorrect field caused API to ignore date filters silently
+- **Report - Endpoint - Get License Usage**: same date filter field name correction (`lastUpdatedTime` → `fromDate`/`toDate`) for the `mspEPLicenseUsage` endpoint
+- **Report - Cyber Resilience - Get Rollback Actions**: `entityTypes` filter moved from invalid top-level request body property into `filterBy` array with correct singular fieldName `entityType`; was silently ignored by the API when sent at top level. `actionTypes` removed from request (no matching filterBy fieldName in the API schema). Response key corrected from `items` to `data` (both single-page and returnAll paths) matching the `GetRollbackActionsReportDataResponse` schema
+- **Report - Cyber Resilience - Get Data Protection Risk**: `workloadTypes` and `connectionStatus` filters moved from invalid top-level request body properties into `filterBy` with correct fieldNames `workloadName` and `connectionStatusToCloud` respectively per the `mspDGDataProtectionRisk` schema. `riskLevels` removed (no matching filterBy fieldName in API schema). Response key corrected from `items` to `data` (both paths)
+- **Report - Cyber Resilience - Get Data Protection Risk**: removed non-functional `Filter by Risk Levels` / `Risk Levels` UI controls that silently did nothing (no `riskLevel` fieldName exists in the API schema)
+- **Customer**: fixed default operation from invalid `"list"` to `"getMany"`; previously caused the node to render with no operation pre-selected
+- **Report - Enterprise Workloads** (renamed): resource display label updated from "Report - Hybrid Workloads" to "Report - Enterprise Workloads" to match Druva's current product name; **breaking** — internal resource value changed from `reportHybrid` to `reportEnterprise`; existing workflows referencing `reportHybrid` must be updated to `reportEnterprise`; source files renamed from `ReportHybrid.*` to `ReportEnterprise.*` and all internal identifiers (`reportHybridOperations`, `reportHybridFields`, `executeReportHybridOperation`) updated accordingly
+- **Service Plan - Filter by Feature**: "Hybrid Workloads" option renamed to "Enterprise Workloads" in the feature filter dropdown, matching the API value the endpoint actually expects; previously the stored value `"Hybrid Workloads"` would have been silently rejected or ignored by the API
+- **Tenant - Create / Update**: "Hybrid Workloads" renamed to "Enterprise Workloads" in the feature name dropdown to match the API string accepted by `TenantFeaturesV3`; the underlying API value is unchanged
+- **Tenant - Get**: `includeFeatures` default changed from `false` to `true` so that feature data is returned out of the box; this data is required to identify Druva Provisioned tenants and support contract-syncing workflows
+- **Tenant - Get Many**: `includeFeatures` was hardcoded to `false`, suppressing feature data for all tenants in bulk operations; now always requests features from the API so that `features`, `edition`, and `productID_label` are available as alternatives to service plan lookups
+- **Customer - Get / Get Many**: added computed `isDruvaProvisioned` boolean field derived from the `licenseManagementAllowed` customer attribute (`"0"` = Druva Provisioned, `"1"` = MSP Provisioned) as per the Druva MSP product and attribute values specification
+- **Tenant - Get / Get Many**: added computed `isDruvaProvisioned` boolean field resolved from the parent customer's `licenseManagementAllowed` attribute — the authoritative definition of provisioning type; for `get`, one additional customer fetch is made using the already-resolved `customerId`; for `getMany`, a single customer list fetch builds an in-memory lookup map applied across all tenants; Druva Provisioned tenants have no MSP-managed service plan (`servicePlanID = -1`) and workflows should use the tenant's own `edition`, `productID_label`, and `features` fields for contract syncing instead
+
+- **Report - Hybrid Workloads**: Enterprise Workloads operations now use token-based pagination (`druvaMspApiRequestAllReportItems`) instead of the page-number-based helper; all operations (M365, Google Workspace, Enterprise Workloads) now use `"data"` as the response key (was `"items"` for M365/Google), matching the actual Druva API response structure
+- **Core**: replaced 12-branch `if/else if` resource dispatch in `DruvaMsp.node.ts execute()` with a data-driven registry object — no behaviour change
+- **Report - Hybrid Workloads**: removed phantom `getConsumptionByBackupSetReport` operation that referenced non-existent endpoint `mspEWConsumptionByBackupSet`
+- **Report - Cyber Resilience**: date filter field name corrected from `fromDate`/`toDate` to `lastUpdatedTime`; operator direction also corrected (start date uses `GTE`, end date uses `LTE`)
+- **Event**: removed undocumented `startDate`/`endDate` server-side query parameters (not in Druva API spec); date filtering continues to work via existing client-side `applyRemainingFilters`
+- **Event**: page size cap raised from 100 to 500 to match the Druva API documented maximum
+
+
 ## [1.2.0] - 2025-12-13
 ### Fixed
 - Updated Consumption Billing Analyzer and getTenants load options to use v3 customer API endpoints (v2 endpoints returning 403 errors)

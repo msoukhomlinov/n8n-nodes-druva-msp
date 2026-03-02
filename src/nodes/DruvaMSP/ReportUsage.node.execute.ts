@@ -1,6 +1,13 @@
-import { druvaMspApiRequest, druvaMspApiRequestAllReportV2Items } from './GenericFunctions';
-import { REPORT_FIELD_NAMES, REPORT_OPERATORS, type IReportFilter } from './helpers/Constants';
-import { getRelativeDateRange } from './helpers/DateHelpers';
+import {
+  druvaMspApiRequest,
+  druvaMspApiRequestAllReportV2Items,
+} from "./GenericFunctions";
+import {
+  REPORT_FIELD_NAMES,
+  REPORT_OPERATORS,
+  type IReportFilter,
+} from "./helpers/Constants";
+import { getRelativeDateRange } from "./helpers/DateHelpers";
 import {
   createCustomerFilter,
   createDateRangeFilter,
@@ -8,11 +15,15 @@ import {
   createReportFilter,
   createReportFilters,
   createUsageDescriptionFilter,
-} from './helpers/ReportHelpers';
-import { logger } from './helpers/LoggerHelper';
+} from "./helpers/ReportHelpers";
+import { logger } from "./helpers/LoggerHelper";
 
-import type { IExecuteFunctions } from 'n8n-workflow';
-import type { IDataObject, INodeExecutionData, NodeApiError } from 'n8n-workflow';
+import type { IExecuteFunctions } from "n8n-workflow";
+import type {
+  IDataObject,
+  INodeExecutionData,
+  NodeApiError,
+} from "n8n-workflow";
 
 /**
  * Executes the selected Report - Usage operation.
@@ -24,31 +35,31 @@ export async function executeReportUsageOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
   try {
     // Get date parameters based on selection method
     const dateSelectionMethod = this.getNodeParameter(
-      'dateSelectionMethod',
+      "dateSelectionMethod",
       i,
-      'relativeDates',
+      "relativeDates",
     ) as string;
-    let startDate = '';
-    let endDate = '';
+    let startDate = "";
+    let endDate = "";
 
     // Skip date filter initialization if "All Dates" is selected
-    if (dateSelectionMethod !== 'allDates') {
-      if (dateSelectionMethod === 'specificDates') {
+    if (dateSelectionMethod !== "allDates") {
+      if (dateSelectionMethod === "specificDates") {
         // Use specific dates provided by user
-        startDate = this.getNodeParameter('startDate', i, '') as string;
-        endDate = this.getNodeParameter('endDate', i, '') as string;
+        startDate = this.getNodeParameter("startDate", i, "") as string;
+        endDate = this.getNodeParameter("endDate", i, "") as string;
       } else {
         // Use relative date range
         const relativeDateRange = this.getNodeParameter(
-          'relativeDateRange',
+          "relativeDateRange",
           i,
-          'currentMonth',
+          "currentMonth",
         ) as string;
         const dateRange = getRelativeDateRange(relativeDateRange);
         startDate = dateRange.startDate;
@@ -56,18 +67,18 @@ export async function executeReportUsageOperation(
       }
     }
 
-    if (operation === 'getGlobalReport') {
+    if (operation === "getGlobalReport") {
       // Get Global Usage Report implementation (migrated from deprecated summary endpoint)
       // This endpoint returns paginated itemized consumption records
-      const endpoint = '/msp/reporting/v2/reports/mspGlobalUsage';
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
+      const endpoint = "/msp/reporting/v2/reports/mspGlobalUsage";
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
 
       // Create filters array for all filters
       const filterBy: IReportFilter[] = [];
 
       // Add date range filter if not using "All Dates"
-      if (dateSelectionMethod !== 'allDates' && startDate && endDate) {
+      if (dateSelectionMethod !== "allDates" && startDate && endDate) {
         filterBy.push(...createDateRangeFilter(startDate, endDate));
       }
 
@@ -77,7 +88,10 @@ export async function executeReportUsageOperation(
       };
 
       // Debug logging to show request details
-      await logger.debug(`ReportUsage.${operation}: Making API request to ${endpoint}`, this);
+      await logger.debug(
+        `ReportUsage.${operation}: Making API request to ${endpoint}`,
+        this,
+      );
       await logger.debug(
         `ReportUsage.${operation}: Request body: ${JSON.stringify(body, null, 2)}`,
         this,
@@ -89,7 +103,7 @@ export async function executeReportUsageOperation(
           this,
           endpoint,
           body,
-          'data',
+          "data",
         );
 
         await logger.debug(
@@ -99,7 +113,12 @@ export async function executeReportUsageOperation(
 
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
+        const response = await druvaMspApiRequest.call(
+          this,
+          "POST",
+          endpoint,
+          body,
+        );
 
         const itemCount = (response as IDataObject)?.data
           ? ((response as IDataObject).data as IDataObject[]).length
@@ -120,38 +139,57 @@ export async function executeReportUsageOperation(
         const items = (response as IDataObject)?.data ?? [];
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
-    } else if (operation === 'getItemizedConsumption' || operation === 'getItemizedQuota') {
+    } else if (
+      operation === "getItemizedConsumption" ||
+      operation === "getItemizedQuota"
+    ) {
       // Common logic for both itemized report types
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
 
       // Set endpoint based on operation
       const endpoint =
-        operation === 'getItemizedConsumption'
-          ? '/msp/reporting/v2/reports/consumptionItemized'
-          : '/msp/reporting/v2/reports/quotaItemized';
+        operation === "getItemizedConsumption"
+          ? "/msp/reporting/v2/reports/consumptionItemized"
+          : "/msp/reporting/v2/reports/quotaItemized";
 
       // Create filters array for all filters
       const filterBy: IReportFilter[] = [];
 
       // Add date range filter if not using "All Dates"
-      if (dateSelectionMethod !== 'allDates' && startDate && endDate) {
+      if (dateSelectionMethod !== "allDates" && startDate && endDate) {
         filterBy.push(...createDateRangeFilter(startDate, endDate));
       }
 
       // Add customer filter if specified
-      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
+      const filterByCustomers = this.getNodeParameter(
+        "filterByCustomers",
+        i,
+        false,
+      ) as boolean;
       if (filterByCustomers) {
-        const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
+        const customerIds = this.getNodeParameter(
+          "customerIds",
+          i,
+          [],
+        ) as string[];
         if (customerIds.length > 0) {
           filterBy.push(createCustomerFilter(customerIds));
         }
       }
 
       // Add product filter if specified
-      const filterByProducts = this.getNodeParameter('filterByProducts', i, false) as boolean;
+      const filterByProducts = this.getNodeParameter(
+        "filterByProducts",
+        i,
+        false,
+      ) as boolean;
       if (filterByProducts) {
-        const productIds = this.getNodeParameter('productIds', i, []) as string[];
+        const productIds = this.getNodeParameter(
+          "productIds",
+          i,
+          [],
+        ) as string[];
         if (productIds.length > 0) {
           filterBy.push(createProductFilter(productIds));
         }
@@ -159,12 +197,16 @@ export async function executeReportUsageOperation(
 
       // Add product module filter if specified
       const filterByProductModules = this.getNodeParameter(
-        'filterByProductModules',
+        "filterByProductModules",
         i,
         false,
       ) as boolean;
       if (filterByProductModules) {
-        const productModuleIds = this.getNodeParameter('productModuleIds', i, []) as number[];
+        const productModuleIds = this.getNodeParameter(
+          "productModuleIds",
+          i,
+          [],
+        ) as number[];
         if (productModuleIds.length > 0) {
           filterBy.push(
             createReportFilter(
@@ -178,12 +220,16 @@ export async function executeReportUsageOperation(
 
       // Add usage description filter if specified
       const filterByUsageDescriptions = this.getNodeParameter(
-        'filterByUsageDescriptions',
+        "filterByUsageDescriptions",
         i,
         false,
       ) as boolean;
       if (filterByUsageDescriptions) {
-        const usageDescriptions = this.getNodeParameter('usageDescriptions', i, []) as string[];
+        const usageDescriptions = this.getNodeParameter(
+          "usageDescriptions",
+          i,
+          [],
+        ) as string[];
         if (usageDescriptions.length > 0) {
           filterBy.push(createUsageDescriptionFilter(usageDescriptions));
         }
@@ -191,12 +237,16 @@ export async function executeReportUsageOperation(
 
       // Add edition name filter if specified
       const filterByEditionNames = this.getNodeParameter(
-        'filterByEditionNames',
+        "filterByEditionNames",
         i,
         false,
       ) as boolean;
       if (filterByEditionNames) {
-        const editionNames = this.getNodeParameter('editionNames', i, []) as string[];
+        const editionNames = this.getNodeParameter(
+          "editionNames",
+          i,
+          [],
+        ) as string[];
         if (editionNames.length > 0) {
           filterBy.push(
             createReportFilter(
@@ -214,7 +264,10 @@ export async function executeReportUsageOperation(
       };
 
       // Debug logging to show request details
-      await logger.debug(`ReportUsage.${operation}: Making API request to ${endpoint}`, this);
+      await logger.debug(
+        `ReportUsage.${operation}: Making API request to ${endpoint}`,
+        this,
+      );
       await logger.debug(
         `ReportUsage.${operation}: Request body: ${JSON.stringify(body, null, 2)}`,
         this,
@@ -226,7 +279,7 @@ export async function executeReportUsageOperation(
           this,
           endpoint,
           body,
-          'data',
+          "data",
         );
 
         await logger.debug(
@@ -236,7 +289,12 @@ export async function executeReportUsageOperation(
 
         responseData = this.helpers.returnJsonArray(allItems);
       } else {
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
+        const response = await druvaMspApiRequest.call(
+          this,
+          "POST",
+          endpoint,
+          body,
+        );
 
         const itemCount = (response as IDataObject)?.data
           ? ((response as IDataObject).data as IDataObject[]).length
@@ -254,6 +312,80 @@ export async function executeReportUsageOperation(
           );
         }
 
+        const items = (response as IDataObject)?.data ?? [];
+        responseData = this.helpers.returnJsonArray(items as IDataObject[]);
+      }
+    } else if (
+      operation === "getCommitAndBalance" ||
+      operation === "getLicenseDailyReport" ||
+      operation === "getLicenseMonthlyReport" ||
+      operation === "getChargebackTenantConsumptionReport" ||
+      operation === "getChargebackTenantConsumptionMonthlyReport"
+    ) {
+      const endpointMap: Record<string, string> = {
+        getCommitAndBalance: "/msp/reporting/v2/reports/mspCommitAndBalance",
+        getLicenseDailyReport:
+          "/msp/reporting/v2/reports/mspChargebackLicenseStateReport",
+        getLicenseMonthlyReport:
+          "/msp/reporting/v2/reports/mspChargebackLicenseStateMonthlyReport",
+        getChargebackTenantConsumptionReport:
+          "/msp/reporting/v2/reports/mspChargebackTenantConsumptionReport",
+        getChargebackTenantConsumptionMonthlyReport:
+          "/msp/reporting/v2/reports/mspChargebackTenantConsumptionMonthlyReport",
+      };
+      const endpoint = endpointMap[operation];
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
+
+      const filterBy: IReportFilter[] = [];
+
+      if (dateSelectionMethod !== "allDates" && startDate && endDate) {
+        filterBy.push(...createDateRangeFilter(startDate, endDate));
+      }
+
+      // Customer filter (supported by all except getCommitAndBalance)
+      if (operation !== "getCommitAndBalance") {
+        const filterByCustomers = this.getNodeParameter(
+          "filterByCustomers",
+          i,
+          false,
+        ) as boolean;
+        if (filterByCustomers) {
+          const customerIds = this.getNodeParameter(
+            "customerIds",
+            i,
+            [],
+          ) as string[];
+          if (customerIds.length > 0) {
+            filterBy.push(createCustomerFilter(customerIds));
+          }
+        }
+      }
+
+      const body: IDataObject = {
+        filters: createReportFilters(returnAll ? 100 : limit, filterBy),
+      };
+
+      await logger.debug(
+        `ReportUsage.${operation}: Making API request to ${endpoint}`,
+        this,
+      );
+
+      if (returnAll) {
+        const allItems = await druvaMspApiRequestAllReportV2Items.call(
+          this,
+          endpoint,
+          body,
+          "data",
+        );
+        responseData = this.helpers.returnJsonArray(allItems);
+      } else {
+        const response = await druvaMspApiRequest.call(
+          this,
+          "POST",
+          endpoint,
+          body,
+        );
         const items = (response as IDataObject)?.data ?? [];
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }

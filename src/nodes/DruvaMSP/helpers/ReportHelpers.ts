@@ -1,13 +1,14 @@
-import type { IDataObject } from 'n8n-workflow';
+import type { IDataObject } from "n8n-workflow";
 import {
   REPORT_FIELD_NAMES,
   REPORT_OPERATORS,
   type IReportFilter,
   type ReportFieldName,
   type ReportOperator,
-} from './Constants';
-import { formatReportDate } from './DateHelpers';
-import { logger } from './LoggerHelper';
+  API_MAX_PAGE_SIZE,
+} from "./Constants";
+import { formatReportDate } from "./DateHelpers";
+import { logger } from "./LoggerHelper";
 
 /**
  * Format a date for use in report filters (RFC3339 format)
@@ -45,10 +46,21 @@ export function createReportFilter(
  * @param endDate End date string from n8n
  * @returns Array of filter objects for the date range
  */
-export function createDateRangeFilter(startDate: string, endDate: string): IReportFilter[] {
+export function createDateRangeFilter(
+  startDate: string,
+  endDate: string,
+): IReportFilter[] {
   return [
-    createReportFilter(REPORT_FIELD_NAMES.DATE, REPORT_OPERATORS.GTE, formatReportDate(startDate)),
-    createReportFilter(REPORT_FIELD_NAMES.DATE, REPORT_OPERATORS.LTE, formatReportDate(endDate)),
+    createReportFilter(
+      REPORT_FIELD_NAMES.DATE,
+      REPORT_OPERATORS.GTE,
+      formatReportDate(startDate),
+    ),
+    createReportFilter(
+      REPORT_FIELD_NAMES.DATE,
+      REPORT_OPERATORS.LTE,
+      formatReportDate(endDate),
+    ),
   ];
 }
 
@@ -71,7 +83,11 @@ export function createCustomerFilter(customerIds: string[]): IReportFilter {
  * @returns Filter object for tenants
  */
 export function createTenantFilter(tenantIds: string[]): IReportFilter {
-  return createReportFilter(REPORT_FIELD_NAMES.TENANT_ID, REPORT_OPERATORS.CONTAINS, tenantIds);
+  return createReportFilter(
+    REPORT_FIELD_NAMES.TENANT_ID,
+    REPORT_OPERATORS.CONTAINS,
+    tenantIds,
+  );
 }
 
 /**
@@ -80,7 +96,11 @@ export function createTenantFilter(tenantIds: string[]): IReportFilter {
  * @returns Filter object for products
  */
 export function createProductFilter(productIds: string[]): IReportFilter {
-  return createReportFilter(REPORT_FIELD_NAMES.PRODUCT_ID, REPORT_OPERATORS.CONTAINS, productIds);
+  return createReportFilter(
+    REPORT_FIELD_NAMES.PRODUCT_ID,
+    REPORT_OPERATORS.CONTAINS,
+    productIds,
+  );
 }
 
 /**
@@ -88,7 +108,9 @@ export function createProductFilter(productIds: string[]): IReportFilter {
  * @param usageDescriptions Array of usage descriptions to filter by
  * @returns Filter object for usage descriptions
  */
-export function createUsageDescriptionFilter(usageDescriptions: string[]): IReportFilter {
+export function createUsageDescriptionFilter(
+  usageDescriptions: string[],
+): IReportFilter {
   return createReportFilter(
     REPORT_FIELD_NAMES.USAGE_DESCRIPTION,
     REPORT_OPERATORS.CONTAINS,
@@ -101,17 +123,19 @@ export function createUsageDescriptionFilter(usageDescriptions: string[]): IRepo
  * @param servicePlanIds Array of service plan IDs to filter by
  * @returns Promise<Filter object for service plans>
  */
-export async function createServicePlanFilter(servicePlanIds: string[]): Promise<IReportFilter> {
+export async function createServicePlanFilter(
+  servicePlanIds: string[],
+): Promise<IReportFilter> {
   // Convert first ID to a number as the API expects a single numeric value
   // Druva API expects servicePlanId to be a single integer, not an array
   if (servicePlanIds.length === 0) {
-    throw new Error('At least one service plan ID must be provided');
+    throw new Error("At least one service plan ID must be provided");
   }
 
   // Use the first ID in the array and convert it to a number
   const numericId = Number.parseInt(servicePlanIds[0], 10);
   if (Number.isNaN(numericId)) {
-    throw new Error('Invalid service plan ID: cannot be converted to a number');
+    throw new Error("Invalid service plan ID: cannot be converted to a number");
   }
 
   // Note: This function doesn't have execution context, so debug will use fallback (disabled by default)
@@ -134,9 +158,12 @@ export async function createServicePlanFilter(servicePlanIds: string[]): Promise
  * @param filterBy Array of filter objects
  * @returns Complete filters object for report API requests
  */
-export function createReportFilters(pageSize: number, filterBy: IReportFilter[]): IDataObject {
+export function createReportFilters(
+  pageSize: number,
+  filterBy: IReportFilter[],
+): IDataObject {
   return {
-    pageSize: Math.min(Math.max(1, pageSize), 100), // Ensure pageSize is between 1-100
+    pageSize: Math.min(Math.max(1, pageSize), API_MAX_PAGE_SIZE), // Ensure pageSize is between 1 and API max
     filterBy,
   };
 }
@@ -147,16 +174,16 @@ export function createReportFilters(pageSize: number, filterBy: IReportFilter[])
  */
 export async function getReportFieldNameOptions() {
   return [
-    { name: 'Date', value: REPORT_FIELD_NAMES.DATE },
-    { name: 'Customer ID', value: REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID },
-    { name: 'Account Name', value: REPORT_FIELD_NAMES.ACCOUNT_NAME },
-    { name: 'Tenant ID', value: REPORT_FIELD_NAMES.TENANT_ID },
-    { name: 'Product ID', value: REPORT_FIELD_NAMES.PRODUCT_ID },
-    { name: 'Product Module ID', value: REPORT_FIELD_NAMES.PRODUCT_MODULE_ID },
-    { name: 'Usage Description', value: REPORT_FIELD_NAMES.USAGE_DESCRIPTION },
-    { name: 'Edition Name', value: REPORT_FIELD_NAMES.EDITION_NAME },
-    { name: 'Service Plan ID', value: REPORT_FIELD_NAMES.SERVICE_PLAN_ID },
-    { name: 'Workload Name', value: REPORT_FIELD_NAMES.WORKLOAD_NAME },
+    { name: "Date", value: REPORT_FIELD_NAMES.DATE },
+    { name: "Customer ID", value: REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID },
+    { name: "Account Name", value: REPORT_FIELD_NAMES.ACCOUNT_NAME },
+    { name: "Tenant ID", value: REPORT_FIELD_NAMES.TENANT_ID },
+    { name: "Product ID", value: REPORT_FIELD_NAMES.PRODUCT_ID },
+    { name: "Product Module ID", value: REPORT_FIELD_NAMES.PRODUCT_MODULE_ID },
+    { name: "Usage Description", value: REPORT_FIELD_NAMES.USAGE_DESCRIPTION },
+    { name: "Edition Name", value: REPORT_FIELD_NAMES.EDITION_NAME },
+    { name: "Service Plan ID", value: REPORT_FIELD_NAMES.SERVICE_PLAN_ID },
+    { name: "Workload Name", value: REPORT_FIELD_NAMES.WORKLOAD_NAME },
   ];
 }
 
@@ -166,13 +193,13 @@ export async function getReportFieldNameOptions() {
  */
 export async function getReportOperatorOptions() {
   return [
-    { name: 'Equal', value: REPORT_OPERATORS.EQUAL },
-    { name: 'Not Equal', value: REPORT_OPERATORS.NOTEQUAL },
-    { name: 'Contains (Any Value in Array)', value: REPORT_OPERATORS.CONTAINS },
-    { name: 'Less Than', value: REPORT_OPERATORS.LT },
-    { name: 'Less Than or Equal', value: REPORT_OPERATORS.LTE },
-    { name: 'Greater Than', value: REPORT_OPERATORS.GT },
-    { name: 'Greater Than or Equal', value: REPORT_OPERATORS.GTE },
+    { name: "Equal", value: REPORT_OPERATORS.EQUAL },
+    { name: "Not Equal", value: REPORT_OPERATORS.NOTEQUAL },
+    { name: "Contains (Any Value in Array)", value: REPORT_OPERATORS.CONTAINS },
+    { name: "Less Than", value: REPORT_OPERATORS.LT },
+    { name: "Less Than or Equal", value: REPORT_OPERATORS.LTE },
+    { name: "Greater Than", value: REPORT_OPERATORS.GT },
+    { name: "Greater Than or Equal", value: REPORT_OPERATORS.GTE },
   ];
 }
 

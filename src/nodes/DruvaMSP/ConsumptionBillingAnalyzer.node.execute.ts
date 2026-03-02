@@ -1,16 +1,19 @@
-import { druvaMspApiRequestAllItems, druvaMspApiRequestAllReportV2Items } from './GenericFunctions';
-import type { IReportFilter } from './helpers/Constants';
-import { getRelativeDateRange } from './helpers/DateHelpers';
+import {
+  druvaMspApiRequestAllItems,
+  druvaMspApiRequestAllReportV2Items,
+} from "./GenericFunctions";
+import { type IReportFilter, API_MAX_PAGE_SIZE } from "./helpers/Constants";
+import { getRelativeDateRange } from "./helpers/DateHelpers";
 import {
   createCustomerFilter,
   createDateRangeFilter,
   createReportFilters,
-} from './helpers/ReportHelpers';
-import { logger } from './helpers/LoggerHelper';
+} from "./helpers/ReportHelpers";
+import { logger } from "./helpers/LoggerHelper";
 
-import type { IExecuteFunctions } from 'n8n-workflow';
-import type { IDataObject, INodeExecutionData } from 'n8n-workflow';
-import * as crypto from 'crypto';
+import type { IExecuteFunctions } from "n8n-workflow";
+import type { IDataObject, INodeExecutionData } from "n8n-workflow";
+import * as crypto from "crypto";
 
 // Define interfaces for the hierarchical data structure
 interface IUsageItem {
@@ -60,13 +63,13 @@ function roundValue(
   applyRounding = false,
 ): number {
   // If rounding is disabled or direction is "none", return the value as is
-  if (!applyRounding || roundingDirection === 'none') {
+  if (!applyRounding || roundingDirection === "none") {
     return value;
   }
 
   const multiplier = 10 ** decimalPlaces;
 
-  if (roundingDirection === 'up') {
+  if (roundingDirection === "up") {
     return Math.ceil(value * multiplier) / multiplier;
   }
 
@@ -84,7 +87,7 @@ function roundValue(
  */
 export function calculateUsageValue(
   usageData: IDataObject[],
-  calculationMethod: 'average' | 'highWaterMark',
+  calculationMethod: "average" | "highWaterMark",
   startDate: Date,
   endDate: Date,
 ): number {
@@ -93,7 +96,7 @@ export function calculateUsageValue(
     return 0;
   }
 
-  if (calculationMethod === 'highWaterMark') {
+  if (calculationMethod === "highWaterMark") {
     // Find the maximum usage value in the data
     let maxUsage = 0;
     for (const record of usageData) {
@@ -108,7 +111,9 @@ export function calculateUsageValue(
   // Average method
   // Calculate the total number of days in the period
   const totalDays =
-    Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    Math.floor(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    ) + 1;
 
   // Sum all usage values
   let totalUsage = 0;
@@ -125,7 +130,9 @@ export function calculateUsageValue(
  * @param customers Array of customer objects
  * @returns A lookup object with customer IDs as keys and customer objects as values
  */
-function createCustomerLookup(customers: IDataObject[]): { [key: string]: IDataObject } {
+function createCustomerLookup(customers: IDataObject[]): {
+  [key: string]: IDataObject;
+} {
   const lookup: { [key: string]: IDataObject } = {};
 
   for (const customer of customers) {
@@ -167,9 +174,14 @@ function groupConsumptionDataByCustomer(
  * @returns A unique key based on productModuleId, editionName, usageDescription, and servicePlanId
  */
 function createUsageItemKey(record: IDataObject): string {
-  return [record.productModuleId, record.editionName, record.usageDescription, record.servicePlanId]
+  return [
+    record.productModuleId,
+    record.editionName,
+    record.usageDescription,
+    record.servicePlanId,
+  ]
     .map(String)
-    .join('::');
+    .join("::");
 }
 
 /**
@@ -177,7 +189,9 @@ function createUsageItemKey(record: IDataObject): string {
  * @param customerData Array of consumption records for a single customer
  * @returns Map of tenantId-productId to array of consumption records
  */
-function groupByTenantAndProduct(customerData: IDataObject[]): Map<string, IDataObject[]> {
+function groupByTenantAndProduct(
+  customerData: IDataObject[],
+): Map<string, IDataObject[]> {
   const productMap = new Map<string, IDataObject[]>();
 
   for (const record of customerData) {
@@ -203,7 +217,9 @@ function groupByTenantAndProduct(customerData: IDataObject[]): Map<string, IData
  * @param productData Array of consumption records for a single product
  * @returns Map of productModuleId to array of consumption records
  */
-function groupByProductModule(productData: IDataObject[]): Map<number, IDataObject[]> {
+function groupByProductModule(
+  productData: IDataObject[],
+): Map<number, IDataObject[]> {
   const moduleMap = new Map<number, IDataObject[]>();
 
   for (const record of productData) {
@@ -226,7 +242,9 @@ function groupByProductModule(productData: IDataObject[]): Map<number, IDataObje
  * @param moduleData Array of consumption records for a single product module
  * @returns Map of usage item key to array of consumption records
  */
-function groupByUsageItem(moduleData: IDataObject[]): Map<string, IDataObject[]> {
+function groupByUsageItem(
+  moduleData: IDataObject[],
+): Map<string, IDataObject[]> {
   const usageMap = new Map<string, IDataObject[]>();
 
   for (const record of moduleData) {
@@ -246,13 +264,13 @@ function groupByUsageItem(moduleData: IDataObject[]): Map<string, IDataObject[]>
  * Interface for the consumption data processing parameters
  */
 interface IProcessingParams {
-  calculationMethod: 'average' | 'highWaterMark';
-  roundingDirection: 'none' | 'up' | 'down';
+  calculationMethod: "average" | "highWaterMark";
+  roundingDirection: "up" | "down";
   decimalPlaces: number;
   filterOutZeroUsage: boolean;
   applyRounding: boolean;
   convertByteValues: boolean;
-  byteConversionUnit: 'GB' | 'TB';
+  byteConversionUnit: "GB" | "TB";
 }
 
 /**
@@ -261,8 +279,8 @@ interface IProcessingParams {
  * @param targetUnit The unit to convert to ('GB' or 'TB')
  * @returns The converted value
  */
-function convertBytesToUnit(bytes: number, targetUnit: 'GB' | 'TB'): number {
-  if (targetUnit === 'GB') {
+function convertBytesToUnit(bytes: number, targetUnit: "GB" | "TB"): number {
+  if (targetUnit === "GB") {
     // Convert bytes to gigabytes (1 GB = 1,073,741,824 bytes)
     return bytes / 1073741824;
   }
@@ -296,26 +314,30 @@ function generateDeterministicKey(
 ): string {
   // Validate all required fields are present and not empty
   const requiredFields = [
-    { name: 'customerGlobalId', value: customerGlobalId },
-    { name: 'tenantId', value: tenantId },
-    { name: 'startDate', value: startDate },
-    { name: 'endDate', value: endDate },
-    { name: 'productName', value: productName },
-    { name: 'productModuleName', value: productModuleName },
-    { name: 'editionName', value: editionName },
-    { name: 'usageDescription', value: usageDescription },
+    { name: "customerGlobalId", value: customerGlobalId },
+    { name: "tenantId", value: tenantId },
+    { name: "startDate", value: startDate },
+    { name: "endDate", value: endDate },
+    { name: "productName", value: productName },
+    { name: "productModuleName", value: productModuleName },
+    { name: "editionName", value: editionName },
+    { name: "usageDescription", value: usageDescription },
   ];
 
   const missingFields: string[] = [];
   for (const field of requiredFields) {
-    if (field.value === null || field.value === undefined || String(field.value).trim() === '') {
+    if (
+      field.value === null ||
+      field.value === undefined ||
+      String(field.value).trim() === ""
+    ) {
       missingFields.push(field.name);
     }
   }
 
   if (missingFields.length > 0) {
     throw new Error(
-      `Cannot generate deterministic key: missing required fields: ${missingFields.join(', ')}`,
+      `Cannot generate deterministic key: missing required fields: ${missingFields.join(", ")}`,
     );
   }
 
@@ -329,10 +351,10 @@ function generateDeterministicKey(
     String(productModuleName),
     String(editionName),
     String(usageDescription),
-  ].join('|');
+  ].join("|");
 
   // Generate SHA-256 hash and return first 32 characters
-  const hash = crypto.createHash('sha256').update(concatenated).digest('hex');
+  const hash = crypto.createHash("sha256").update(concatenated).digest("hex");
   return hash.substring(0, 32);
 }
 
@@ -373,7 +395,7 @@ function processCustomerConsumptionData(
 
   // Process each tenant-product group
   for (const [key, productData] of productMap.entries()) {
-    const [tenantId, productIdStr] = key.split('::');
+    const [tenantId, productIdStr] = key.split("::");
     const productId = Number(productIdStr);
     const firstProductRecord = productData[0];
 
@@ -401,14 +423,18 @@ function processCustomerConsumptionData(
         const usageDescription = firstUsageRecord.usageDescription as string;
 
         // Get the unit, ensuring it has a default value, now using usageUnit from API
-        let usageUnit = 'Unknown';
-        if (firstUsageRecord.usageUnit !== undefined && firstUsageRecord.usageUnit !== null) {
+        let usageUnit = "Unknown";
+        if (
+          firstUsageRecord.usageUnit !== undefined &&
+          firstUsageRecord.usageUnit !== null
+        ) {
           usageUnit = String(firstUsageRecord.usageUnit);
         }
 
         // Use service plan name directly from the API response
         const servicePlanName =
-          (firstUsageRecord.servicePlanName as string) || 'Unknown Service Plan';
+          (firstUsageRecord.servicePlanName as string) ||
+          "Unknown Service Plan";
 
         // Calculate usage value based on calculation method
         const calculatedValue = calculateUsageValue(
@@ -428,7 +454,10 @@ function processCustomerConsumptionData(
 
         // Calculate CU consumed (total over the period) and apply rounding
         let cuConsumed = 0;
-        if (firstUsageRecord.cuConsumed !== undefined && firstUsageRecord.cuConsumed !== null) {
+        if (
+          firstUsageRecord.cuConsumed !== undefined &&
+          firstUsageRecord.cuConsumed !== null
+        ) {
           cuConsumed = usageData.reduce(
             (total, record) => total + Number(record.cuConsumed || 0),
             0,
@@ -443,7 +472,11 @@ function processCustomerConsumptionData(
         }
 
         // Skip zero usage items if filtering is enabled AND both usageAmount and cuConsumed are zero
-        if (params.filterOutZeroUsage && roundedValue === 0 && cuConsumed === 0) {
+        if (
+          params.filterOutZeroUsage &&
+          roundedValue === 0 &&
+          cuConsumed === 0
+        ) {
           continue;
         }
 
@@ -453,11 +486,14 @@ function processCustomerConsumptionData(
 
         if (
           params.convertByteValues &&
-          typeof usageUnit === 'string' &&
-          (usageUnit.toLowerCase().includes('byte') || usageUnit.toLowerCase().includes('b'))
+          typeof usageUnit === "string" &&
+          new Set(["byte", "bytes", "b"]).has(usageUnit.toLowerCase())
         ) {
           // Convert the value to the target unit
-          finalUsageAmount = convertBytesToUnit(roundedValue, params.byteConversionUnit);
+          finalUsageAmount = convertBytesToUnit(
+            roundedValue,
+            params.byteConversionUnit,
+          );
           // Update the unit
           finalUsageUnit = params.byteConversionUnit;
         }
@@ -468,9 +504,15 @@ function processCustomerConsumptionData(
           servicePlanId,
           servicePlanName,
           usageDescription,
-          usageAmount: params.applyRounding
-            ? roundValue(finalUsageAmount, params.roundingDirection, params.decimalPlaces, true)
-            : finalUsageAmount,
+          usageAmount:
+            params.applyRounding && finalUsageAmount !== roundedValue
+              ? roundValue(
+                  finalUsageAmount,
+                  params.roundingDirection,
+                  params.decimalPlaces,
+                  true,
+                )
+              : finalUsageAmount,
           usageUnit: finalUsageUnit,
           cuConsumed,
         };
@@ -568,12 +610,15 @@ function buildHierarchicalConsumptionData(
  * @param data The processed customer consumption data
  * @returns Object containing validation results
  */
-function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; issues: string[] } {
+function validateOutputData(data: ICustomerConsumption[]): {
+  isValid: boolean;
+  issues: string[];
+} {
   const issues: string[] = [];
 
   // Check if we have any data
   if (!data.length) {
-    issues.push('No data available after processing');
+    issues.push("No data available after processing");
     return { isValid: false, issues };
   }
 
@@ -581,18 +626,20 @@ function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; i
   for (const customer of data) {
     // Validate customer fields
     if (!customer.customerGlobalId) {
-      issues.push(`Missing customerGlobalId for customer: ${customer.customerName || 'Unknown'}`);
+      issues.push(
+        `Missing customerGlobalId for customer: ${customer.customerName || "Unknown"}`,
+      );
     }
 
     if (!customer.customerName) {
       issues.push(
-        `Missing customerName for customer ID: ${customer.customerGlobalId || 'Unknown'}`,
+        `Missing customerName for customer ID: ${customer.customerGlobalId || "Unknown"}`,
       );
     }
 
     if (!customer.products || !customer.products.length) {
       issues.push(
-        `No products for customer: ${customer.customerName || customer.customerGlobalId || 'Unknown'}`,
+        `No products for customer: ${customer.customerName || customer.customerGlobalId || "Unknown"}`,
       );
       continue;
     }
@@ -601,19 +648,19 @@ function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; i
     for (const product of customer.products) {
       if (!product.productId) {
         issues.push(
-          `Missing productId for product: ${product.productName || 'Unknown'} in customer: ${customer.customerName || 'Unknown'}`,
+          `Missing productId for product: ${product.productName || "Unknown"} in customer: ${customer.customerName || "Unknown"}`,
         );
       }
 
       if (!product.productName) {
         issues.push(
-          `Missing productName for product ID: ${product.productId || 'Unknown'} in customer: ${customer.customerName || 'Unknown'}`,
+          `Missing productName for product ID: ${product.productId || "Unknown"} in customer: ${customer.customerName || "Unknown"}`,
         );
       }
 
       if (!product.modules || !product.modules.length) {
         issues.push(
-          `No modules for product: ${product.productName || 'Unknown'} in customer: ${customer.customerName || 'Unknown'}`,
+          `No modules for product: ${product.productName || "Unknown"} in customer: ${customer.customerName || "Unknown"}`,
         );
         continue;
       }
@@ -622,19 +669,19 @@ function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; i
       for (const module of product.modules) {
         if (!module.productModuleId) {
           issues.push(
-            `Missing productModuleId for module: ${module.productModuleName || 'Unknown'} in product: ${product.productName || 'Unknown'}`,
+            `Missing productModuleId for module: ${module.productModuleName || "Unknown"} in product: ${product.productName || "Unknown"}`,
           );
         }
 
         if (!module.productModuleName) {
           issues.push(
-            `Missing productModuleName for module ID: ${module.productModuleId || 'Unknown'} in product: ${product.productName || 'Unknown'}`,
+            `Missing productModuleName for module ID: ${module.productModuleId || "Unknown"} in product: ${product.productName || "Unknown"}`,
           );
         }
 
         if (!module.usageItems || !module.usageItems.length) {
           issues.push(
-            `No usage items for module: ${module.productModuleName || 'Unknown'} in product: ${product.productName || 'Unknown'}`,
+            `No usage items for module: ${module.productModuleName || "Unknown"} in product: ${product.productName || "Unknown"}`,
           );
           continue;
         }
@@ -643,19 +690,19 @@ function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; i
         for (const usageItem of module.usageItems) {
           if (usageItem.usageAmount < 0) {
             issues.push(
-              `Negative usageAmount (${usageItem.usageAmount}) for usage: ${usageItem.usageDescription || 'Unknown'} in module: ${module.productModuleName || 'Unknown'}`,
+              `Negative usageAmount (${usageItem.usageAmount}) for usage: ${usageItem.usageDescription || "Unknown"} in module: ${module.productModuleName || "Unknown"}`,
             );
           }
 
           if (!usageItem.usageDescription) {
             issues.push(
-              `Missing usageDescription for usage item in module: ${module.productModuleName || 'Unknown'}`,
+              `Missing usageDescription for usage item in module: ${module.productModuleName || "Unknown"}`,
             );
           }
 
           if (!usageItem.usageUnit) {
             issues.push(
-              `Missing usageUnit for usage item: ${usageItem.usageDescription || 'Unknown'} in module: ${module.productModuleName || 'Unknown'}`,
+              `Missing usageUnit for usage item: ${usageItem.usageDescription || "Unknown"} in module: ${module.productModuleName || "Unknown"}`,
             );
           }
         }
@@ -681,14 +728,21 @@ function validateOutputData(data: ICustomerConsumption[]): { isValid: boolean; i
 function flattenConsumptionData(
   data: ICustomerConsumption[],
   addKey = false,
-  keyFieldName = 'id',
+  keyFieldName = "id",
 ): IDataObject[] {
   const flattened: IDataObject[] = [];
   let fieldNameValidated = false;
 
   // Iterate through each customer
   for (const customer of data) {
-    const { customerGlobalId, customerName, accountName, startDate, endDate, products } = customer;
+    const {
+      customerGlobalId,
+      customerName,
+      accountName,
+      startDate,
+      endDate,
+      products,
+    } = customer;
 
     // Iterate through each product
     for (const product of products) {
@@ -754,14 +808,16 @@ function flattenConsumptionData(
             } catch (error) {
               // Log error and rethrow with context
               logger.error(
-                `Consumption: Failed to generate key for record: ${JSON.stringify({
-                  customerGlobalId,
-                  tenantId,
-                  productName,
-                  productModuleName,
-                  editionName: usageItem.editionName,
-                  usageDescription: usageItem.usageDescription,
-                })}`,
+                `Consumption: Failed to generate key for record: ${JSON.stringify(
+                  {
+                    customerGlobalId,
+                    tenantId,
+                    productName,
+                    productModuleName,
+                    editionName: usageItem.editionName,
+                    usageDescription: usageItem.usageDescription,
+                  },
+                )}`,
                 error,
               );
               throw error;
@@ -787,30 +843,30 @@ export async function executeConsumptionBillingAnalyzerOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
   try {
-    if (operation === 'analyzeConsumption') {
+    if (operation === "analyzeConsumption") {
       // Get date parameters based on selection method
       const dateSelectionMethod = this.getNodeParameter(
-        'dateSelectionMethod',
+        "dateSelectionMethod",
         i,
-        'relativeDates',
+        "relativeDates",
       ) as string;
-      let startDate = '';
-      let endDate = '';
+      let startDate = "";
+      let endDate = "";
 
-      if (dateSelectionMethod === 'specificDates') {
+      if (dateSelectionMethod === "specificDates") {
         // Use specific dates provided by user
-        startDate = this.getNodeParameter('startDate', i, '') as string;
-        endDate = this.getNodeParameter('endDate', i, '') as string;
+        startDate = this.getNodeParameter("startDate", i, "") as string;
+        endDate = this.getNodeParameter("endDate", i, "") as string;
       } else {
         // Use relative date range
         const relativeDateRange = this.getNodeParameter(
-          'relativeDateRange',
+          "relativeDateRange",
           i,
-          'currentMonth',
+          "currentMonth",
         ) as string;
         const dateRange = getRelativeDateRange(relativeDateRange);
         startDate = dateRange.startDate;
@@ -818,24 +874,53 @@ export async function executeConsumptionBillingAnalyzerOperation(
       }
 
       // Get calculation parameters
-      const calculationMethod = this.getNodeParameter('calculationMethod', i, 'average') as
-        | 'average'
-        | 'highWaterMark';
-      const roundingDirection = this.getNodeParameter('roundingDirection', i, 'none') as
-        | 'none'
-        | 'up'
-        | 'down';
-      const decimalPlaces = this.getNodeParameter('decimalPlaces', i, 2) as number;
-      const filterOutZeroUsage = this.getNodeParameter('filterOutZeroUsage', i, false) as boolean;
-      const applyRounding = this.getNodeParameter('applyRounding', i, false) as boolean;
-      const convertByteValues = this.getNodeParameter('convertByteValues', i, false) as boolean;
-      const byteConversionUnit = this.getNodeParameter('byteConversionUnit', i, 'TB') as
-        | 'GB'
-        | 'TB';
+      const calculationMethod = this.getNodeParameter(
+        "calculationMethod",
+        i,
+        "average",
+      ) as "average" | "highWaterMark";
+      const roundingDirection = this.getNodeParameter(
+        "roundingDirection",
+        i,
+        "up",
+      ) as "up" | "down";
+      const decimalPlaces = this.getNodeParameter(
+        "decimalPlaces",
+        i,
+        2,
+      ) as number;
+      const filterOutZeroUsage = this.getNodeParameter(
+        "filterOutZeroUsage",
+        i,
+        false,
+      ) as boolean;
+      const applyRounding = this.getNodeParameter(
+        "applyRounding",
+        i,
+        false,
+      ) as boolean;
+      const convertByteValues = this.getNodeParameter(
+        "convertByteValues",
+        i,
+        false,
+      ) as boolean;
+      const byteConversionUnit = this.getNodeParameter(
+        "byteConversionUnit",
+        i,
+        "TB",
+      ) as "GB" | "TB";
 
       // Get key generation parameters
-      const addAutoGeneratedKey = this.getNodeParameter('addAutoGeneratedKey', i, false) as boolean;
-      const keyFieldName = this.getNodeParameter('keyFieldName', i, 'id') as string;
+      const addAutoGeneratedKey = this.getNodeParameter(
+        "addAutoGeneratedKey",
+        i,
+        false,
+      ) as boolean;
+      const keyFieldName = this.getNodeParameter(
+        "keyFieldName",
+        i,
+        "id",
+      ) as string;
 
       // Create filters array for all filters
       const filterBy: IReportFilter[] = [];
@@ -844,10 +929,14 @@ export async function executeConsumptionBillingAnalyzerOperation(
       filterBy.push(...createDateRangeFilter(startDate, endDate));
 
       // Add customer filter if specified
-      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
+      const filterByCustomers = this.getNodeParameter(
+        "filterByCustomers",
+        i,
+        false,
+      ) as boolean;
       let customerIds: string[] = [];
       if (filterByCustomers) {
-        customerIds = this.getNodeParameter('customerIds', i, []) as string[];
+        customerIds = this.getNodeParameter("customerIds", i, []) as string[];
         if (customerIds.length > 0) {
           filterBy.push(createCustomerFilter(customerIds));
         }
@@ -855,18 +944,18 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       // ------- DATA RETRIEVAL PHASE -------
 
-      logger.info('Consumption: Starting data retrieval phase...');
+      logger.info("Consumption: Starting data retrieval phase...");
 
       // Fetch Customer data for enrichment
-      logger.info('Consumption: Fetching customer data for enrichment...');
-      const customersEndpoint = '/msp/v3/customers';
+      logger.info("Consumption: Fetching customer data for enrichment...");
+      const customersEndpoint = "/msp/v3/customers";
       const customers = (await druvaMspApiRequestAllItems.call(
         this,
-        'GET',
+        "GET",
         customersEndpoint,
-        'customers',
+        "customers",
         {},
-        { pageSize: '100' },
+        { pageSize: String(API_MAX_PAGE_SIZE) },
       )) as IDataObject[];
 
       // Create a lookup object for quick customer reference
@@ -875,8 +964,9 @@ export async function executeConsumptionBillingAnalyzerOperation(
       logger.info(`Consumption: Retrieved ${customers.length} customers`);
 
       // Fetch Consumption Data
-      logger.info('Consumption: Fetching consumption data...');
-      const consumptionEndpoint = '/msp/reporting/v2/reports/consumptionItemized';
+      logger.info("Consumption: Fetching consumption data...");
+      const consumptionEndpoint =
+        "/msp/reporting/v2/reports/consumptionItemized";
 
       // Prepare request body with the correct structure - always fetch all data with maximum page size
       const body: IDataObject = {
@@ -889,19 +979,24 @@ export async function executeConsumptionBillingAnalyzerOperation(
         this,
         consumptionEndpoint,
         body,
-        'data',
+        "data",
       )) as IDataObject[];
 
-      logger.info(`Consumption: Retrieved ${consumptionData.length} consumption records`);
+      logger.info(
+        `Consumption: Retrieved ${consumptionData.length} consumption records`,
+      );
 
       // Validate the data retrieved
       if (!consumptionData.length) {
-        logger.warn('Consumption: No consumption data found for the selected period and filters');
+        logger.warn(
+          "Consumption: No consumption data found for the selected period and filters",
+        );
 
         // Return informative error when no data is found
         return this.helpers.returnJsonArray({
           success: false,
-          message: 'No consumption data found for the selected period and filters',
+          message:
+            "No consumption data found for the selected period and filters",
           parameters: {
             startDate,
             endDate,
@@ -909,14 +1004,14 @@ export async function executeConsumptionBillingAnalyzerOperation(
             roundingDirection,
             decimalPlaces,
             filterOutZeroUsage,
-            customerFilter: filterByCustomers ? 'Applied' : 'Not applied',
+            customerFilter: filterByCustomers ? "Applied" : "Not applied",
           },
         });
       }
 
       // ------- PROCESSING PHASE -------
 
-      logger.info('Consumption: Processing consumption data...');
+      logger.info("Consumption: Processing consumption data...");
 
       // Parse date strings to Date objects for calculations
       const startDateObj = new Date(startDate);
@@ -939,17 +1034,21 @@ export async function executeConsumptionBillingAnalyzerOperation(
         endDateObj,
       );
 
-      logger.info(`Consumption: Processed data for ${processedData.length} customers`);
+      logger.info(
+        `Consumption: Processed data for ${processedData.length} customers`,
+      );
 
       // ------- OUTPUT GENERATION PHASE -------
 
-      logger.info('Consumption: Generating final output...');
+      logger.info("Consumption: Generating final output...");
 
       // Validate the output data
       const validationResult = validateOutputData(processedData);
 
       if (!validationResult.isValid) {
-        logger.warn('Consumption: Validation issues found in the processed data:');
+        logger.warn(
+          "Consumption: Validation issues found in the processed data:",
+        );
         for (const issue of validationResult.issues) {
           logger.warn(`Consumption: - ${issue}`);
         }
@@ -961,7 +1060,9 @@ export async function executeConsumptionBillingAnalyzerOperation(
         addAutoGeneratedKey,
         keyFieldName,
       );
-      logger.info(`Consumption: Flattened data into ${flattenedData.length} records`);
+      logger.info(
+        `Consumption: Flattened data into ${flattenedData.length} records`,
+      );
 
       // Return the flattened data
       responseData = this.helpers.returnJsonArray(flattenedData);
@@ -969,7 +1070,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
     return responseData;
   } catch (error) {
-    logger.error('Consumption: Error during execution', error);
+    logger.error("Consumption: Error during execution", error);
     if (this.continueOnFail()) {
       return this.helpers.returnJsonArray({ error: error.message });
     }

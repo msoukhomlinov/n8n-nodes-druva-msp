@@ -3,27 +3,37 @@ import type {
   INodeExecutionData,
   IDataObject,
   NodeApiError,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
 // These will be used when implementing the operations
-import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
-import { getServicePlanStatusLabel } from './helpers/ValueConverters';
-import { enrichApiResponse, enrichApiResponseArray } from './helpers/ValueConverters';
-import { logger } from './helpers/LoggerHelper';
+import {
+  druvaMspApiRequest,
+  druvaMspApiRequestAllItems,
+} from "./GenericFunctions";
+import { getServicePlanStatusLabel } from "./helpers/ValueConverters";
+import {
+  enrichApiResponse,
+  enrichApiResponseArray,
+} from "./helpers/ValueConverters";
+import { logger } from "./helpers/LoggerHelper";
 
 export async function executeServicePlanOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
   try {
-    if (operation === 'get') {
+    if (operation === "get") {
       // Implement Get logic
-      const servicePlanId = this.getNodeParameter('servicePlanId', i) as string;
+      const servicePlanId = this.getNodeParameter("servicePlanId", i) as string;
       const endpoint = `/msp/v3/servicePlans/${servicePlanId}`;
-      const response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as IDataObject;
+      const response = (await druvaMspApiRequest.call(
+        this,
+        "GET",
+        endpoint,
+      )) as IDataObject;
 
       // Enrich the response with human-readable labels
       const enrichedResponse = enrichApiResponse(response, {
@@ -31,46 +41,63 @@ export async function executeServicePlanOperation(
       });
 
       responseData = this.helpers.returnJsonArray([enrichedResponse]);
-    } else if (operation === 'getMany') {
+    } else if (operation === "getMany") {
       // Implement Get Many logic
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
-      const endpoint = '/msp/v3/servicePlans';
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
+      const endpoint = "/msp/v3/servicePlans";
 
       // Get filter settings
-      const filterByEdition = this.getNodeParameter('filterByEdition', i, false) as boolean;
+      const filterByEdition = this.getNodeParameter(
+        "filterByEdition",
+        i,
+        false,
+      ) as boolean;
       const selectedEditions = filterByEdition
-        ? (this.getNodeParameter('editions', i, []) as string[])
+        ? (this.getNodeParameter("editions", i, []) as string[])
         : [];
 
-      const filterByFeature = this.getNodeParameter('filterByFeature', i, false) as boolean;
+      const filterByFeature = this.getNodeParameter(
+        "filterByFeature",
+        i,
+        false,
+      ) as boolean;
       const selectedFeatures = filterByFeature
-        ? (this.getNodeParameter('features', i, []) as string[])
+        ? (this.getNodeParameter("features", i, []) as string[])
         : [];
 
-      const filterByStatus = this.getNodeParameter('filterByStatus', i, false) as boolean;
+      const filterByStatus = this.getNodeParameter(
+        "filterByStatus",
+        i,
+        false,
+      ) as boolean;
       const selectedStatus = filterByStatus
-        ? (this.getNodeParameter('status', i, 1) as number)
+        ? (this.getNodeParameter("status", i, 1) as number)
         : undefined;
 
-      const filterByName = this.getNodeParameter('filterByName', i, false) as boolean;
+      const filterByName = this.getNodeParameter(
+        "filterByName",
+        i,
+        false,
+      ) as boolean;
       const nameContains = filterByName
-        ? (this.getNodeParameter('nameContains', i, '') as string).toLowerCase()
-        : '';
+        ? (this.getNodeParameter("nameContains", i, "") as string).toLowerCase()
+        : "";
 
       // Log active filters in a consolidated format
       const activeFilters = [];
       if (filterByEdition && selectedEditions.length > 0)
-        activeFilters.push(`editions: ${selectedEditions.join(', ')}`);
+        activeFilters.push(`editions: ${selectedEditions.join(", ")}`);
       if (filterByFeature && selectedFeatures.length > 0)
-        activeFilters.push(`features: ${selectedFeatures.join(', ')}`);
+        activeFilters.push(`features: ${selectedFeatures.join(", ")}`);
       if (filterByStatus && selectedStatus !== undefined)
         activeFilters.push(`status: ${selectedStatus}`);
-      if (filterByName && nameContains) activeFilters.push(`name contains: ${nameContains}`);
+      if (filterByName && nameContains)
+        activeFilters.push(`name contains: ${nameContains}`);
 
       if (activeFilters.length > 0) {
         await logger.debug(
-          `[INFO-START] Druva MSP API - Post-processing filters applied: ${activeFilters.join('; ')}`,
+          `[INFO-START] Druva MSP API - Post-processing filters applied: ${activeFilters.join("; ")}`,
           this,
         );
       }
@@ -80,20 +107,29 @@ export async function executeServicePlanOperation(
       if (returnAll) {
         const allServicePlans = await druvaMspApiRequestAllItems.call(
           this,
-          'GET',
+          "GET",
           endpoint,
-          'servicePlans',
+          "servicePlans",
         );
 
         // Enrich the response array with human-readable labels
-        servicePlans = enrichApiResponseArray(allServicePlans as IDataObject[], {
-          status: getServicePlanStatusLabel,
-        });
+        servicePlans = enrichApiResponseArray(
+          allServicePlans as IDataObject[],
+          {
+            status: getServicePlanStatusLabel,
+          },
+        );
       } else {
         // v3 API expects pageSize as a string
-        const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, {
-          pageSize: limit.toString(),
-        });
+        const response = await druvaMspApiRequest.call(
+          this,
+          "GET",
+          endpoint,
+          undefined,
+          {
+            pageSize: limit.toString(),
+          },
+        );
         const plansData = (response as IDataObject)?.servicePlans ?? [];
 
         // Enrich the response array with human-readable labels

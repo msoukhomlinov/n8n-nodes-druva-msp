@@ -2,16 +2,47 @@
  * Constants and types for Druva MSP API values
  */
 
+/** Maximum page size accepted by all Druva MSP API v3 list endpoints */
+export const API_MAX_PAGE_SIZE = 100;
+
+// Canonical Druva product/module names — update here when Druva renames
+// Values must match the Druva API strings exactly
+export const DRUVA_PRODUCT_NAMES = {
+  ENTERPRISE_WORKLOADS: "Enterprise Workloads", // was "Hybrid Workloads"
+  SAAS_APPS_AND_ENDPOINTS: "SaaS Apps and Endpoints",
+  MICROSOFT_365: "Microsoft 365",
+  GOOGLE_WORKSPACE: "Google Workspace",
+  ENDPOINTS: "Endpoints",
+  D365: "D365", // Dynamics 365 — newer reporting schemas
+  SFDC: "SFDC", // Salesforce — newer reporting schemas
+  STORAGE: "Storage",
+  SENSITIVE_DATA_GOVERNANCE: "Sensitive Data Governance",
+} as const;
+
+// Tenant feature names — exact strings accepted by TenantFeaturesV3 / PatchTenantFeatures API
+export const DRUVA_TENANT_FEATURE_NAMES = {
+  ENTERPRISE_WORKLOADS: "Enterprise Workloads",
+  ENTERPRISE_WORKLOADS_ARR:
+    "Enterprise Workloads Accelerated Ransomware Recovery",
+  LONG_TERM_RETENTION: "Long Term Retention",
+  M365: "M365",
+  GOOGLE_WORKSPACE: "Google Workspace",
+  ENDPOINTS: "Endpoints",
+  M365_ARR: "M365 Accelerated Ransomware Recovery",
+  ENDPOINTS_ARR: "Endpoints Accelerated Ransomware Recovery",
+  GOOGLE_WORKSPACE_ARR: "Google Workspace Accelerated Ransomware Recovery",
+} as const;
+
 /**
  * Constants for tenant status values
  */
 export const TENANT_STATUS = {
-  0: 'Creation Pending',
-  1: 'Ready',
-  2: 'Suspended',
-  3: 'Soft Deleted',
-  4: 'Being Migrated',
-  5: 'Updating',
+  0: "Creation Pending",
+  1: "Ready",
+  2: "Suspended",
+  3: "Soft Deleted",
+  4: "Being Migrated",
+  5: "Updating",
 } as const;
 
 // Define a type for tenant status values
@@ -22,9 +53,9 @@ export type TenantStatusLabel = (typeof TENANT_STATUS)[TenantStatusCode];
  * Constants for tenant type values
  */
 export const TENANT_TYPE = {
-  1: 'Sandbox',
-  2: 'Evaluation (30-day trial)',
-  3: 'Commercial',
+  1: "Sandbox",
+  2: "Evaluation (30-day trial)",
+  3: "Commercial",
 } as const;
 
 // Define a type for tenant type values
@@ -35,8 +66,8 @@ export type TenantTypeLabel = (typeof TENANT_TYPE)[TenantTypeCode];
  * Constants for product ID values
  */
 export const PRODUCT_ID = {
-  1: 'Hybrid Workloads',
-  2: 'SaaS Apps and Endpoints',
+  1: DRUVA_PRODUCT_NAMES.ENTERPRISE_WORKLOADS,
+  2: DRUVA_PRODUCT_NAMES.SAAS_APPS_AND_ENDPOINTS,
 } as const;
 
 // Define a type for product ID values
@@ -47,23 +78,24 @@ export type ProductIdLabel = (typeof PRODUCT_ID)[ProductIdCode];
  * Constants for product module ID values
  */
 export const PRODUCT_MODULE_ID = {
-  1: 'Hybrid Workloads',
-  2: 'Microsoft 365',
-  3: 'Endpoints',
-  4: 'Google Workspace',
+  1: DRUVA_PRODUCT_NAMES.ENTERPRISE_WORKLOADS,
+  2: DRUVA_PRODUCT_NAMES.MICROSOFT_365,
+  3: DRUVA_PRODUCT_NAMES.ENDPOINTS,
+  4: DRUVA_PRODUCT_NAMES.GOOGLE_WORKSPACE,
 } as const;
 
 // Define a type for product module ID values
 export type ProductModuleIdCode = keyof typeof PRODUCT_MODULE_ID;
-export type ProductModuleIdLabel = (typeof PRODUCT_MODULE_ID)[ProductModuleIdCode];
+export type ProductModuleIdLabel =
+  (typeof PRODUCT_MODULE_ID)[ProductModuleIdCode];
 
 /**
  * Constants for admin role values
  */
 export const ADMIN_ROLES = {
-  2: 'MSP Admin',
-  3: 'Tenant Admin',
-  4: 'Read Only Admin',
+  2: "MSP Admin",
+  3: "Tenant Admin",
+  4: "Read Only Admin",
 } as const;
 
 // Define a type for admin role values
@@ -74,8 +106,8 @@ export type AdminRoleLabel = (typeof ADMIN_ROLES)[AdminRoleCode];
  * Constants for admin status values
  */
 export const ADMIN_STATUSES = {
-  0: 'Updating',
-  1: 'Ready',
+  0: "Updating",
+  1: "Ready",
 } as const;
 
 // Define a type for admin status values
@@ -86,9 +118,9 @@ export type AdminStatusLabel = (typeof ADMIN_STATUSES)[AdminStatusCode];
  * Constants for event category values
  */
 export const EVENT_CATEGORIES = {
-  EVENT: 'Event',
-  AUDIT: 'Audit',
-  ALERT: 'Alert',
+  EVENT: "Event",
+  AUDIT: "Audit",
+  ALERT: "Alert",
 } as const;
 
 // Define a type for event category values
@@ -99,27 +131,28 @@ export type EventCategoryLabel = (typeof EVENT_CATEGORIES)[EventCategoryCode];
  * Constants for syslog severity values
  */
 export const SYSLOG_SEVERITIES = {
-  0: 'Emergency (0)',
-  1: 'Alert (1)',
-  2: 'Critical (2)',
-  3: 'Error (3)',
-  4: 'Warning (4)',
-  5: 'Notice (5)',
-  6: 'Informational (6)',
-  7: 'Debug (7)',
+  0: "Emergency (0)",
+  1: "Alert (1)",
+  2: "Critical (2)",
+  3: "Error (3)",
+  4: "Warning (4)",
+  5: "Notice (5)",
+  6: "Informational (6)",
+  7: "Debug (7)",
 } as const;
 
 // Define a type for syslog severity values
 export type SyslogSeverityCode = keyof typeof SYSLOG_SEVERITIES;
-export type SyslogSeverityLabel = (typeof SYSLOG_SEVERITIES)[SyslogSeverityCode];
+export type SyslogSeverityLabel =
+  (typeof SYSLOG_SEVERITIES)[SyslogSeverityCode];
 
 /**
  * Constants for customer status values
  */
 export const CUSTOMER_STATUS = {
-  0: 'Creation Pending',
-  1: 'Ready',
-  2: 'Tenant Processing',
+  0: "Creation Pending",
+  1: "Ready",
+  2: "Tenant Processing",
 } as const;
 
 // Define a type for customer status values
@@ -128,35 +161,38 @@ export type CustomerStatusLabel = (typeof CUSTOMER_STATUS)[CustomerStatusCode];
 
 // Add service plan status constants
 export const SERVICE_PLAN_STATUS = {
-  0: 'Updating',
-  1: 'Ready',
+  0: "Updating",
+  1: "Ready",
 };
 
 // Add service plan edition constants
 export const SERVICE_PLAN_EDITIONS = {
-  business: 'Business',
-  enterprise: 'Enterprise',
-  elite: 'Elite',
+  business: "Business",
+  enterprise: "Enterprise",
+  elite: "Elite",
 };
 
 // Add service plan feature name constants
+// Keys = exact API strings for ServicePlanProductFeaturesV3.name
+// Values = display labels shown in n8n UI (via getServicePlanFeatureOptions)
 export const SERVICE_PLAN_FEATURES = {
-  'Hybrid Workloads': 'Hybrid Workloads',
-  M365: 'Microsoft 365',
-  Endpoints: 'Endpoints',
-  'Google Workspace': 'Google Workspace',
-  storage: 'Storage',
-  sensitiveDataGovernance: 'Sensitive Data Governance',
+  [DRUVA_TENANT_FEATURE_NAMES.ENTERPRISE_WORKLOADS]:
+    DRUVA_PRODUCT_NAMES.ENTERPRISE_WORKLOADS,
+  M365: DRUVA_PRODUCT_NAMES.MICROSOFT_365,
+  Endpoints: DRUVA_PRODUCT_NAMES.ENDPOINTS,
+  "Google Workspace": DRUVA_PRODUCT_NAMES.GOOGLE_WORKSPACE,
+  storage: DRUVA_PRODUCT_NAMES.STORAGE,
+  sensitiveDataGovernance: DRUVA_PRODUCT_NAMES.SENSITIVE_DATA_GOVERNANCE,
 };
 
 /**
  * Constants for task status values
  */
 export const TASK_STATUS = {
-  1: 'Queued',
-  2: 'In Progress',
-  3: 'Paused',
-  4: 'Finished',
+  1: "Queued",
+  2: "In Progress",
+  3: "Paused",
+  4: "Finished",
 } as const;
 
 // Define a type for task status values
@@ -167,34 +203,36 @@ export type TaskStatusLabel = (typeof TASK_STATUS)[TaskStatusCode];
  * Constants for task output status values
  */
 export const TASK_OUTPUT_STATUS = {
-  0: 'Success',
-  1: 'Failed',
-  [-1]: 'Internal Use',
+  0: "Success",
+  1: "Failed",
+  [-1]: "Internal Use",
 } as const;
 
 // Define a type for task output status values
 export type TaskOutputStatusCode = keyof typeof TASK_OUTPUT_STATUS;
-export type TaskOutputStatusLabel = (typeof TASK_OUTPUT_STATUS)[TaskOutputStatusCode];
+export type TaskOutputStatusLabel =
+  (typeof TASK_OUTPUT_STATUS)[TaskOutputStatusCode];
 
 /**
  * Report field names for filtering in Druva MSP Reports API
  * These are used in the filters.filterBy array
  */
 export const REPORT_FIELD_NAMES = {
-  DATE: 'date',
-  CUSTOMER_GLOBAL_ID: 'customerGlobalId',
-  ACCOUNT_NAME: 'accountName',
-  TENANT_ID: 'tenantId',
-  PRODUCT_ID: 'productId',
-  PRODUCT_MODULE_ID: 'productModuleId',
-  USAGE_DESCRIPTION: 'usageDescription',
-  EDITION_NAME: 'editionName',
-  SERVICE_PLAN_ID: 'servicePlanId',
-  WORKLOAD_NAME: 'workloadName',
+  DATE: "date",
+  CUSTOMER_GLOBAL_ID: "customerGlobalId",
+  ACCOUNT_NAME: "accountName",
+  TENANT_ID: "tenantId",
+  PRODUCT_ID: "productId",
+  PRODUCT_MODULE_ID: "productModuleId",
+  USAGE_DESCRIPTION: "usageDescription",
+  EDITION_NAME: "editionName",
+  SERVICE_PLAN_ID: "servicePlanId",
+  WORKLOAD_NAME: "workloadName",
 } as const;
 
 // Define a type for report field names
-export type ReportFieldName = (typeof REPORT_FIELD_NAMES)[keyof typeof REPORT_FIELD_NAMES];
+export type ReportFieldName =
+  (typeof REPORT_FIELD_NAMES)[keyof typeof REPORT_FIELD_NAMES];
 
 /**
  * Report operators for filtering in Druva MSP Reports API
@@ -204,29 +242,30 @@ export type ReportFieldName = (typeof REPORT_FIELD_NAMES)[keyof typeof REPORT_FI
  */
 export const REPORT_OPERATORS = {
   // Return data with exact match for given field name
-  EQUAL: 'EQUAL',
+  EQUAL: "EQUAL",
 
   // Return data not matching with given values
-  NOTEQUAL: 'NOTEQUAL',
+  NOTEQUAL: "NOTEQUAL",
 
   // Value for this operator will be an array; returns data matching any value in the array
-  CONTAINS: 'CONTAINS',
+  CONTAINS: "CONTAINS",
 
   // Less than comparison
-  LT: 'LT',
+  LT: "LT",
 
   // Less than or equal to comparison
-  LTE: 'LTE',
+  LTE: "LTE",
 
   // Greater than comparison
-  GT: 'GT',
+  GT: "GT",
 
   // Greater than or equal to comparison
-  GTE: 'GTE',
+  GTE: "GTE",
 } as const;
 
 // Define a type for report operators
-export type ReportOperator = (typeof REPORT_OPERATORS)[keyof typeof REPORT_OPERATORS];
+export type ReportOperator =
+  (typeof REPORT_OPERATORS)[keyof typeof REPORT_OPERATORS];
 
 /**
  * Interface for a report filter object
@@ -242,27 +281,27 @@ export interface IReportFilter {
  * Shared options list for relative date ranges across nodes
  */
 export const RELATIVE_DATE_RANGE_OPTIONS = [
-  { name: 'Current Month', value: 'currentMonth' },
-  { name: 'Previous Month 1', value: 'previousMonth1' },
-  { name: 'Previous Month 2', value: 'previousMonth2' },
-  { name: 'Previous Month 3', value: 'previousMonth3' },
-  { name: 'Previous Month 4', value: 'previousMonth4' },
-  { name: 'Previous Month 5', value: 'previousMonth5' },
-  { name: 'Previous Month 6', value: 'previousMonth6' },
-  { name: 'Previous Month 7', value: 'previousMonth7' },
-  { name: 'Previous Month 8', value: 'previousMonth8' },
-  { name: 'Previous Month 9', value: 'previousMonth9' },
-  { name: 'Previous Month 10', value: 'previousMonth10' },
-  { name: 'Previous Month 11', value: 'previousMonth11' },
-  { name: 'Previous Month 12', value: 'previousMonth12' },
-  { name: 'Current Quarter', value: 'currentQuarter' },
-  { name: 'Previous Quarter', value: 'previousQuarter' },
-  { name: 'Current Year', value: 'currentYear' },
-  { name: 'Previous Year', value: 'previousYear' },
-  { name: 'Last 30 Days', value: 'last30Days' },
-  { name: 'Last 60 Days', value: 'last60Days' },
-  { name: 'Last 90 Days', value: 'last90Days' },
-  { name: 'Last 6 Months', value: 'last6Months' },
-  { name: 'Last 12 Months', value: 'last12Months' },
-  { name: 'Year To Date', value: 'yearToDate' },
+  { name: "Current Month", value: "currentMonth" },
+  { name: "Previous Month 1", value: "previousMonth1" },
+  { name: "Previous Month 2", value: "previousMonth2" },
+  { name: "Previous Month 3", value: "previousMonth3" },
+  { name: "Previous Month 4", value: "previousMonth4" },
+  { name: "Previous Month 5", value: "previousMonth5" },
+  { name: "Previous Month 6", value: "previousMonth6" },
+  { name: "Previous Month 7", value: "previousMonth7" },
+  { name: "Previous Month 8", value: "previousMonth8" },
+  { name: "Previous Month 9", value: "previousMonth9" },
+  { name: "Previous Month 10", value: "previousMonth10" },
+  { name: "Previous Month 11", value: "previousMonth11" },
+  { name: "Previous Month 12", value: "previousMonth12" },
+  { name: "Current Quarter", value: "currentQuarter" },
+  { name: "Previous Quarter", value: "previousQuarter" },
+  { name: "Current Year", value: "currentYear" },
+  { name: "Previous Year", value: "previousYear" },
+  { name: "Last 30 Days", value: "last30Days" },
+  { name: "Last 60 Days", value: "last60Days" },
+  { name: "Last 90 Days", value: "last90Days" },
+  { name: "Last 6 Months", value: "last6Months" },
+  { name: "Last 12 Months", value: "last12Months" },
+  { name: "Year To Date", value: "yearToDate" },
 ] as const;

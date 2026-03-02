@@ -5,11 +5,12 @@ import type {
   IHookFunctions,
   IHttpRequestOptions,
   IHttpRequestMethods,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
-import { druvaMspApiRequest } from './ApiRequestHelpers';
-import { getDruvaMspAccessToken } from './AuthHelpers';
-import { logger } from './LoggerHelper';
+import { druvaMspApiRequest } from "./ApiRequestHelpers";
+import { getDruvaMspAccessToken } from "./AuthHelpers";
+import { logger } from "./LoggerHelper";
+import { API_MAX_PAGE_SIZE } from "./Constants";
 
 /**
  * Helper class for managing pagination through API requests.
@@ -219,19 +220,22 @@ export async function druvaMspApiRequestAllItemsForOptions(
   body?: IDataObject,
   initialQs?: IDataObject,
 ): Promise<IDataObject[]> {
-  await logger.debug(`Options: Starting paginated request to ${endpoint}`, this);
+  await logger.debug(
+    `Options: Starting paginated request to ${endpoint}`,
+    this,
+  );
   await logger.debug(`Options: Looking for items under key ${itemsKey}`, this);
 
   // Get credentials for API access
-  const credentials = await this.getCredentials('druvaMspApi');
-  const baseUrl = credentials.baseUrl || 'https://apis.druva.com';
+  const credentials = await this.getCredentials("druvaMspApi");
+  const baseUrl = credentials.baseUrl || "https://apis.druva.com";
 
   // Get access token using the extracted function
   const accessToken = await getDruvaMspAccessToken.call(this);
 
   const allItems: IDataObject[] = [];
   let pageToken: string | undefined | null = undefined;
-  const pageSize = 100; // Use a large page size for loading options
+  const pageSize = API_MAX_PAGE_SIZE;
   let pageCount = 0;
   const previousTokens = new Set<string>(); // Prevent infinite loops
 
@@ -247,7 +251,9 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
     // Safety check - limit total pages to prevent excessive API calls
     if (pageCount > MAX_TOTAL_PAGES) {
-      logger.warn(`Options: Reached maximum page limit of ${MAX_TOTAL_PAGES}, stopping pagination`);
+      logger.warn(
+        `Options: Reached maximum page limit of ${MAX_TOTAL_PAGES}, stopping pagination`,
+      );
       break;
     }
 
@@ -258,7 +264,7 @@ export async function druvaMspApiRequestAllItemsForOptions(
       qs = { pageToken };
       await logger.debug(`Options: Using pageToken: ${pageToken}`, this);
       await logger.debug(
-        'Options: IMPORTANT: Using only pageToken with no other parameters as per API requirements',
+        "Options: IMPORTANT: Using only pageToken with no other parameters as per API requirements",
         this,
       );
 
@@ -294,19 +300,25 @@ export async function druvaMspApiRequestAllItemsForOptions(
       await logger.debug(`Options: Making request to: ${url}`, this);
 
       const response = (await this.helpers.httpRequest({
-        method: method as IHttpRequestOptions['method'],
+        method: method as IHttpRequestOptions["method"],
         url,
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         qs,
-        body: method !== 'GET' ? body : undefined,
+        body: method !== "GET" ? body : undefined,
         json: true,
       })) as IDataObject;
 
-      await logger.debug(`Options: Response received for page ${pageCount}`, this);
-      await logger.debug(`Options: Response keys: ${Object.keys(response).join(', ')}`, this);
+      await logger.debug(
+        `Options: Response received for page ${pageCount}`,
+        this,
+      );
+      await logger.debug(
+        `Options: Response keys: ${Object.keys(response).join(", ")}`,
+        this,
+      );
 
       const items = response[itemsKey] as IDataObject[] | undefined;
       // API returns nextPageToken but expects pageToken in requests
@@ -314,7 +326,10 @@ export async function druvaMspApiRequestAllItemsForOptions(
 
       // Process the retrieved items
       if (Array.isArray(items)) {
-        await logger.debug(`Options: Found ${items.length} items on this page`, this);
+        await logger.debug(
+          `Options: Found ${items.length} items on this page`,
+          this,
+        );
 
         // Check if we're getting inefficient pagination (single items per page)
         if (items.length === 1) {
@@ -336,18 +351,30 @@ export async function druvaMspApiRequestAllItemsForOptions(
         logger.warn(
           `Options: Expected an array under key ${itemsKey} but received: ${JSON.stringify(items)}`,
         );
-        await logger.debug(`Options: Response structure: ${JSON.stringify(response)}`, this);
+        await logger.debug(
+          `Options: Response structure: ${JSON.stringify(response)}`,
+          this,
+        );
         pageToken = null;
       }
 
       if (pageToken) {
-        await logger.debug(`Options: Next page token found: ${pageToken}`, this);
+        await logger.debug(
+          `Options: Next page token found: ${pageToken}`,
+          this,
+        );
       } else {
-        await logger.debug('Options: No next page token found, this is the last page', this);
+        await logger.debug(
+          "Options: No next page token found, this is the last page",
+          this,
+        );
       }
 
       if (items === undefined || items.length === 0) {
-        await logger.debug('Options: No items found on this page, stopping pagination', this);
+        await logger.debug(
+          "Options: No items found on this page, stopping pagination",
+          this,
+        );
         pageToken = null;
       }
     } catch (error) {
@@ -371,7 +398,7 @@ export async function druvaMspApiRequestAllReportItems(
   this: IExecuteFunctions,
   endpoint: string,
   initialBody: IDataObject,
-  responseKey = 'items',
+  responseKey = "items",
 ): Promise<IDataObject[]> {
   const allItems: IDataObject[] = [];
   let nextPageToken: string | null | undefined = undefined;
@@ -380,15 +407,18 @@ export async function druvaMspApiRequestAllReportItems(
   const firstRequestBody = { ...initialBody };
 
   // Ensure we use maximum page size for efficiency when not explicitly set
-  if (firstRequestBody.filters && typeof firstRequestBody.filters === 'object') {
+  if (
+    firstRequestBody.filters &&
+    typeof firstRequestBody.filters === "object"
+  ) {
     // If filters exists and has a pageSize property, make sure it's maximized
     const filters = firstRequestBody.filters as IDataObject;
     if (!filters.pageSize) {
-      filters.pageSize = 100;
+      filters.pageSize = API_MAX_PAGE_SIZE;
     }
   } else if (firstRequestBody.pageSize === undefined) {
     // For backward compatibility with older code that sets pageSize directly on body
-    firstRequestBody.pageSize = 100;
+    firstRequestBody.pageSize = API_MAX_PAGE_SIZE;
   }
 
   // Use the new PaginationHelper class for token tracking and loop detection
@@ -402,7 +432,10 @@ export async function druvaMspApiRequestAllReportItems(
       // For Druva API: "You can query using the pageToken/nextPageToken or filters; you cannot provide both simultaneously."
       // For report endpoints, API returns "nextPageToken" but expects "pageToken" in requests
       requestBody = { pageToken: nextPageToken };
-      await logger.debug(`Report: Using only pageToken for pagination: ${nextPageToken}`, this);
+      await logger.debug(
+        `Report: Using only pageToken for pagination: ${nextPageToken}`,
+        this,
+      );
 
       // Check for token loop - if detected, stop pagination
       if (!paginationHelper.trackToken(nextPageToken)) {
@@ -411,7 +444,10 @@ export async function druvaMspApiRequestAllReportItems(
     } else {
       // For the first request, use the initial body with all filters
       requestBody = firstRequestBody;
-      await logger.debug('Report: Using initial request body with filters for first page', this);
+      await logger.debug(
+        "Report: Using initial request body with filters for first page",
+        this,
+      );
 
       // Even without a token, increment the loop counter for safety limits
       if (!paginationHelper.incrementCounter()) {
@@ -428,7 +464,7 @@ export async function druvaMspApiRequestAllReportItems(
     // Make the request
     const response = (await druvaMspApiRequest.call(
       this,
-      'POST',
+      "POST",
       endpoint,
       requestBody,
     )) as IDataObject;
@@ -442,7 +478,10 @@ export async function druvaMspApiRequestAllReportItems(
       `Report: Response from ${endpoint} has nextPageToken: ${nextPageToken}`,
       this,
     );
-    await logger.debug(`Report: Response contains ${items ? items.length : 0} items`, this);
+    await logger.debug(
+      `Report: Response contains ${items ? items.length : 0} items`,
+      this,
+    );
 
     // Add items to our result array if we have any
     if (paginationHelper.hasItems(items)) {
@@ -464,7 +503,7 @@ export async function druvaMspApiRequestAllReportV2Items(
   this: IExecuteFunctions,
   endpoint: string,
   initialBody: IDataObject,
-  responseKey = 'data',
+  responseKey = "data",
 ): Promise<IDataObject[]> {
   const allItems: IDataObject[] = [];
   let nextPageToken: string | null | undefined = undefined;
@@ -473,15 +512,18 @@ export async function druvaMspApiRequestAllReportV2Items(
   const firstRequestBody = { ...initialBody };
 
   // Ensure we use maximum page size for efficiency when not explicitly set
-  if (firstRequestBody.filters && typeof firstRequestBody.filters === 'object') {
+  if (
+    firstRequestBody.filters &&
+    typeof firstRequestBody.filters === "object"
+  ) {
     // If filters exists and has a pageSize property, make sure it's maximized
     const filters = firstRequestBody.filters as IDataObject;
     if (!filters.pageSize) {
-      filters.pageSize = 100;
+      filters.pageSize = API_MAX_PAGE_SIZE;
     }
   } else if (firstRequestBody.pageSize === undefined) {
     // For backward compatibility with older code that sets pageSize directly on body
-    firstRequestBody.pageSize = 100;
+    firstRequestBody.pageSize = API_MAX_PAGE_SIZE;
   }
 
   // Loop detection variables
@@ -499,7 +541,10 @@ export async function druvaMspApiRequestAllReportV2Items(
       requestBody = { pageToken: nextPageToken };
 
       // Debug logging
-      await logger.debug(`ReportV2: Using only pageToken for pagination: ${nextPageToken}`, this);
+      await logger.debug(
+        `ReportV2: Using only pageToken for pagination: ${nextPageToken}`,
+        this,
+      );
 
       // Loop detection - check if we've seen this token before
       if (seenTokens.has(nextPageToken)) {
@@ -514,7 +559,10 @@ export async function druvaMspApiRequestAllReportV2Items(
     } else {
       // For the first request, use the initial body with all filters
       requestBody = firstRequestBody;
-      await logger.debug('ReportV2: Using initial request body with filters for first page', this);
+      await logger.debug(
+        "ReportV2: Using initial request body with filters for first page",
+        this,
+      );
     }
 
     // Debug logging to show request structure
@@ -537,7 +585,7 @@ export async function druvaMspApiRequestAllReportV2Items(
     // Make the request
     const response = (await druvaMspApiRequest.call(
       this,
-      'POST',
+      "POST",
       endpoint,
       requestBody,
     )) as IDataObject;
@@ -551,7 +599,10 @@ export async function druvaMspApiRequestAllReportV2Items(
       `ReportV2: Response from ${endpoint} has nextPageToken: ${nextPageToken}`,
       this,
     );
-    await logger.debug(`ReportV2: Response contains ${items ? items.length : 0} items`, this);
+    await logger.debug(
+      `ReportV2: Response contains ${items ? items.length : 0} items`,
+      this,
+    );
 
     // Add items to our result array
     if (Array.isArray(items) && items.length > 0) {
@@ -574,13 +625,13 @@ export async function druvaMspApiRequestAllPagedItems(
   method: IHttpRequestMethods,
   endpoint: string,
   initialBody: IDataObject,
-  responseKey = 'items',
+  responseKey = "items",
 ): Promise<IDataObject[]> {
   const allItems: IDataObject[] = [];
   const body = { ...initialBody };
 
   // Default page size if not provided
-  const pageSize = (body.pageSize as number) || 100;
+  const pageSize = (body.pageSize as number) || API_MAX_PAGE_SIZE;
   let page = (body.page as number) || 1;
 
   // Loop detection variables
@@ -605,7 +656,12 @@ export async function druvaMspApiRequestAllPagedItems(
     }
 
     // Make the request
-    const response = (await druvaMspApiRequest.call(this, method, endpoint, body)) as IDataObject;
+    const response = (await druvaMspApiRequest.call(
+      this,
+      method,
+      endpoint,
+      body,
+    )) as IDataObject;
 
     // Get items from the response
     const items = response[responseKey] as IDataObject[] | undefined;

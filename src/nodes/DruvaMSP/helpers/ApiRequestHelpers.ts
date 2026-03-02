@@ -6,18 +6,22 @@ import type {
   IHttpRequestOptions,
   IHttpRequestMethods,
   JsonObject,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
-import { getDruvaMspAccessToken } from './AuthHelpers';
-import { logger } from './LoggerHelper';
+import { getDruvaMspAccessToken } from "./AuthHelpers";
+import { logger } from "./LoggerHelper";
 
 /**
  * Build the API URL for a given endpoint
  */
 function buildApiUrl(endpoint: string, baseUrl: string): string {
-  const baseUrlWithoutTrailing = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const baseUrlWithoutTrailing = baseUrl.endsWith("/")
+    ? baseUrl.slice(0, -1)
+    : baseUrl;
 
-  const endpointWithLeading = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const endpointWithLeading = endpoint.startsWith("/")
+    ? endpoint
+    : `/${endpoint}`;
 
   return `${baseUrlWithoutTrailing}${endpointWithLeading}`;
 }
@@ -27,7 +31,7 @@ function buildApiUrl(endpoint: string, baseUrl: string): string {
  */
 function handleApiError(error: JsonObject, endpoint: string): never {
   throw new Error(
-    `Druva MSP API request error [${error.statusCode || 100}]: ${error.message || 'Unknown error'} - ${endpoint}`,
+    `Druva MSP API request error [${error.statusCode || 100}]: ${error.message || "Unknown error"} - ${endpoint}`,
   );
 }
 
@@ -44,8 +48,9 @@ export async function druvaMspApiRequest(
   option: IDataObject = {},
 ): Promise<unknown> {
   // Get credentials for API access
-  const credentials = await this.getCredentials('druvaMspApi');
-  const baseUrl = (credentials.apiBaseUrl as string) || 'https://apis.druva.com';
+  const credentials = await this.getCredentials("druvaMspApi");
+  const baseUrl =
+    (credentials.apiBaseUrl as string) || "https://apis.druva.com";
 
   try {
     // Get access token using the extracted function
@@ -55,8 +60,8 @@ export async function druvaMspApiRequest(
     let options: IHttpRequestOptions = {
       method,
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+        Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
       qs,
@@ -66,7 +71,7 @@ export async function druvaMspApiRequest(
     };
 
     // Remove body for GET requests
-    if (method === 'GET' && !Object.keys(body).length) {
+    if (method === "GET" && !Object.keys(body).length) {
       // Create a new options object without the body property
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { body: unusedBody, ...optionsWithoutBody } = options;
@@ -76,14 +81,14 @@ export async function druvaMspApiRequest(
     options = Object.assign({}, options, option);
 
     // If API call is to a Reports endpoint, add detailed debug logging
-    if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
+    if (endpoint.includes("/reports/") || endpoint.includes("/reporting/")) {
       await logger.debug(
         `API Request: ${method} ${options.url}${
-          method === 'POST' || method === 'PUT'
+          method === "POST" || method === "PUT"
             ? ` with ${Object.keys(body).length} parameters`
             : Object.keys(qs).length > 0
               ? ` with ${Object.keys(qs).length} query params`
-              : ''
+              : ""
         }`,
         this,
       );
@@ -93,27 +98,30 @@ export async function druvaMspApiRequest(
     const response = await this.helpers.httpRequest(options);
 
     // If API call is to a Reports endpoint, add summary debug logging for response
-    if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
-      if (typeof response === 'object') {
+    if (endpoint.includes("/reports/") || endpoint.includes("/reporting/")) {
+      if (typeof response === "object") {
         await logger.debug(
           `API Response: Success. ${
             Array.isArray(response.data)
               ? `Received ${response.data?.length || 0} records`
-              : `Response keys: ${Object.keys(response).join(', ')}`
-          }${response.nextPageToken ? ' (has more pages)' : ''}`,
+              : `Response keys: ${Object.keys(response).join(", ")}`
+          }${response.nextPageToken ? " (has more pages)" : ""}`,
           this,
         );
       } else {
-        await logger.debug(`API Response: Success. Response type: ${typeof response}`, this);
+        await logger.debug(
+          `API Response: Success. Response type: ${typeof response}`,
+          this,
+        );
       }
     }
 
     return response;
   } catch (error) {
-    if (endpoint.includes('/reports/') || endpoint.includes('/reporting/')) {
+    if (endpoint.includes("/reports/") || endpoint.includes("/reporting/")) {
       logger.error(
-        `API Error: ${error.statusCode || 100} - ${error.message || 'Unknown error'}${
-          error.response?.body ? ' (details in API response)' : ''
+        `API Error: ${error.statusCode || 100} - ${error.message || "Unknown error"}${
+          error.response?.body ? " (details in API response)" : ""
         }`,
         error,
       );

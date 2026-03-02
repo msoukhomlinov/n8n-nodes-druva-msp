@@ -1,10 +1,18 @@
 // Contains the execution logic for Admin resource operations
 
-import type { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
+import type {
+  IExecuteFunctions,
+  INodeExecutionData,
+  IDataObject,
+} from "n8n-workflow";
 
-import { druvaMspApiRequest } from './GenericFunctions';
-import { getAdminRoleLabel, getAdminStatusLabel } from './helpers/ValueConverters';
-import { logger } from './helpers/LoggerHelper';
+import { druvaMspApiRequest } from "./GenericFunctions";
+import {
+  getAdminRoleLabel,
+  getAdminStatusLabel,
+} from "./helpers/ValueConverters";
+import { logger } from "./helpers/LoggerHelper";
+import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
 
 /**
  * Processes the admin data to add derived fields
@@ -20,17 +28,22 @@ function processAdminData(admin: IDataObject): IDataObject {
     processedAdmin[key] = admin[key];
 
     // Add role_label after role field
-    if (key === 'role' && admin.role !== undefined) {
+    if (key === "role" && admin.role !== undefined) {
       // Convert to number if it's a string
-      const roleCode = typeof admin.role === 'string' ? Number(admin.role) : (admin.role as number);
+      const roleCode =
+        typeof admin.role === "string"
+          ? Number(admin.role)
+          : (admin.role as number);
       processedAdmin.role_label = getAdminRoleLabel(roleCode);
     }
 
     // Add status_label after status field
-    if (key === 'status' && admin.status !== undefined) {
+    if (key === "status" && admin.status !== undefined) {
       // Convert to number if it's a string
       const statusCode =
-        typeof admin.status === 'string' ? Number(admin.status) : (admin.status as number);
+        typeof admin.status === "string"
+          ? Number(admin.status)
+          : (admin.status as number);
       processedAdmin.status_label = getAdminStatusLabel(statusCode);
     }
   }
@@ -48,32 +61,53 @@ export async function executeAdminOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
-  if (operation === 'getMany') {
-    const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-    const limit = this.getNodeParameter('limit', i, 50) as number;
-    const endpoint = '/msp/v2/admins';
+  if (operation === "getMany") {
+    const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+    const limit = this.getNodeParameter("limit", i, 50) as number;
+    const endpoint = "/msp/v2/admins";
 
     // Prepare initial query parameters (for first request only)
     const initialQueryParams: IDataObject = {};
 
     // Check for email filter
-    const filterByEmail = this.getNodeParameter('filterByEmail', i, false) as boolean;
+    const filterByEmail = this.getNodeParameter(
+      "filterByEmail",
+      i,
+      false,
+    ) as boolean;
     if (filterByEmail) {
-      const email = this.getNodeParameter('email', i, '') as string;
+      const email = this.getNodeParameter("email", i, "") as string;
       if (email) {
         initialQueryParams.email = email;
       }
     }
 
     // Check for role filter
-    const filterByRole = this.getNodeParameter('filterByRole', i, false) as boolean;
+    const filterByRole = this.getNodeParameter(
+      "filterByRole",
+      i,
+      false,
+    ) as boolean;
     if (filterByRole) {
-      const role = this.getNodeParameter('role', i, []) as string[];
+      const role = this.getNodeParameter("role", i, []) as string[];
       if (role.length > 0) {
-        initialQueryParams.role = role.join(',');
+        initialQueryParams.role = role.join(",");
+      }
+    }
+
+    // Check for ID filter
+    const filterByIds = this.getNodeParameter(
+      "filterByIds",
+      i,
+      false,
+    ) as boolean;
+    if (filterByIds) {
+      const adminIds = this.getNodeParameter("adminIds", i, []) as string[];
+      if (adminIds.length > 0) {
+        initialQueryParams.id = adminIds.join(",");
       }
     }
 
@@ -82,7 +116,7 @@ export async function executeAdminOperation(
       initialQueryParams.pageSize = limit;
     } else {
       // For returnAll, use maximum page size for efficiency
-      initialQueryParams.pageSize = 100;
+      initialQueryParams.pageSize = API_MAX_PAGE_SIZE;
     }
 
     let admins: IDataObject[] = [];
@@ -110,7 +144,7 @@ export async function executeAdminOperation(
         // Make the API request
         const response = (await druvaMspApiRequest.call(
           this,
-          'GET',
+          "GET",
           endpoint,
           undefined,
           requestParams,
@@ -151,7 +185,7 @@ export async function executeAdminOperation(
         // Log progress for debugging
         await logger.debug(
           `Admin: Page progress: +${pageAdmins.length} admins (total: ${admins.length})${
-            nextPageToken ? ', more pages available' : ''
+            nextPageToken ? ", more pages available" : ""
           }`,
           this,
         );
@@ -160,7 +194,7 @@ export async function executeAdminOperation(
       // Get limited number of admins (single request, no pagination needed)
       const response = await druvaMspApiRequest.call(
         this,
-        'GET',
+        "GET",
         endpoint,
         undefined,
         initialQueryParams,

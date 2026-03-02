@@ -1,11 +1,19 @@
 // Contains the execution logic for Customer resource operations
 
-import type { IExecuteFunctions, INodeExecutionData, IDataObject } from 'n8n-workflow';
+import type {
+  IExecuteFunctions,
+  INodeExecutionData,
+  IDataObject,
+} from "n8n-workflow";
 
-import { druvaMspApiRequest, druvaMspApiRequestAllItems } from './GenericFunctions';
-import { getCustomerStatusLabel } from './helpers/ValueConverters';
-import { logger } from './helpers/LoggerHelper';
-import { getDruvaMspAccessToken } from './helpers/AuthHelpers';
+import {
+  druvaMspApiRequest,
+  druvaMspApiRequestAllItems,
+} from "./GenericFunctions";
+import { getCustomerStatusLabel } from "./helpers/ValueConverters";
+import { logger } from "./helpers/LoggerHelper";
+import { getDruvaMspAccessToken } from "./helpers/AuthHelpers";
+import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
 
 /**
  * Processes the customer data to add derived fields
@@ -22,13 +30,23 @@ function processCustomerData(customer: IDataObject): IDataObject {
     processedCustomer[key] = customer[key];
 
     // If this is the status field, add the status_label immediately after
-    if (key === 'status' && customer.status !== undefined) {
+    if (key === "status" && customer.status !== undefined) {
       // Convert to number if it's a string
       const statusCode =
-        typeof customer.status === 'string' ? Number(customer.status) : (customer.status as number);
+        typeof customer.status === "string"
+          ? Number(customer.status)
+          : (customer.status as number);
       processedCustomer.status_label = getCustomerStatusLabel(statusCode);
     }
   }
+
+  // Derive isDruvaProvisioned from licenseManagementAllowed attribute:
+  //   "0" = Druva Provisioned, "1" = MSP Provisioned
+  const attrs = processedCustomer.attributes as IDataObject[] | undefined;
+  const licAttr = attrs?.find((a) => a.name === "licenseManagementAllowed");
+  processedCustomer.isDruvaProvisioned = licAttr
+    ? licAttr.value === "0"
+    : false;
 
   return processedCustomer;
 }
@@ -43,13 +61,13 @@ export async function executeCustomerOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
-  if (operation === 'create') {
-    const customerName = this.getNodeParameter('customerName', i, '') as string;
+  if (operation === "create") {
+    const customerName = this.getNodeParameter("customerName", i, "") as string;
     const hideDruvaCustomerName = this.getNodeParameter(
-      'hideDruvaCustomerName',
+      "hideDruvaCustomerName",
       i,
       false,
     ) as boolean;
@@ -57,15 +75,22 @@ export async function executeCustomerOperation(
     // Get accountName if custom name is enabled, otherwise use customerName
     let accountName: string;
     if (hideDruvaCustomerName) {
-      accountName = this.getNodeParameter('accountName', i, '') as string;
+      accountName = this.getNodeParameter("accountName", i, "") as string;
     } else {
       accountName = customerName;
-      await logger.debug(`Customer: Using customer name as account name: ${accountName}`, this);
+      await logger.debug(
+        `Customer: Using customer name as account name: ${accountName}`,
+        this,
+      );
     }
 
-    const tenantAdmins = this.getNodeParameter('tenantAdmins', i, []) as string[];
-    const phoneNumber = this.getNodeParameter('phoneNumber', i, '') as string;
-    const address = this.getNodeParameter('address', i, '') as string;
+    const tenantAdmins = this.getNodeParameter(
+      "tenantAdmins",
+      i,
+      [],
+    ) as string[];
+    const phoneNumber = this.getNodeParameter("phoneNumber", i, "") as string;
+    const address = this.getNodeParameter("address", i, "") as string;
 
     // Include only the required fields according to the API spec
     const body: IDataObject = {
@@ -76,7 +101,11 @@ export async function executeCustomerOperation(
     };
 
     // Only add tenantAdmins if any admins are specified
-    if (tenantAdmins && Array.isArray(tenantAdmins) && tenantAdmins.length > 0) {
+    if (
+      tenantAdmins &&
+      Array.isArray(tenantAdmins) &&
+      tenantAdmins.length > 0
+    ) {
       await logger.debug(
         `Customer: Processing ${tenantAdmins.length} tenant admins for customer creation`,
         this,
@@ -85,7 +114,7 @@ export async function executeCustomerOperation(
       // Convert string IDs to numbers if they are numeric strings
       const tenantAdminIds = tenantAdmins.map((id) => {
         // Handle both string and number IDs
-        if (typeof id === 'string') {
+        if (typeof id === "string") {
           const numId = Number.parseInt(id, 10);
           if (!Number.isNaN(numId)) {
             return numId;
@@ -101,14 +130,40 @@ export async function executeCustomerOperation(
       );
       body.tenantAdmins = tenantAdminIds;
     } else {
-      await logger.debug('Customer: No tenant admins specified for customer creation', this);
+      await logger.debug(
+        "Customer: No tenant admins specified for customer creation",
+        this,
+      );
+    }
+
+    // Handle attributes if specified
+    const updateAttributes = this.getNodeParameter(
+      "updateAttributes",
+      i,
+      false,
+    ) as boolean;
+    if (updateAttributes) {
+      const attributesData = this.getNodeParameter(
+        "attributes",
+        i,
+        {},
+      ) as IDataObject;
+      const attributeItems = (attributesData.attribute as IDataObject[]) || [];
+      body.attributes = attributeItems.map((attr) => ({
+        name: attr.name as string,
+        value: attr.value as string,
+      }));
     }
 
     // Handle features if enabled
-    const updateFeatures = this.getNodeParameter('updateFeatures', i, false) as boolean;
+    const updateFeatures = this.getNodeParameter(
+      "updateFeatures",
+      i,
+      false,
+    ) as boolean;
     if (updateFeatures) {
       const securityPostureAndObservability = this.getNodeParameter(
-        'securityPostureAndObservability',
+        "securityPostureAndObservability",
         i,
         false,
       ) as boolean;
@@ -118,7 +173,7 @@ export async function executeCustomerOperation(
 
       if (securityPostureAndObservability) {
         features.push({
-          name: 'Security Posture and Observability',
+          name: "Security Posture and Observability",
         });
       }
 
@@ -131,38 +186,62 @@ export async function executeCustomerOperation(
       );
     }
 
-    const endpoint = '/msp/v3/customers';
-    const response = await druvaMspApiRequest.call(this, 'POST', endpoint, body);
+    const endpoint = "/msp/v3/customers";
+    const response = await druvaMspApiRequest.call(
+      this,
+      "POST",
+      endpoint,
+      body,
+    );
     responseData = this.helpers.returnJsonArray([response as IDataObject]);
-  } else if (operation === 'get') {
-    const customerId = this.getNodeParameter('customerId', i, '') as string;
+  } else if (operation === "get") {
+    const customerId = this.getNodeParameter("customerId", i, "") as string;
+    const includeFeatures = this.getNodeParameter(
+      "includeFeatures",
+      i,
+      false,
+    ) as boolean;
     const endpoint = `/msp/v3/customers/${customerId}`;
-    const response = await druvaMspApiRequest.call(this, 'GET', endpoint);
+    const qs: IDataObject = {};
+    if (includeFeatures) {
+      qs.includeFeatures = true;
+    }
+    const response = await druvaMspApiRequest.call(
+      this,
+      "GET",
+      endpoint,
+      undefined,
+      qs,
+    );
 
     // Process the customer data to add derived fields
     const processedCustomer = processCustomerData(response as IDataObject);
 
     responseData = this.helpers.returnJsonArray([processedCustomer]);
-  } else if (operation === 'getMany') {
-    const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-    const limit = this.getNodeParameter('limit', i, 50) as number;
-    const includeFeatures = this.getNodeParameter('includeFeatures', i, false) as boolean;
-    const endpoint = '/msp/v3/customers';
+  } else if (operation === "getMany") {
+    const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+    const limit = this.getNodeParameter("limit", i, 50) as number;
+    const includeFeatures = this.getNodeParameter(
+      "includeFeatures",
+      i,
+      false,
+    ) as boolean;
+    const endpoint = "/msp/v3/customers";
 
     let customers: IDataObject[] = [];
 
     // Retrieve customers from API
     if (returnAll) {
-      const queryParams: IDataObject = {};
+      const queryParams: IDataObject = { pageSize: String(API_MAX_PAGE_SIZE) };
       if (includeFeatures) {
         queryParams.includeFeatures = true;
       }
 
       customers = (await druvaMspApiRequestAllItems.call(
         this,
-        'GET',
+        "GET",
         endpoint,
-        'customers',
+        "customers",
         {},
         queryParams,
       )) as IDataObject[];
@@ -175,7 +254,13 @@ export async function executeCustomerOperation(
         queryParams.includeFeatures = true;
       }
 
-      const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, queryParams);
+      const response = await druvaMspApiRequest.call(
+        this,
+        "GET",
+        endpoint,
+        undefined,
+        queryParams,
+      );
       customers = ((response as IDataObject)?.customers as IDataObject[]) || [];
     }
 
@@ -183,8 +268,16 @@ export async function executeCustomerOperation(
     customers = customers.map((customer) => processCustomerData(customer));
 
     // Check if any filters are enabled
-    const filterByCustomerName = this.getNodeParameter('filterByCustomerName', i, false) as boolean;
-    const filterByAccountName = this.getNodeParameter('filterByAccountName', i, false) as boolean;
+    const filterByCustomerName = this.getNodeParameter(
+      "filterByCustomerName",
+      i,
+      false,
+    ) as boolean;
+    const filterByAccountName = this.getNodeParameter(
+      "filterByAccountName",
+      i,
+      false,
+    ) as boolean;
 
     // Apply client-side filtering if any filters are enabled
     if (filterByCustomerName || filterByAccountName) {
@@ -195,32 +288,41 @@ export async function executeCustomerOperation(
 
         // Filter by customer name if enabled
         if (filterByCustomerName) {
-          const operator = this.getNodeParameter('customerNameOperator', i, 'contains') as string;
-          const value = this.getNodeParameter('customerNameValue', i, '') as string;
+          const operator = this.getNodeParameter(
+            "customerNameOperator",
+            i,
+            "contains",
+          ) as string;
+          const value = this.getNodeParameter(
+            "customerNameValue",
+            i,
+            "",
+          ) as string;
           const customerValue = customer.customerName as string;
 
           // Case-insensitive comparison
-          const customerStringValue = String(customerValue || '').toLowerCase();
+          const customerStringValue = String(customerValue || "").toLowerCase();
           const compareValue = String(value).toLowerCase();
 
           // Apply the correct operator
           switch (operator) {
-            case 'contains':
+            case "contains":
               matchesCustomerName = customerStringValue.includes(compareValue);
               break;
-            case 'notContains':
+            case "notContains":
               matchesCustomerName = !customerStringValue.includes(compareValue);
               break;
-            case 'equals':
+            case "equals":
               matchesCustomerName = customerStringValue === compareValue;
               break;
-            case 'notEquals':
+            case "notEquals":
               matchesCustomerName = customerStringValue !== compareValue;
               break;
-            case 'startsWith':
-              matchesCustomerName = customerStringValue.startsWith(compareValue);
+            case "startsWith":
+              matchesCustomerName =
+                customerStringValue.startsWith(compareValue);
               break;
-            case 'endsWith':
+            case "endsWith":
               matchesCustomerName = customerStringValue.endsWith(compareValue);
               break;
             default:
@@ -230,32 +332,40 @@ export async function executeCustomerOperation(
 
         // Filter by account name if enabled
         if (filterByAccountName) {
-          const operator = this.getNodeParameter('accountNameOperator', i, 'contains') as string;
-          const value = this.getNodeParameter('accountNameValue', i, '') as string;
+          const operator = this.getNodeParameter(
+            "accountNameOperator",
+            i,
+            "contains",
+          ) as string;
+          const value = this.getNodeParameter(
+            "accountNameValue",
+            i,
+            "",
+          ) as string;
           const customerValue = customer.accountName as string;
 
           // Case-insensitive comparison
-          const customerStringValue = String(customerValue || '').toLowerCase();
+          const customerStringValue = String(customerValue || "").toLowerCase();
           const compareValue = String(value).toLowerCase();
 
           // Apply the correct operator
           switch (operator) {
-            case 'contains':
+            case "contains":
               matchesAccountName = customerStringValue.includes(compareValue);
               break;
-            case 'notContains':
+            case "notContains":
               matchesAccountName = !customerStringValue.includes(compareValue);
               break;
-            case 'equals':
+            case "equals":
               matchesAccountName = customerStringValue === compareValue;
               break;
-            case 'notEquals':
+            case "notEquals":
               matchesAccountName = customerStringValue !== compareValue;
               break;
-            case 'startsWith':
+            case "startsWith":
               matchesAccountName = customerStringValue.startsWith(compareValue);
               break;
-            case 'endsWith':
+            case "endsWith":
               matchesAccountName = customerStringValue.endsWith(compareValue);
               break;
             default:
@@ -274,22 +384,51 @@ export async function executeCustomerOperation(
     }
 
     responseData = this.helpers.returnJsonArray(customers);
-  } else if (operation === 'update') {
-    const customerId = this.getNodeParameter('customerId', i, '') as string;
-    const customerName = this.getNodeParameter('customerName', i, '') as string;
-    const tenantAdmins = this.getNodeParameter('tenantAdmins', i, []) as string[];
-    const phoneNumber = this.getNodeParameter('phoneNumber', i, '') as string;
-    const address = this.getNodeParameter('address', i, '') as string;
+  } else if (operation === "update") {
+    const customerId = this.getNodeParameter("customerId", i, "") as string;
+    const customerName = this.getNodeParameter("customerName", i, "") as string;
+    const tenantAdmins = this.getNodeParameter(
+      "tenantAdmins",
+      i,
+      [],
+    ) as string[];
+    const phoneNumber = this.getNodeParameter("phoneNumber", i, "") as string;
+    const address = this.getNodeParameter("address", i, "") as string;
 
     // Include required fields with proper naming
+    // attributes is required by UpdateCustomerV3Request (can be empty array)
     const body: IDataObject = {
       customerName,
       phone: phoneNumber,
       address,
+      attributes: [],
     };
 
+    // Handle attributes if provided
+    const updateAttributes = this.getNodeParameter(
+      "updateAttributes",
+      i,
+      false,
+    ) as boolean;
+    if (updateAttributes) {
+      const attributesData = this.getNodeParameter(
+        "attributes",
+        i,
+        {},
+      ) as IDataObject;
+      const attributeItems = (attributesData.attribute as IDataObject[]) || [];
+      body.attributes = attributeItems.map((attr) => ({
+        name: attr.name as string,
+        value: attr.value as string,
+      }));
+    }
+
     // Only add tenantAdmins if any admins are specified
-    if (tenantAdmins && Array.isArray(tenantAdmins) && tenantAdmins.length > 0) {
+    if (
+      tenantAdmins &&
+      Array.isArray(tenantAdmins) &&
+      tenantAdmins.length > 0
+    ) {
       await logger.debug(
         `Customer: Processing ${tenantAdmins.length} tenant admins for customer update`,
         this,
@@ -298,7 +437,7 @@ export async function executeCustomerOperation(
       // Convert string IDs to numbers if they are numeric strings
       const tenantAdminIds = tenantAdmins.map((id) => {
         // Handle both string and number IDs
-        if (typeof id === 'string') {
+        if (typeof id === "string") {
           const numId = Number.parseInt(id, 10);
           if (!Number.isNaN(numId)) {
             return numId;
@@ -314,16 +453,23 @@ export async function executeCustomerOperation(
       );
       body.tenantAdmins = tenantAdminIds;
     } else {
-      await logger.debug('Customer: No tenant admins specified for customer update', this);
+      await logger.debug(
+        "Customer: No tenant admins specified for customer update",
+        this,
+      );
     }
 
     // Handle features update if enabled
     // Note: Features is optional in UpdateCustomerRequest schema, so we only include it when explicitly enabled
     // Per API spec: "You MUST provide information for all the fields" - this refers to required fields (customerName, phone, address)
-    const updateFeatures = this.getNodeParameter('updateFeatures', i, false) as boolean;
+    const updateFeatures = this.getNodeParameter(
+      "updateFeatures",
+      i,
+      false,
+    ) as boolean;
     if (updateFeatures) {
       const securityPostureAndObservability = this.getNodeParameter(
-        'securityPostureAndObservability',
+        "securityPostureAndObservability",
         i,
         false,
       ) as boolean;
@@ -333,7 +479,7 @@ export async function executeCustomerOperation(
 
       if (securityPostureAndObservability) {
         features.push({
-          name: 'Security Posture and Observability',
+          name: "Security Posture and Observability",
         });
       }
 
@@ -348,28 +494,29 @@ export async function executeCustomerOperation(
     }
 
     const endpoint = `/msp/v3/customers/${customerId}`;
-    const response = await druvaMspApiRequest.call(this, 'PUT', endpoint, body);
+    const response = await druvaMspApiRequest.call(this, "PUT", endpoint, body);
     responseData = this.helpers.returnJsonArray([response as IDataObject]);
-  } else if (operation === 'getToken') {
-    const customerId = this.getNodeParameter('customerId', i, '') as string;
+  } else if (operation === "getToken") {
+    const customerId = this.getNodeParameter("customerId", i, "") as string;
     const endpoint = `/msp/v2/customers/${customerId}/token`;
 
     // API requires form-urlencoded body with grant_type=client_credentials
     // Get MSP access token first
     const mspAccessToken = await getDruvaMspAccessToken.call(this);
-    const credentials = await this.getCredentials('druvaMspApi');
-    const baseUrl = (credentials.apiBaseUrl as string) || 'https://apis.druva.com';
+    const credentials = await this.getCredentials("druvaMspApi");
+    const baseUrl =
+      (credentials.apiBaseUrl as string) || "https://apis.druva.com";
 
     // Make request with form-urlencoded body
     const response = await this.helpers.httpRequest({
-      method: 'POST',
+      method: "POST",
       url: `${baseUrl}${endpoint}`,
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
         Authorization: `Bearer ${mspAccessToken}`,
       },
-      body: 'grant_type=client_credentials',
+      body: "grant_type=client_credentials",
       json: true,
     });
 

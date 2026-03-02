@@ -1,50 +1,50 @@
-import type { INodeProperties } from 'n8n-workflow';
+import type { INodeProperties } from "n8n-workflow";
 
 // Define the operations for the Customer resource
 export const customerOperations: INodeProperties[] = [
   {
-    displayName: 'Operation',
-    name: 'operation',
-    type: 'options',
+    displayName: "Operation",
+    name: "operation",
+    type: "options",
     noDataExpression: true,
     displayOptions: {
       show: {
-        resource: ['customer'],
+        resource: ["customer"],
       },
     },
     options: [
       {
-        name: 'Create',
-        value: 'create',
-        action: 'Create a new customer',
-        description: 'Create a new MSP customer account',
+        name: "Create",
+        value: "create",
+        action: "Create a new customer",
+        description: "Create a new MSP customer account",
       },
       {
-        name: 'Get',
-        value: 'get',
-        action: 'Get a customer by ID',
-        description: 'Retrieve details for a specific customer',
+        name: "Get",
+        value: "get",
+        action: "Get a customer by ID",
+        description: "Retrieve details for a specific customer",
       },
       {
-        name: 'Get Many',
-        value: 'getMany',
-        action: 'Get many customers',
-        description: 'Retrieve a list of customers',
+        name: "Get Many",
+        value: "getMany",
+        action: "Get many customers",
+        description: "Retrieve a list of customers",
       },
       {
-        name: 'Get Token',
-        value: 'getToken',
-        action: 'Get a customer API token',
-        description: 'Generate a customer-specific API token',
+        name: "Get Token",
+        value: "getToken",
+        action: "Get a customer API token",
+        description: "Generate a customer-specific API token",
       },
       {
-        name: 'Update',
-        value: 'update',
-        action: 'Update a customer',
-        description: 'Update details of an existing customer',
+        name: "Update",
+        value: "update",
+        action: "Update a customer",
+        description: "Update details of an existing customer",
       },
     ],
-    default: 'list', // Default to a common read operation
+    default: "getMany",
   },
 ];
 
@@ -55,86 +55,87 @@ export const customerFields: INodeProperties[] = [
   /*                                customer:create                             */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Customer Name',
-    name: 'customerName',
-    type: 'string',
+    displayName: "Customer Name",
+    name: "customerName",
+    type: "string",
     required: true,
-    default: '',
+    default: "",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["create"],
       },
     },
-    description: 'Name of the customer organisation',
+    description: "Name of the customer organisation",
   },
   /* -------------------------------------------------------------------------- */
   /*                                customer:update                             */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Customer ID',
-    name: 'customerId',
-    type: 'string',
+    displayName: "Customer ID",
+    name: "customerId",
+    type: "string",
     required: true,
-    default: '',
+    default: "",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['update'],
+        resource: ["customer"],
+        operation: ["update"],
       },
     },
-    description: 'The unique ID of the customer to update',
+    description: "The unique ID of the customer to update",
   },
   {
-    displayName: 'Customer Name',
-    name: 'customerName',
-    type: 'string',
+    displayName: "Customer Name",
+    name: "customerName",
+    type: "string",
     required: true,
-    default: '',
+    default: "",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['update'],
+        resource: ["customer"],
+        operation: ["update"],
       },
     },
-    description: 'Name of the customer organization',
+    description: "Name of the customer organization",
   },
   {
-    displayName: 'Phone Number',
-    name: 'phoneNumber',
-    type: 'string',
+    displayName: "Phone Number",
+    name: "phoneNumber",
+    type: "string",
     required: true,
-    default: '',
+    default: "",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['update'],
+        resource: ["customer"],
+        operation: ["update"],
       },
     },
-    description: 'Contact phone number for the customer (e.g., +1-XXX-XXX-XXXX)',
+    description:
+      "Contact phone number for the customer (e.g., +1-XXX-XXX-XXXX)",
   },
   {
-    displayName: 'Address',
-    name: 'address',
-    type: 'string',
+    displayName: "Address",
+    name: "address",
+    type: "string",
     required: true,
-    default: '',
-    placeholder: 'e.g. 123 Main St, San Francisco, CA, USA 94105',
+    default: "",
+    placeholder: "e.g. 123 Main St, San Francisco, CA, USA 94105",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['update'],
+        resource: ["customer"],
+        operation: ["update"],
       },
     },
     description:
       "Customer's physical address as a single string (e.g., street, city, state, country, postal code)",
   },
   {
-    displayName: 'Tenant Admins',
-    name: 'tenantAdmins',
-    type: 'multiOptions',
+    displayName: "Tenant Admins",
+    name: "tenantAdmins",
+    type: "multiOptions",
     typeOptions: {
-      loadOptionsMethod: 'getAdmins',
+      loadOptionsMethod: "getAdmins",
       loadOptionsDependsOn: [],
     },
     default: [],
@@ -143,63 +144,116 @@ export const customerFields: INodeProperties[] = [
       "Specify the unique IDs of tenant administrators who should manage the tenant for the customer. Get the list of tenant administrators IDs using the 'List all administrators' API. If you want to remove a tenant administrator from this customer, simply do not select that administrator. If no tenant admins are selected, all tenant admins will be removed from this customer.",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['update'],
+        resource: ["customer"],
+        operation: ["update"],
       },
     },
   },
   {
-    displayName: 'Update Features',
-    name: 'updateFeatures',
-    type: 'boolean',
+    displayName: "Update Features",
+    name: "updateFeatures",
+    type: "boolean",
     default: false,
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['update'],
+        resource: ["customer"],
+        operation: ["update"],
       },
     },
-    description: 'Whether to update the customer features',
+    description: "Whether to update the customer features",
   },
   {
-    displayName: 'Security Posture and Observability',
-    name: 'securityPostureAndObservability',
-    type: 'boolean',
+    displayName: "Security Posture and Observability",
+    name: "securityPostureAndObservability",
+    type: "boolean",
     default: false,
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['update'],
+        resource: ["customer"],
+        operation: ["update"],
         updateFeatures: [true],
       },
     },
     description:
-      'Whether to enable the Security Posture and Observability feature for this customer',
+      "Whether to enable the Security Posture and Observability feature for this customer",
   },
   {
-    displayName: 'Hide Customer Name from Druva',
-    name: 'hideDruvaCustomerName',
-    type: 'boolean',
+    displayName: "Update Attributes",
+    name: "updateAttributes",
+    type: "boolean",
     default: false,
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["update"],
+      },
+    },
+    description:
+      "Whether to update customer-level attributes (e.g. licenseManagementAllowed, dataAccessAllowed)",
+  },
+  {
+    displayName: "Attributes",
+    name: "attributes",
+    type: "fixedCollection",
+    typeOptions: { multipleValues: true },
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ["customer"],
+        operation: ["update"],
+        updateAttributes: [true],
+      },
+    },
+    description:
+      "Customer-level attributes. See https://developer.druva.com/docs/msp-product-and-attribute-values for valid attribute names and values.",
+    options: [
+      {
+        name: "attribute",
+        displayName: "Attribute",
+        values: [
+          {
+            displayName: "Name",
+            name: "name",
+            type: "string",
+            default: "",
+            description:
+              "Attribute name (e.g. licenseManagementAllowed, dataAccessAllowed)",
+          },
+          {
+            displayName: "Value",
+            name: "value",
+            type: "string",
+            default: "",
+            description: "Attribute value (e.g. 1 to enable, 0 to disable)",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    displayName: "Hide Customer Name from Druva",
+    name: "hideDruvaCustomerName",
+    type: "boolean",
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ["customer"],
+        operation: ["create"],
       },
     },
     description:
       "Whether to keep the real customer name private from Druva's internal systems by using a different internal name",
   },
   {
-    displayName: 'Alternative Name for Druva Systems',
-    name: 'accountName',
-    type: 'string',
+    displayName: "Alternative Name for Druva Systems",
+    name: "accountName",
+    type: "string",
     required: true,
-    default: '',
+    default: "",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["create"],
         hideDruvaCustomerName: [true],
       },
     },
@@ -208,125 +262,193 @@ export const customerFields: INodeProperties[] = [
     hint: "This is the name that will appear in Druva's internal systems. Once entered, it cannot be changed after creation",
   },
   {
-    displayName: 'Phone Number',
-    name: 'phoneNumber',
-    type: 'string',
+    displayName: "Phone Number",
+    name: "phoneNumber",
+    type: "string",
     required: true,
-    default: '',
+    default: "",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["create"],
       },
     },
-    description: 'Contact phone number for the customer (e.g., +1-XXX-XXX-XXXX)',
+    description:
+      "Contact phone number for the customer (e.g., +1-XXX-XXX-XXXX)",
   },
   {
-    displayName: 'Address',
-    name: 'address',
-    type: 'string',
+    displayName: "Address",
+    name: "address",
+    type: "string",
     required: true,
-    default: '',
-    placeholder: 'e.g. 123 Main St, San Francisco, CA, USA 94105',
+    default: "",
+    placeholder: "e.g. 123 Main St, San Francisco, CA, USA 94105",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["create"],
       },
     },
     description:
       "Customer's physical address as a single string (e.g., street, city, state, country, postal code)",
   },
   {
-    displayName: 'Tenant Admins',
-    name: 'tenantAdmins',
-    type: 'multiOptions',
+    displayName: "Tenant Admins",
+    name: "tenantAdmins",
+    type: "multiOptions",
     typeOptions: {
-      loadOptionsMethod: 'getAdmins',
+      loadOptionsMethod: "getAdmins",
       loadOptionsDependsOn: [],
     },
     default: [],
     noDataExpression: true,
-    description: 'IDs of tenant administrators who should manage the tenant for the customer',
+    description:
+      "IDs of tenant administrators who should manage the tenant for the customer",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["create"],
       },
     },
   },
   {
-    displayName: 'Update Features',
-    name: 'updateFeatures',
-    type: 'boolean',
+    displayName: "Update Features",
+    name: "updateFeatures",
+    type: "boolean",
     default: false,
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["create"],
       },
     },
-    description: 'Whether to set customer features during creation',
+    description: "Whether to set customer features during creation",
   },
   {
-    displayName: 'Security Posture and Observability',
-    name: 'securityPostureAndObservability',
-    type: 'boolean',
+    displayName: "Security Posture and Observability",
+    name: "securityPostureAndObservability",
+    type: "boolean",
     default: false,
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['create'],
+        resource: ["customer"],
+        operation: ["create"],
         updateFeatures: [true],
       },
     },
     description:
-      'Whether to enable the Security Posture and Observability feature for this customer',
+      "Whether to enable the Security Posture and Observability feature for this customer",
+  },
+  {
+    displayName: "Set Attributes",
+    name: "updateAttributes",
+    type: "boolean",
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ["customer"],
+        operation: ["create"],
+      },
+    },
+    description:
+      "Whether to set customer-level attributes during creation (e.g. licenseManagementAllowed, dataAccessAllowed)",
+  },
+  {
+    displayName: "Attributes",
+    name: "attributes",
+    type: "fixedCollection",
+    typeOptions: { multipleValues: true },
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ["customer"],
+        operation: ["create"],
+        updateAttributes: [true],
+      },
+    },
+    description:
+      "Customer-level attributes. See https://developer.druva.com/docs/msp-product-and-attribute-values for valid attribute names and values.",
+    options: [
+      {
+        name: "attribute",
+        displayName: "Attribute",
+        values: [
+          {
+            displayName: "Name",
+            name: "name",
+            type: "string",
+            default: "",
+            description:
+              "Attribute name (e.g. licenseManagementAllowed, dataAccessAllowed)",
+          },
+          {
+            displayName: "Value",
+            name: "value",
+            type: "string",
+            default: "",
+            description: "Attribute value (e.g. 1 to enable, 0 to disable)",
+          },
+        ],
+      },
+    ],
   },
   /* -------------------------------------------------------------------------- */
   /*                                customer:get                                */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Customer ID',
-    name: 'customerId',
-    type: 'options',
+    displayName: "Customer ID",
+    name: "customerId",
+    type: "options",
     typeOptions: {
-      loadOptionsMethod: 'getCustomers',
+      loadOptionsMethod: "getCustomers",
     },
     required: true,
-    default: '',
+    default: "",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['get', 'getToken'],
+        resource: ["customer"],
+        operation: ["get", "getToken"],
       },
     },
-    description: 'The unique ID of the customer to perform the operation on',
+    description: "The unique ID of the customer to perform the operation on",
+  },
+  {
+    displayName: "Include Features",
+    name: "includeFeatures",
+    type: "boolean",
+    default: false,
+    displayOptions: {
+      show: {
+        resource: ["customer"],
+        operation: ["get"],
+      },
+    },
+    description: "Whether to include customer features in the response",
   },
   /* -------------------------------------------------------------------------- */
   /*                                customer:list                               */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Return All',
-    name: 'returnAll',
-    type: 'boolean',
+    displayName: "Return All",
+    name: "returnAll",
+    type: "boolean",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
       },
     },
     default: false,
-    description: 'Whether to return all results or only up to a given limit',
+    description: "Whether to return all results or only up to a given limit",
   },
   {
-    displayName: 'Limit',
-    name: 'limit',
-    type: 'number',
+    displayName: "Limit",
+    name: "limit",
+    type: "number",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
         returnAll: [false],
       },
     },
@@ -335,155 +457,154 @@ export const customerFields: INodeProperties[] = [
       maxValue: 100,
     },
     default: 50,
-    description: 'Max number of results to return',
+    description: "Max number of results to return",
   },
   {
-    displayName: 'Include Features',
-    name: 'includeFeatures',
-    type: 'boolean',
+    displayName: "Include Features",
+    name: "includeFeatures",
+    type: "boolean",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
       },
     },
     default: false,
-    description: 'Whether to include customer features in the response',
-    hint: 'Druva API allows includeFeatures only on the first request (no pageToken).',
+    description: "Whether to include customer features in the response",
   },
   {
-    displayName: 'Filter by Customer Name',
-    name: 'filterByCustomerName',
-    type: 'boolean',
+    displayName: "Filter by Customer Name",
+    name: "filterByCustomerName",
+    type: "boolean",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
       },
     },
     default: false,
-    description: 'Whether to filter results by customer name',
+    description: "Whether to filter results by customer name",
   },
   {
-    displayName: 'Customer Name Operator',
-    name: 'customerNameOperator',
-    type: 'options',
+    displayName: "Customer Name Operator",
+    name: "customerNameOperator",
+    type: "options",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
         filterByCustomerName: [true],
       },
     },
     options: [
       {
-        name: 'Contains',
-        value: 'contains',
+        name: "Contains",
+        value: "contains",
       },
       {
-        name: 'Not Contains',
-        value: 'notContains',
+        name: "Not Contains",
+        value: "notContains",
       },
       {
-        name: 'Equals',
-        value: 'equals',
+        name: "Equals",
+        value: "equals",
       },
       {
-        name: 'Not Equals',
-        value: 'notEquals',
+        name: "Not Equals",
+        value: "notEquals",
       },
       {
-        name: 'Starts With',
-        value: 'startsWith',
+        name: "Starts With",
+        value: "startsWith",
       },
       {
-        name: 'Ends With',
-        value: 'endsWith',
+        name: "Ends With",
+        value: "endsWith",
       },
     ],
-    default: 'contains',
-    description: 'Operation to perform when comparing Customer Name values',
+    default: "contains",
+    description: "Operation to perform when comparing Customer Name values",
   },
   {
-    displayName: 'Customer Name Value',
-    name: 'customerNameValue',
-    type: 'string',
+    displayName: "Customer Name Value",
+    name: "customerNameValue",
+    type: "string",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
         filterByCustomerName: [true],
       },
     },
-    default: '',
-    description: 'The value to compare against the customer name',
+    default: "",
+    description: "The value to compare against the customer name",
   },
   {
-    displayName: 'Filter by Account Name',
-    name: 'filterByAccountName',
-    type: 'boolean',
+    displayName: "Filter by Account Name",
+    name: "filterByAccountName",
+    type: "boolean",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
       },
     },
     default: false,
-    description: 'Whether to filter results by account name',
+    description: "Whether to filter results by account name",
   },
   {
-    displayName: 'Account Name Operator',
-    name: 'accountNameOperator',
-    type: 'options',
+    displayName: "Account Name Operator",
+    name: "accountNameOperator",
+    type: "options",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
         filterByAccountName: [true],
       },
     },
     options: [
       {
-        name: 'Contains',
-        value: 'contains',
+        name: "Contains",
+        value: "contains",
       },
       {
-        name: 'Not Contains',
-        value: 'notContains',
+        name: "Not Contains",
+        value: "notContains",
       },
       {
-        name: 'Equals',
-        value: 'equals',
+        name: "Equals",
+        value: "equals",
       },
       {
-        name: 'Not Equals',
-        value: 'notEquals',
+        name: "Not Equals",
+        value: "notEquals",
       },
       {
-        name: 'Starts With',
-        value: 'startsWith',
+        name: "Starts With",
+        value: "startsWith",
       },
       {
-        name: 'Ends With',
-        value: 'endsWith',
+        name: "Ends With",
+        value: "endsWith",
       },
     ],
-    default: 'contains',
-    description: 'Operation to perform when comparing Account Name values',
+    default: "contains",
+    description: "Operation to perform when comparing Account Name values",
   },
   {
-    displayName: 'Account Name Value',
-    name: 'accountNameValue',
-    type: 'string',
+    displayName: "Account Name Value",
+    name: "accountNameValue",
+    type: "string",
     displayOptions: {
       show: {
-        resource: ['customer'],
-        operation: ['getMany'],
+        resource: ["customer"],
+        operation: ["getMany"],
         filterByAccountName: [true],
       },
     },
-    default: '',
-    description: 'The value to compare against the account name',
+    default: "",
+    description: "The value to compare against the account name",
   },
   /* -------------------------------------------------------------------------- */
   /*                                customer:getToken                           */

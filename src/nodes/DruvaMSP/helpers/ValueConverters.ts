@@ -1,5 +1,5 @@
-import type { INodePropertyOptions } from 'n8n-workflow';
-import type { IDataObject } from 'n8n-workflow';
+import type { INodePropertyOptions } from "n8n-workflow";
+import type { IDataObject } from "n8n-workflow";
 import type {
   TenantStatusCode,
   TenantTypeCode,
@@ -10,7 +10,7 @@ import type {
   EventCategoryCode,
   SyslogSeverityCode,
   CustomerStatusCode,
-} from './Constants';
+} from "./Constants";
 
 import {
   TENANT_STATUS,
@@ -27,27 +27,34 @@ import {
   SERVICE_PLAN_FEATURES,
   TASK_STATUS,
   TASK_OUTPUT_STATUS,
-} from './Constants';
+} from "./Constants";
 
 /**
  * Convert a tenant status code to its human-readable label
  */
 export function getTenantStatusLabel(statusCode: number): string {
-  return TENANT_STATUS[statusCode as TenantStatusCode] || `Unknown Status (${statusCode})`;
+  return (
+    TENANT_STATUS[statusCode as TenantStatusCode] ||
+    `Unknown Status (${statusCode})`
+  );
 }
 
 /**
  * Convert a tenant type code to its human-readable label
  */
 export function getTenantTypeLabel(typeCode: number): string {
-  return TENANT_TYPE[typeCode as TenantTypeCode] || `Unknown Type (${typeCode})`;
+  return (
+    TENANT_TYPE[typeCode as TenantTypeCode] || `Unknown Type (${typeCode})`
+  );
 }
 
 /**
  * Convert a product ID to its human-readable label
  */
 export function getProductIdLabel(productId: number): string {
-  return PRODUCT_ID[productId as ProductIdCode] || `Unknown Product (${productId})`;
+  return (
+    PRODUCT_ID[productId as ProductIdCode] || `Unknown Product (${productId})`
+  );
 }
 
 /**
@@ -55,7 +62,8 @@ export function getProductIdLabel(productId: number): string {
  */
 export function getProductModuleIdLabel(moduleId: number): string {
   return (
-    PRODUCT_MODULE_ID[moduleId as ProductModuleIdCode] || `Unknown Product Module (${moduleId})`
+    PRODUCT_MODULE_ID[moduleId as ProductModuleIdCode] ||
+    `Unknown Product Module (${moduleId})`
   );
 }
 
@@ -70,7 +78,10 @@ export function getAdminRoleLabel(roleCode: number): string {
  * Convert an admin status code to its human-readable label
  */
 export function getAdminStatusLabel(statusCode: number): string {
-  return ADMIN_STATUSES[statusCode as AdminStatusCode] || `Unknown Status (${statusCode})`;
+  return (
+    ADMIN_STATUSES[statusCode as AdminStatusCode] ||
+    `Unknown Status (${statusCode})`
+  );
 }
 
 /**
@@ -78,7 +89,8 @@ export function getAdminStatusLabel(statusCode: number): string {
  */
 export function getEventCategoryLabel(categoryCode: string): string {
   return (
-    EVENT_CATEGORIES[categoryCode as EventCategoryCode] || `Unknown Category (${categoryCode})`
+    EVENT_CATEGORIES[categoryCode as EventCategoryCode] ||
+    `Unknown Category (${categoryCode})`
   );
 }
 
@@ -87,7 +99,8 @@ export function getEventCategoryLabel(categoryCode: string): string {
  */
 export function getSyslogSeverityLabel(severityCode: number): string {
   return (
-    SYSLOG_SEVERITIES[severityCode as SyslogSeverityCode] || `Unknown Severity (${severityCode})`
+    SYSLOG_SEVERITIES[severityCode as SyslogSeverityCode] ||
+    `Unknown Severity (${severityCode})`
   );
 }
 
@@ -95,17 +108,20 @@ export function getSyslogSeverityLabel(severityCode: number): string {
  * Convert a customer status code to its human-readable label
  */
 export function getCustomerStatusLabel(statusCode: number): string {
-  return CUSTOMER_STATUS[statusCode as CustomerStatusCode] || `Unknown Status (${statusCode})`;
+  return (
+    CUSTOMER_STATUS[statusCode as CustomerStatusCode] ||
+    `Unknown Status (${statusCode})`
+  );
 }
 
 /**
  * Convert a service plan status code to its human-readable label
  */
 export function getServicePlanStatusLabel(status: unknown): string {
-  if (typeof status === 'number' && status in SERVICE_PLAN_STATUS) {
+  if (typeof status === "number" && status in SERVICE_PLAN_STATUS) {
     return SERVICE_PLAN_STATUS[status as keyof typeof SERVICE_PLAN_STATUS];
   }
-  return String(status || 'Unknown');
+  return String(status || "Unknown");
 }
 
 /**
@@ -292,7 +308,7 @@ export function enrichApiResponse(
     orderedResult[key] = data[key];
 
     // Check if this is a field that needs a label
-    if (key in fieldMappings && typeof data[key] === 'number') {
+    if (key in fieldMappings && typeof data[key] === "number") {
       // If so, add the label property immediately after the original
       const labelField = `${key}_label`;
       orderedResult[labelField] = fieldMappings[key](data[key] as number);
@@ -346,20 +362,20 @@ export function getServicePlanStatusOptions(): INodePropertyOptions[] {
  * Convert a task status code to its human-readable label
  */
 export function getTaskStatusLabel(status: unknown): string {
-  if (typeof status === 'number' && status in TASK_STATUS) {
+  if (typeof status === "number" && status in TASK_STATUS) {
     return TASK_STATUS[status as keyof typeof TASK_STATUS];
   }
-  return String(status || 'Unknown');
+  return String(status || "Unknown");
 }
 
 /**
  * Convert a task output status code to its human-readable label
  */
 export function getTaskOutputStatusLabel(status: unknown): string {
-  if (typeof status === 'number' && status in TASK_OUTPUT_STATUS) {
+  if (typeof status === "number" && status in TASK_OUTPUT_STATUS) {
     return TASK_OUTPUT_STATUS[status as keyof typeof TASK_OUTPUT_STATUS];
   }
-  return String(status || 'Unknown');
+  return String(status || "Unknown");
 }
 
 /**
@@ -408,7 +424,7 @@ export function enrichApiResponseWithDates(
     const timestamp = data[field];
 
     // Only process if the field exists and is a number
-    if (timestamp !== undefined && typeof timestamp === 'number') {
+    if (timestamp !== undefined && typeof timestamp === "number") {
       // Create a Date object and add as a new field with the "At" suffix
       const dateObject = convertUnixTimestampToDate(timestamp);
       const dateField = `${field}At`;

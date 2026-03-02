@@ -3,12 +3,19 @@ import type {
   INodeExecutionData,
   IExecuteFunctions,
   NodeApiError,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
-import { druvaMspApiRequest, druvaMspApiRequestAllReportItems } from './GenericFunctions';
-import { REPORT_FIELD_NAMES, REPORT_OPERATORS } from './helpers/Constants';
-import { getRelativeDateRange } from './helpers/DateHelpers';
-import { logger } from './helpers/LoggerHelper';
+import {
+  druvaMspApiRequest,
+  druvaMspApiRequestAllReportItems,
+} from "./GenericFunctions";
+import {
+  REPORT_FIELD_NAMES,
+  REPORT_OPERATORS,
+  API_MAX_PAGE_SIZE,
+} from "./helpers/Constants";
+import { getRelativeDateRange } from "./helpers/DateHelpers";
+import { logger } from "./helpers/LoggerHelper";
 
 /**
  * Executes the selected Report - Cyber Resilience operation.
@@ -20,37 +27,37 @@ export async function executeReportCyberOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
   try {
-    if (operation === 'getRollbackActions') {
+    if (operation === "getRollbackActions") {
       // Implement Get Rollback Actions Report logic
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
 
       // Get date parameters based on selection method
       const dateSelectionMethod = this.getNodeParameter(
-        'dateSelectionMethod',
+        "dateSelectionMethod",
         i,
-        'relativeDates',
+        "relativeDates",
       ) as string;
 
-      let startTime = '';
-      let endTime = '';
+      let startTime = "";
+      let endTime = "";
 
       // Skip date filter initialization if "All Dates" is selected
-      if (dateSelectionMethod !== 'allDates') {
-        if (dateSelectionMethod === 'specificDates') {
+      if (dateSelectionMethod !== "allDates") {
+        if (dateSelectionMethod === "specificDates") {
           // Use specific dates provided by user
-          startTime = this.getNodeParameter('startDate', i, '') as string;
-          endTime = this.getNodeParameter('endDate', i, '') as string;
+          startTime = this.getNodeParameter("startDate", i, "") as string;
+          endTime = this.getNodeParameter("endDate", i, "") as string;
         } else {
           // Use relative date range
           const relativeDateRange = this.getNodeParameter(
-            'relativeDateRange',
+            "relativeDateRange",
             i,
-            'currentMonth',
+            "currentMonth",
           ) as string;
           const dateRange = getRelativeDateRange(relativeDateRange);
           startTime = dateRange.startDate;
@@ -58,36 +65,60 @@ export async function executeReportCyberOperation(
         }
       }
 
-      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
-      const filterByEntityTypes = this.getNodeParameter('filterByEntityTypes', i, false) as boolean;
-      const filterByActionTypes = this.getNodeParameter('filterByActionTypes', i, false) as boolean;
+      const filterByCustomers = this.getNodeParameter(
+        "filterByCustomers",
+        i,
+        false,
+      ) as boolean;
+      const filterByEntityTypes = this.getNodeParameter(
+        "filterByEntityTypes",
+        i,
+        false,
+      ) as boolean;
+      const filterByActionTypes = this.getNodeParameter(
+        "filterByActionTypes",
+        i,
+        false,
+      ) as boolean;
 
-      const endpoint = '/msp/reporting/v1/reports/mspDGRollbackActions';
+      const endpoint = "/msp/reporting/v1/reports/mspDGRollbackActions";
 
       // Prepare request body
       const body: IDataObject = {};
 
-      if (dateSelectionMethod !== 'allDates') {
+      if (dateSelectionMethod !== "allDates") {
         body.startTime = startTime;
         body.endTime = endTime;
       }
 
       if (filterByCustomers) {
-        const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
+        const customerIds = this.getNodeParameter(
+          "customerIds",
+          i,
+          [],
+        ) as string[];
         if (customerIds.length > 0) {
           body.customerIds = customerIds;
         }
       }
 
       if (filterByEntityTypes) {
-        const entityTypes = this.getNodeParameter('entityTypes', i, []) as string[];
+        const entityTypes = this.getNodeParameter(
+          "entityTypes",
+          i,
+          [],
+        ) as string[];
         if (entityTypes.length > 0) {
           body.entityTypes = entityTypes;
         }
       }
 
       if (filterByActionTypes) {
-        const actionTypes = this.getNodeParameter('actionTypes', i, []) as string[];
+        const actionTypes = this.getNodeParameter(
+          "actionTypes",
+          i,
+          [],
+        ) as string[];
         if (actionTypes.length > 0) {
           body.actionTypes = actionTypes;
         }
@@ -110,28 +141,36 @@ export async function executeReportCyberOperation(
         // Add date filters if specified
         if (body.startTime) {
           filterBy.push({
-            fieldName: 'fromDate',
-            operator: REPORT_OPERATORS.LTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.GTE,
             value: body.startTime,
           });
         }
 
         if (body.endTime) {
           filterBy.push({
-            fieldName: 'toDate',
-            operator: REPORT_OPERATORS.GTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.LTE,
             value: body.endTime,
           });
         }
 
+        // Add entityType filter if specified (singular fieldName per API schema)
+        if (body.entityTypes) {
+          filterBy.push({
+            fieldName: "entityType",
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: body.entityTypes,
+          });
+        }
+        // Note: actionTypes (DELETE/RESTORE) has no matching filterBy fieldName in the
+        // mspDGRollbackActions schema and is not sent to the API
+
         // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
-          // Copy any other fields except dates and customerIds (we handle those in filters)
-          ...(body.entityTypes ? { entityTypes: body.entityTypes } : {}),
-          ...(body.actionTypes ? { actionTypes: body.actionTypes } : {}),
           // Add filters object with proper structure
           filters: {
-            pageSize: 100,
+            pageSize: API_MAX_PAGE_SIZE,
             filterBy,
           },
         };
@@ -142,7 +181,12 @@ export async function executeReportCyberOperation(
           this,
         );
 
-        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
+        const allItems = await druvaMspApiRequestAllReportItems.call(
+          this,
+          endpoint,
+          requestBody,
+          "data",
+        );
 
         await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
@@ -167,25 +211,33 @@ export async function executeReportCyberOperation(
         // Add date filters if specified
         if (body.startTime) {
           filterBy.push({
-            fieldName: 'fromDate',
-            operator: REPORT_OPERATORS.LTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.GTE,
             value: body.startTime,
           });
         }
 
         if (body.endTime) {
           filterBy.push({
-            fieldName: 'toDate',
-            operator: REPORT_OPERATORS.GTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.LTE,
             value: body.endTime,
           });
         }
 
+        // Add entityType filter if specified (singular fieldName per API schema)
+        if (body.entityTypes) {
+          filterBy.push({
+            fieldName: "entityType",
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: body.entityTypes,
+          });
+        }
+        // Note: actionTypes (DELETE/RESTORE) has no matching filterBy fieldName in the
+        // mspDGRollbackActions schema and is not sent to the API
+
         // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
-          // Copy any other fields except dates and customerIds (we handle those in filters)
-          ...(body.entityTypes ? { entityTypes: body.entityTypes } : {}),
-          ...(body.actionTypes ? { actionTypes: body.actionTypes } : {}),
           // Add filters object
           filters: {
             pageSize: limit,
@@ -193,22 +245,18 @@ export async function executeReportCyberOperation(
           },
         };
 
-        // Always ensure we have a properly structured filters object in the request body
-        if (!requestBody.filters) {
-          // If no filters object exists yet, create one with at least pageSize
-          requestBody.filters = {
-            pageSize: limit,
-            filterBy: [], // Include empty filterBy array even if no filters
-          };
-        }
-
         await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
           this,
         );
 
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
-        const items = (response as IDataObject)?.items ?? [];
+        const response = await druvaMspApiRequest.call(
+          this,
+          "POST",
+          endpoint,
+          requestBody,
+        );
+        const items = (response as IDataObject)?.data ?? [];
 
         await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,
@@ -217,33 +265,33 @@ export async function executeReportCyberOperation(
 
         responseData = this.helpers.returnJsonArray(items as IDataObject[]);
       }
-    } else if (operation === 'getDataProtectionRisk') {
+    } else if (operation === "getDataProtectionRisk") {
       // Implement Get Data Protection Risk Report logic
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
 
       // Get date parameters based on selection method
       const dateSelectionMethod = this.getNodeParameter(
-        'dateSelectionMethod',
+        "dateSelectionMethod",
         i,
-        'relativeDates',
+        "relativeDates",
       ) as string;
 
-      let startTime = '';
-      let endTime = '';
+      let startTime = "";
+      let endTime = "";
 
       // Skip date filter initialization if "All Dates" is selected
-      if (dateSelectionMethod !== 'allDates') {
-        if (dateSelectionMethod === 'specificDates') {
+      if (dateSelectionMethod !== "allDates") {
+        if (dateSelectionMethod === "specificDates") {
           // Use specific dates provided by user
-          startTime = this.getNodeParameter('startDate', i, '') as string;
-          endTime = this.getNodeParameter('endDate', i, '') as string;
+          startTime = this.getNodeParameter("startDate", i, "") as string;
+          endTime = this.getNodeParameter("endDate", i, "") as string;
         } else {
           // Use relative date range
           const relativeDateRange = this.getNodeParameter(
-            'relativeDateRange',
+            "relativeDateRange",
             i,
-            'currentMonth',
+            "currentMonth",
           ) as string;
           const dateRange = getRelativeDateRange(relativeDateRange);
           startTime = dateRange.startDate;
@@ -251,54 +299,62 @@ export async function executeReportCyberOperation(
         }
       }
 
-      const filterByCustomers = this.getNodeParameter('filterByCustomers', i, false) as boolean;
+      const filterByCustomers = this.getNodeParameter(
+        "filterByCustomers",
+        i,
+        false,
+      ) as boolean;
       const filterByWorkloadTypes = this.getNodeParameter(
-        'filterByWorkloadTypes',
+        "filterByWorkloadTypes",
         i,
         false,
       ) as boolean;
       const filterByConnectionStatus = this.getNodeParameter(
-        'filterByConnectionStatus',
+        "filterByConnectionStatus",
         i,
         false,
       ) as boolean;
-      const filterByRiskLevels = this.getNodeParameter('filterByRiskLevels', i, false) as boolean;
 
-      const endpoint = '/msp/reporting/v1/reports/mspDGDataProtectionRisk';
+      const endpoint = "/msp/reporting/v1/reports/mspDGDataProtectionRisk";
 
       // Prepare request body - only include dates if we're not using 'allDates'
       const body: IDataObject = {};
 
-      if (dateSelectionMethod !== 'allDates') {
+      if (dateSelectionMethod !== "allDates") {
         body.startTime = startTime;
         body.endTime = endTime;
       }
 
       if (filterByCustomers) {
-        const customerIds = this.getNodeParameter('customerIds', i, []) as string[];
+        const customerIds = this.getNodeParameter(
+          "customerIds",
+          i,
+          [],
+        ) as string[];
         if (customerIds.length > 0) {
           body.customerIds = customerIds;
         }
       }
 
       if (filterByWorkloadTypes) {
-        const workloadTypes = this.getNodeParameter('workloadTypes', i, []) as string[];
+        const workloadTypes = this.getNodeParameter(
+          "workloadTypes",
+          i,
+          [],
+        ) as string[];
         if (workloadTypes.length > 0) {
           body.workloadTypes = workloadTypes;
         }
       }
 
       if (filterByConnectionStatus) {
-        const connectionStatus = this.getNodeParameter('connectionStatus', i, []) as string[];
+        const connectionStatus = this.getNodeParameter(
+          "connectionStatus",
+          i,
+          [],
+        ) as string[];
         if (connectionStatus.length > 0) {
           body.connectionStatus = connectionStatus;
-        }
-      }
-
-      if (filterByRiskLevels) {
-        const riskLevels = this.getNodeParameter('riskLevels', i, []) as string[];
-        if (riskLevels.length > 0) {
-          body.riskLevels = riskLevels;
         }
       }
 
@@ -319,29 +375,44 @@ export async function executeReportCyberOperation(
         // Add date filters if specified
         if (body.startTime) {
           filterBy.push({
-            fieldName: 'fromDate',
-            operator: REPORT_OPERATORS.LTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.GTE,
             value: body.startTime,
           });
         }
 
         if (body.endTime) {
           filterBy.push({
-            fieldName: 'toDate',
-            operator: REPORT_OPERATORS.GTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.LTE,
             value: body.endTime,
           });
         }
 
+        // Add workloadTypes filter using the API fieldName "workloadName"
+        if (body.workloadTypes) {
+          filterBy.push({
+            fieldName: "workloadName",
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: body.workloadTypes,
+          });
+        }
+
+        // Add connectionStatus filter using the API fieldName "connectionStatusToCloud"
+        if (body.connectionStatus) {
+          filterBy.push({
+            fieldName: "connectionStatusToCloud",
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: body.connectionStatus,
+          });
+        }
+        // Note: riskLevels has no matching filterBy fieldName in the mspDGDataProtectionRisk schema
+
         // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
-          // Copy any other fields except dates and customerIds (we handle those in filters)
-          ...(body.workloadTypes ? { workloadTypes: body.workloadTypes } : {}),
-          ...(body.connectionStatus ? { connectionStatus: body.connectionStatus } : {}),
-          ...(body.riskLevels ? { riskLevels: body.riskLevels } : {}),
           // Add filters object with proper structure
           filters: {
-            pageSize: 100,
+            pageSize: API_MAX_PAGE_SIZE,
             filterBy,
           },
         };
@@ -352,7 +423,12 @@ export async function executeReportCyberOperation(
           this,
         );
 
-        const allItems = await druvaMspApiRequestAllReportItems.call(this, endpoint, requestBody);
+        const allItems = await druvaMspApiRequestAllReportItems.call(
+          this,
+          endpoint,
+          requestBody,
+          "data",
+        );
 
         await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(allItems) ? allItems.length : 0} items`,
@@ -377,26 +453,41 @@ export async function executeReportCyberOperation(
         // Add date filters if specified
         if (body.startTime) {
           filterBy.push({
-            fieldName: 'fromDate',
-            operator: REPORT_OPERATORS.LTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.GTE,
             value: body.startTime,
           });
         }
 
         if (body.endTime) {
           filterBy.push({
-            fieldName: 'toDate',
-            operator: REPORT_OPERATORS.GTE,
+            fieldName: "lastUpdatedTime",
+            operator: REPORT_OPERATORS.LTE,
             value: body.endTime,
           });
         }
 
+        // Add workloadTypes filter using the API fieldName "workloadName"
+        if (body.workloadTypes) {
+          filterBy.push({
+            fieldName: "workloadName",
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: body.workloadTypes,
+          });
+        }
+
+        // Add connectionStatus filter using the API fieldName "connectionStatusToCloud"
+        if (body.connectionStatus) {
+          filterBy.push({
+            fieldName: "connectionStatusToCloud",
+            operator: REPORT_OPERATORS.CONTAINS,
+            value: body.connectionStatus,
+          });
+        }
+        // Note: riskLevels has no matching filterBy fieldName in the mspDGDataProtectionRisk schema
+
         // Create a properly structured request body with filters for the API
         const requestBody: IDataObject = {
-          // Copy any other fields except dates and customerIds (we handle those in filters)
-          ...(body.workloadTypes ? { workloadTypes: body.workloadTypes } : {}),
-          ...(body.connectionStatus ? { connectionStatus: body.connectionStatus } : {}),
-          ...(body.riskLevels ? { riskLevels: body.riskLevels } : {}),
           // Add filters object
           filters: {
             pageSize: limit,
@@ -404,22 +495,18 @@ export async function executeReportCyberOperation(
           },
         };
 
-        // Always ensure we have a properly structured filters object in the request body
-        if (!requestBody.filters) {
-          // If no filters object exists yet, create one with at least pageSize
-          requestBody.filters = {
-            pageSize: limit,
-            filterBy: [], // Include empty filterBy array even if no filters
-          };
-        }
-
         await logger.debug(
           `[DEBUG-START] Report API request: ${endpoint} (single page, limit: ${limit}, filters: ${filterBy.length})`,
           this,
         );
 
-        const response = await druvaMspApiRequest.call(this, 'POST', endpoint, requestBody);
-        const items = (response as IDataObject)?.items ?? [];
+        const response = await druvaMspApiRequest.call(
+          this,
+          "POST",
+          endpoint,
+          requestBody,
+        );
+        const items = (response as IDataObject)?.data ?? [];
 
         await logger.debug(
           `[DEBUG-END] Report API response: Retrieved ${Array.isArray(items) ? items.length : 0} items`,

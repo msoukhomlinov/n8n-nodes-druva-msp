@@ -7,62 +7,85 @@ import type {
   ILoadOptionsFunctions,
   INodePropertyOptions,
   NodeConnectionType,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
 // Import values and types used as values
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeOperationError } from "n8n-workflow";
 
 // Import helper functions
 // Import Customer resource
-import { customerOperations, customerFields } from './Customer.node.options';
-import { executeCustomerOperation } from './Customer.node.execute';
-import { druvaMspApiRequestAllItemsForOptions } from './GenericFunctions';
+import { customerOperations, customerFields } from "./Customer.node.options";
+import { executeCustomerOperation } from "./Customer.node.execute";
+import { druvaMspApiRequestAllItemsForOptions } from "./GenericFunctions";
 
 // Import Tenant resource
-import { tenantOperations, tenantFields } from './Tenant.node.options';
-import { executeTenantOperation } from './Tenant.node.execute';
+import { tenantOperations, tenantFields } from "./Tenant.node.options";
+import { executeTenantOperation } from "./Tenant.node.execute";
 
 // Import Service Plan resource
-import { servicePlanOperations, servicePlanFields } from './ServicePlan.node.options';
-import { executeServicePlanOperation } from './ServicePlan.node.execute';
+import {
+  servicePlanOperations,
+  servicePlanFields,
+} from "./ServicePlan.node.options";
+import { executeServicePlanOperation } from "./ServicePlan.node.execute";
 
 // Import Task resource
-import { taskOperations, taskFields } from './Task.node.options';
-import { executeTaskOperation } from './Task.node.execute';
+import { taskOperations, taskFields } from "./Task.node.options";
+import { executeTaskOperation } from "./Task.node.execute";
 
 // Import Event resource
-import { eventOperations, eventFields } from './Event.node.options';
-import { executeEventOperation } from './Event.node.execute';
+import { eventOperations, eventFields } from "./Event.node.options";
+import { executeEventOperation } from "./Event.node.execute";
 
 // Import Admin resource
-import { adminOperations, adminFields } from './Admin.node.options';
-import { executeAdminOperation } from './Admin.node.execute';
+import { adminOperations, adminFields } from "./Admin.node.options";
+import { executeAdminOperation } from "./Admin.node.execute";
 
 // Import Report - Usage resource
-import { reportUsageOperations, reportUsageFields } from './ReportUsage.node.options';
-import { executeReportUsageOperation } from './ReportUsage.node.execute';
+import {
+  reportUsageOperations,
+  reportUsageFields,
+} from "./ReportUsage.node.options";
+import { executeReportUsageOperation } from "./ReportUsage.node.execute";
 
 // Import Report - Cyber Resilience resource
-import { reportCyberOperations, reportCyberFields } from './ReportCyber.node.options';
-import { executeReportCyberOperation } from './ReportCyber.node.execute';
+import {
+  reportCyberOperations,
+  reportCyberFields,
+} from "./ReportCyber.node.options";
+import { executeReportCyberOperation } from "./ReportCyber.node.execute";
 
 // Import Report - Endpoint resource
-import { reportEndpointOperations, reportEndpointFields } from './ReportEndpoint.node.options';
-import { executeReportEndpointOperation } from './ReportEndpoint.node.execute';
+import {
+  reportEndpointOperations,
+  reportEndpointFields,
+} from "./ReportEndpoint.node.options";
+import { executeReportEndpointOperation } from "./ReportEndpoint.node.execute";
 
-// Import report hybrid resource
-import { reportHybridOperations, reportHybridFields } from './ReportHybrid.node.options';
-import { executeReportHybridOperation } from './ReportHybrid.node.execute';
+// Import report enterprise resource
+import {
+  reportEnterpriseOperations,
+  reportEnterpriseFields,
+} from "./ReportEnterprise.node.options";
+import { executeReportEnterpriseOperation } from "./ReportEnterprise.node.execute";
 
 // Import Consumption Billing Analyzer resource
 import {
   consumptionBillingAnalyzerOperations,
   consumptionBillingAnalyzerFields,
-} from './ConsumptionBillingAnalyzer.node.options';
-import { executeConsumptionBillingAnalyzerOperation } from './ConsumptionBillingAnalyzer.node.execute';
+} from "./ConsumptionBillingAnalyzer.node.options";
+import { executeConsumptionBillingAnalyzerOperation } from "./ConsumptionBillingAnalyzer.node.execute";
+
+// Import Storage Region resource
+import {
+  storageRegionOperations,
+  storageRegionFields,
+} from "./StorageRegion.node.options";
+import { executeStorageRegionOperation } from "./StorageRegion.node.execute";
 
 // Import central logger
-import { logger } from './helpers/LoggerHelper';
+import { logger } from "./helpers/LoggerHelper";
+import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
 
 // Import the value converters at the top of the file
 import {
@@ -78,10 +101,13 @@ import {
   getServicePlanStatusOptions,
   getTaskStatusOptions,
   getProductModuleIdOptions,
-} from './helpers/ValueConverters';
+} from "./helpers/ValueConverters";
 
 // Import report helpers for loadOptions methods
-import { getReportFieldNameOptions, getReportOperatorOptions } from './helpers/ReportHelpers';
+import {
+  getReportFieldNameOptions,
+  getReportOperatorOptions,
+} from "./helpers/ReportHelpers";
 
 // TODO: Import for other resources as they are created
 // etc.
@@ -94,86 +120,90 @@ import { getReportFieldNameOptions, getReportOperatorOptions } from './helpers/R
  */
 export class DruvaMsp implements INodeType {
   description: INodeTypeDescription = {
-    displayName: 'Druva MSP',
-    name: 'druvaMsp',
-    icon: 'file:druvaMsp.svg',
-    group: ['transform'],
+    displayName: "Druva MSP",
+    name: "druvaMsp",
+    icon: "file:druvaMsp.svg",
+    group: ["transform"],
     usableAsTool: true,
     version: 1,
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
-    description: 'Interact with the Druva MSP API',
+    description: "Interact with the Druva MSP API",
     defaults: {
-      name: 'Druva MSP',
+      name: "Druva MSP",
     },
-    inputs: ['main' as NodeConnectionType],
-    outputs: ['main' as NodeConnectionType],
+    inputs: ["main" as NodeConnectionType],
+    outputs: ["main" as NodeConnectionType],
     credentials: [
       {
-        name: 'druvaMspApi',
+        name: "druvaMspApi",
         required: true,
       },
     ],
     requestDefaults: {
-      baseURL: 'https://apis.druva.com',
+      baseURL: "https://apis.druva.com",
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+        Accept: "application/json",
+        "Content-Type": "application/json",
       },
     },
     properties: [
       {
-        displayName: 'Resource',
-        name: 'resource',
-        type: 'options',
+        displayName: "Resource",
+        name: "resource",
+        type: "options",
         noDataExpression: true,
         options: [
           {
-            name: 'Admin',
-            value: 'admin',
+            name: "Admin",
+            value: "admin",
           },
           {
-            name: 'Consumption Billing Analyzer',
-            value: 'consumptionBillingAnalyzer',
+            name: "Consumption Billing Analyzer",
+            value: "consumptionBillingAnalyzer",
           },
           {
-            name: 'Customer',
-            value: 'customer',
+            name: "Customer",
+            value: "customer",
           },
           {
-            name: 'Event',
-            value: 'event',
+            name: "Event",
+            value: "event",
           },
           {
-            name: 'Report - Cyber Resilience',
-            value: 'reportCyber',
+            name: "Report - Cyber Resilience",
+            value: "reportCyber",
           },
           {
-            name: 'Report - Endpoint',
-            value: 'reportEndpoint',
+            name: "Report - Endpoint",
+            value: "reportEndpoint",
           },
           {
-            name: 'Report - Hybrid Workloads',
-            value: 'reportHybrid',
+            name: "Report - Enterprise Workloads",
+            value: "reportEnterprise",
           },
           {
-            name: 'Report - Usage',
-            value: 'reportUsage',
+            name: "Report - Usage",
+            value: "reportUsage",
           },
           {
-            name: 'Service Plan',
-            value: 'servicePlan',
+            name: "Service Plan",
+            value: "servicePlan",
           },
           {
-            name: 'Task',
-            value: 'task',
+            name: "Storage Region",
+            value: "storageRegion",
           },
           {
-            name: 'Tenant',
-            value: 'tenant',
+            name: "Task",
+            value: "task",
+          },
+          {
+            name: "Tenant",
+            value: "tenant",
           },
           // TODO: Add other resources (Reports)
         ],
-        default: 'customer',
+        default: "customer",
       },
 
       // Operations for each resource
@@ -187,7 +217,8 @@ export class DruvaMsp implements INodeType {
       ...reportUsageOperations,
       ...reportCyberOperations,
       ...reportEndpointOperations,
-      ...reportHybridOperations,
+      ...reportEnterpriseOperations,
+      ...storageRegionOperations,
 
       // Fields for each resource/operation
       ...adminFields,
@@ -195,26 +226,27 @@ export class DruvaMsp implements INodeType {
       ...customerFields,
       ...tenantFields,
       ...servicePlanFields,
+      ...storageRegionFields,
       ...taskFields,
       ...eventFields,
       ...reportUsageFields,
       ...reportCyberFields,
       ...reportEndpointFields,
-      ...reportHybridFields,
+      ...reportEnterpriseFields,
 
       {
-        displayName: 'Wrap Output Items',
-        name: 'wrapOutputItems',
-        type: 'boolean',
+        displayName: "Wrap Output Items",
+        name: "wrapOutputItems",
+        type: "boolean",
         default: false,
         description:
-          'When enabled, wraps all output items into a single item containing an array. This prevents the next node from executing multiple times.',
+          "When enabled, wraps all output items into a single item containing an array. This prevents the next node from executing multiple times.",
       },
       {
-        displayName: 'Wrapper Property Name',
-        name: 'wrapperPropertyName',
-        type: 'string',
-        default: 'items',
+        displayName: "Wrapper Property Name",
+        name: "wrapperPropertyName",
+        type: "string",
+        default: "items",
         displayOptions: {
           show: {
             wrapOutputItems: [true],
@@ -231,17 +263,17 @@ export class DruvaMsp implements INodeType {
       // Get a list of customers (id/name pairs)
       async getCustomers(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
-        const endpoint = '/msp/v3/customers';
-        const pageSize = 100; // Use larger page size for efficiency
+        const endpoint = "/msp/v3/customers";
+        const pageSize = API_MAX_PAGE_SIZE;
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
           // v3 API expects pageSize as a string
           const customers = await druvaMspApiRequestAllItemsForOptions.call(
             this,
-            'GET',
+            "GET",
             endpoint,
-            'customers',
+            "customers",
             undefined,
             { pageSize: pageSize.toString() },
           );
@@ -257,8 +289,10 @@ export class DruvaMsp implements INodeType {
               }
 
               // Safely extract accountName and customerName
-              const accountName = (customer.accountName as string) || 'Unknown Account';
-              const customerName = (customer.customerName as string) || 'Unknown Customer';
+              const accountName =
+                (customer.accountName as string) || "Unknown Account";
+              const customerName =
+                (customer.customerName as string) || "Unknown Customer";
 
               // Display accountName with customerName in brackets if they differ
               let displayName = accountName;
@@ -271,7 +305,7 @@ export class DruvaMsp implements INodeType {
                 value: customerId,
               });
             } catch (error) {
-              logger.error('Error processing customer:', error);
+              logger.error("Error processing customer:", error);
             }
           }
 
@@ -280,32 +314,39 @@ export class DruvaMsp implements INodeType {
 
           return returnData;
         } catch (error) {
-          logger.error('Error retrieving customers:', error);
-          return [{ name: `Error fetching customers: ${(error as Error).message}`, value: '' }];
+          logger.error("Error retrieving customers:", error);
+          return [
+            {
+              name: `Error fetching customers: ${(error as Error).message}`,
+              value: "",
+            },
+          ];
         }
       },
 
       // Get a list of tenants
       async getTenants(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
-        const pageSize = 100; // Use larger page size for efficiency
+        const pageSize = API_MAX_PAGE_SIZE;
         let customerId: unknown;
 
         try {
-          customerId = this.getCurrentNodeParameter('customerId');
+          customerId = this.getCurrentNodeParameter("customerId");
         } catch (error) {
-          customerId = '';
+          customerId = "";
         }
 
-        const endpoint = customerId ? `/msp/v3/customers/${customerId}/tenants` : '/msp/v3/tenants';
+        const endpoint = customerId
+          ? `/msp/v3/customers/${customerId}/tenants`
+          : "/msp/v3/tenants";
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
           const tenants = await druvaMspApiRequestAllItemsForOptions.call(
             this,
-            'GET',
+            "GET",
             endpoint,
-            'tenants',
+            "tenants",
             undefined,
             { pageSize },
           );
@@ -323,24 +364,29 @@ export class DruvaMsp implements INodeType {
 
           return returnData;
         } catch (error) {
-          logger.error('Error retrieving tenants:', error);
-          return [{ name: `Error fetching tenants: ${(error as Error).message}`, value: '' }];
+          logger.error("Error retrieving tenants:", error);
+          return [
+            {
+              name: `Error fetching tenants: ${(error as Error).message}`,
+              value: "",
+            },
+          ];
         }
       },
 
       // Get a list of admins
       async getAdmins(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
-        const endpoint = '/msp/v2/admins';
-        const pageSize = 100; // Use larger page size for efficiency
+        const endpoint = "/msp/v2/admins";
+        const pageSize = API_MAX_PAGE_SIZE;
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
           const admins = await druvaMspApiRequestAllItemsForOptions.call(
             this,
-            'GET',
+            "GET",
             endpoint,
-            'admins',
+            "admins",
             undefined,
             { pageSize },
           );
@@ -354,20 +400,20 @@ export class DruvaMsp implements INodeType {
               }
 
               // Ensure we have name components
-              const firstName = admin.firstName || '';
-              const lastName = admin.lastName || '';
-              const email = admin.email || '';
+              const firstName = admin.firstName || "";
+              const lastName = admin.lastName || "";
+              const email = admin.email || "";
 
               // Create a display name with both name parts and email
               const name = `${firstName} ${lastName} (${email})`;
 
               // Ensure ID is a string (n8n requires string values for options)
               const id = admin.id || admin.adminId;
-              const value = typeof id === 'string' ? id : String(id);
+              const value = typeof id === "string" ? id : String(id);
 
               returnData.push({ name, value });
             } catch (error) {
-              logger.error('Error formatting admin:', error);
+              logger.error("Error formatting admin:", error);
             }
           }
 
@@ -376,25 +422,30 @@ export class DruvaMsp implements INodeType {
 
           return returnData;
         } catch (error) {
-          logger.error('Error retrieving admins:', error);
-          return [{ name: `Error fetching admins: ${(error as Error).message}`, value: '' }];
+          logger.error("Error retrieving admins:", error);
+          return [
+            {
+              name: `Error fetching admins: ${(error as Error).message}`,
+              value: "",
+            },
+          ];
         }
       },
 
       // Get service plans
       async getServicePlans(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
-        const endpoint = '/msp/v3/servicePlans';
-        const pageSize = 100; // Use larger page size for efficiency
+        const endpoint = "/msp/v3/servicePlans";
+        const pageSize = API_MAX_PAGE_SIZE;
 
         try {
           // Use the shared helper function for pagination with ILoadOptionsFunctions
           // v3 API expects pageSize as a string
           const servicePlans = await druvaMspApiRequestAllItemsForOptions.call(
             this,
-            'GET',
+            "GET",
             endpoint,
-            'servicePlans',
+            "servicePlans",
             undefined,
             { pageSize: pageSize.toString() },
           );
@@ -410,7 +461,10 @@ export class DruvaMsp implements INodeType {
             const plan = servicePlans[0];
             const planId = plan.id || plan.servicePlanId || plan.servicePlanID;
             const planName = plan.name || plan.servicePlanName;
-            await logger.debug(`Sample plan: ID=${planId}, Name=${planName}`, this);
+            await logger.debug(
+              `Sample plan: ID=${planId}, Name=${planName}`,
+              this,
+            );
           }
 
           // Format the options for the UI
@@ -441,8 +495,13 @@ export class DruvaMsp implements INodeType {
           );
           return returnData;
         } catch (error) {
-          logger.error('Error retrieving service plans:', error);
-          return [{ name: `Error fetching service plans: ${(error as Error).message}`, value: '' }];
+          logger.error("Error retrieving service plans:", error);
+          return [
+            {
+              name: `Error fetching service plans: ${(error as Error).message}`,
+              value: "",
+            },
+          ];
         }
       },
 
@@ -493,7 +552,7 @@ export class DruvaMsp implements INodeType {
         return Promise.resolve(getServicePlanEditionOptions());
       },
 
-      // Get service plan feature options (Hybrid Workloads, M365, etc.)
+      // Get service plan feature options (Enterprise Workloads, M365, etc.)
       async getServicePlanFeatureOptions(
         this: ILoadOptionsFunctions,
       ): Promise<INodePropertyOptions[]> {
@@ -508,7 +567,9 @@ export class DruvaMsp implements INodeType {
       },
 
       // Get task status options
-      async getTaskStatusOptions(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+      async getTaskStatusOptions(
+        this: ILoadOptionsFunctions,
+      ): Promise<INodePropertyOptions[]> {
         return getTaskStatusOptions();
       },
 
@@ -529,63 +590,66 @@ export class DruvaMsp implements INodeType {
     const returnData: INodeExecutionData[] = [];
     const length = items.length;
     let responseData: INodeExecutionData[] | INodeExecutionData[][] = [];
-    const resource = this.getNodeParameter('resource', 0) as string;
+    const resource = this.getNodeParameter("resource", 0) as string;
 
     // Check if wrapOutputItems option is enabled
-    const wrapOutputItems = this.getNodeParameter('wrapOutputItems', 0, false) as boolean;
-    const wrapperPropertyName = this.getNodeParameter('wrapperPropertyName', 0, 'items') as string;
+    const wrapOutputItems = this.getNodeParameter(
+      "wrapOutputItems",
+      0,
+      false,
+    ) as boolean;
+    const wrapperPropertyName = this.getNodeParameter(
+      "wrapperPropertyName",
+      0,
+      "items",
+    ) as string;
+
+    const RESOURCE_EXECUTOR: Record<
+      string,
+      (index: number) => Promise<INodeExecutionData[] | INodeExecutionData[][]>
+    > = {
+      customer: (index) => executeCustomerOperation.call(this, index),
+      tenant: (index) => executeTenantOperation.call(this, index),
+      servicePlan: (index) => executeServicePlanOperation.call(this, index),
+      task: (index) => executeTaskOperation.call(this, index),
+      event: (index) => executeEventOperation.call(this, index),
+      admin: (index) => executeAdminOperation.call(this, index),
+      reportUsage: (index) => executeReportUsageOperation.call(this, index),
+      reportCyber: (index) => executeReportCyberOperation.call(this, index),
+      reportEndpoint: (index) =>
+        executeReportEndpointOperation.call(this, index),
+      reportEnterprise: (_index) => executeReportEnterpriseOperation.call(this),
+      consumptionBillingAnalyzer: (index) =>
+        executeConsumptionBillingAnalyzerOperation.call(this, index),
+      storageRegion: (index) => executeStorageRegionOperation.call(this, index),
+    };
+
+    const executor = RESOURCE_EXECUTOR[resource];
+    if (!executor) {
+      throw new NodeOperationError(
+        this.getNode(),
+        `The resource '${resource}' is not implemented!`,
+      );
+    }
 
     for (let i = 0; i < length; i++) {
       try {
-        if (resource === 'customer') {
-          // Execute Customer operations
-          responseData = await executeCustomerOperation.call(this, i);
-        } else if (resource === 'tenant') {
-          // Execute Tenant operations
-          responseData = await executeTenantOperation.call(this, i);
-        } else if (resource === 'servicePlan') {
-          // Execute Service Plan operations
-          responseData = await executeServicePlanOperation.call(this, i);
-        } else if (resource === 'task') {
-          // Execute Task operations
-          responseData = await executeTaskOperation.call(this, i);
-        } else if (resource === 'event') {
-          // Execute Event operations
-          responseData = await executeEventOperation.call(this, i);
-        } else if (resource === 'admin') {
-          // Execute Admin operations
-          responseData = await executeAdminOperation.call(this, i);
-        } else if (resource === 'reportUsage') {
-          // Execute Report Usage operations
-          responseData = await executeReportUsageOperation.call(this, i);
-        } else if (resource === 'reportCyber') {
-          // Execute Report Cyber operations
-          responseData = await executeReportCyberOperation.call(this, i);
-        } else if (resource === 'reportEndpoint') {
-          // Execute Report Endpoint operations
-          responseData = await executeReportEndpointOperation.call(this, i);
-        } else if (resource === 'reportHybrid') {
-          // Execute Report Hybrid operations
-          responseData = await executeReportHybridOperation.call(this);
-        } else if (resource === 'consumptionBillingAnalyzer') {
-          // Execute Consumption Billing Analyzer operations
-          responseData = await executeConsumptionBillingAnalyzerOperation.call(this, i);
-        } else {
-          throw new NodeOperationError(
-            this.getNode(),
-            `The resource '${resource}' is not implemented!`,
-          );
-        }
+        responseData = await executor(i);
 
         // Ensure responseData is always INodeExecutionData[] by flattening if needed
         const dataToProcess =
-          Array.isArray(responseData) && responseData.length > 0 && Array.isArray(responseData[0])
+          Array.isArray(responseData) &&
+          responseData.length > 0 &&
+          Array.isArray(responseData[0])
             ? (responseData as INodeExecutionData[][]).flat()
             : (responseData as INodeExecutionData[]);
 
-        const executionData = this.helpers.constructExecutionMetaData(dataToProcess, {
-          itemData: { item: i },
-        });
+        const executionData = this.helpers.constructExecutionMetaData(
+          dataToProcess,
+          {
+            itemData: { item: i },
+          },
+        );
         returnData.push(...executionData);
       } catch (error) {
         if (this.continueOnFail()) {

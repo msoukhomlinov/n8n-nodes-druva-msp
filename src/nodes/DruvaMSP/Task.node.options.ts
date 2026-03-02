@@ -1,26 +1,26 @@
-import type { INodeProperties } from 'n8n-workflow';
+import type { INodeProperties } from "n8n-workflow";
 
 // Define the operations for the Task resource
 export const taskOperations: INodeProperties[] = [
   {
-    displayName: 'Operation',
-    name: 'operation',
-    type: 'options',
+    displayName: "Operation",
+    name: "operation",
+    type: "options",
     noDataExpression: true,
     displayOptions: {
       show: {
-        resource: ['task'],
+        resource: ["task"],
       },
     },
     options: [
       {
-        name: 'Get',
-        value: 'get',
-        action: 'Get task details',
-        description: 'Retrieve details for a specific task',
+        name: "Get",
+        value: "get",
+        action: "Get task details",
+        description: "Retrieve details for a specific task",
       },
     ],
-    default: 'get',
+    default: "get",
   },
 ];
 
@@ -30,17 +30,17 @@ export const taskFields: INodeProperties[] = [
   /*                                  task:get                                  */
   /* -------------------------------------------------------------------------- */
   {
-    displayName: 'Task ID',
-    name: 'taskId',
-    type: 'string',
+    displayName: "Task ID",
+    name: "taskId",
+    type: "string",
     required: true,
     displayOptions: {
       show: {
-        resource: ['task'],
-        operation: ['get'],
+        resource: ["task"],
+        operation: ["get"],
       },
     },
-    default: '',
-    description: 'The unique identifier of the task to retrieve details for',
+    default: "",
+    description: "The unique identifier of the task to retrieve details for",
   },
 ];

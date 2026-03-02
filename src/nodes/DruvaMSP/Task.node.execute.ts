@@ -3,19 +3,19 @@ import type {
   INodeExecutionData,
   IDataObject,
   NodeApiError,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
 // Import the helper function for API requests
-import { druvaMspApiRequest } from './GenericFunctions';
+import { druvaMspApiRequest } from "./GenericFunctions";
 import {
   getTaskStatusLabel,
   getTaskOutputStatusLabel,
   enrichApiResponse,
   enrichApiResponseWithDates,
-} from './helpers/ValueConverters';
+} from "./helpers/ValueConverters";
 
 // First, import the logger at the top of the file
-import { logger } from './helpers/LoggerHelper';
+import { logger } from "./helpers/LoggerHelper";
 
 /**
  * Task response interface
@@ -60,18 +60,25 @@ export async function executeTaskOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   let responseData: INodeExecutionData[] = [];
 
   try {
-    if (operation === 'get') {
+    if (operation === "get") {
       // Implement Get Task logic
-      const taskId = this.getNodeParameter('taskId', i) as string;
+      const taskId = this.getNodeParameter("taskId", i) as string;
       const endpoint = `/msp/v2/tasks/${taskId}`;
-      const response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as ITaskResponse;
+      const response = (await druvaMspApiRequest.call(
+        this,
+        "GET",
+        endpoint,
+      )) as ITaskResponse;
 
       // Log the field names for debugging
-      await logger.debug(`Task: API Response Fields: ${Object.keys(response).join(', ')}`, this);
+      await logger.debug(
+        `Task: API Response Fields: ${Object.keys(response).join(", ")}`,
+        this,
+      );
 
       // 1. First enrich the response with human-readable labels
       const enrichedWithLabels = enrichApiResponse(response, {
@@ -83,27 +90,38 @@ export async function executeTaskOperation(
       const dateFields: string[] = [];
 
       // Add fields that exist in the response
-      if ('created_on' in response) dateFields.push('created_on');
-      if ('updated_on' in response) dateFields.push('updated_on');
-      if ('createdOn' in response) dateFields.push('createdOn');
-      if ('updatedOn' in response) dateFields.push('updatedOn');
+      if ("created_on" in response) dateFields.push("created_on");
+      if ("updated_on" in response) dateFields.push("updated_on");
+      if ("createdOn" in response) dateFields.push("createdOn");
+      if ("updatedOn" in response) dateFields.push("updatedOn");
 
-      await logger.debug(`Task: Date fields to enrich: ${dateFields.join(', ')}`, this);
+      await logger.debug(
+        `Task: Date fields to enrich: ${dateFields.join(", ")}`,
+        this,
+      );
 
-      const enrichedWithDates = enrichApiResponseWithDates(enrichedWithLabels, dateFields);
+      const enrichedWithDates = enrichApiResponseWithDates(
+        enrichedWithLabels,
+        dateFields,
+      );
 
       // 3. Handle output_status_label separately to place it right after output
       let finalResponse: IDataObject;
-      if (response.output && (response.output as IDataObject).failed !== undefined) {
+      if (
+        response.output &&
+        (response.output as IDataObject).failed !== undefined
+      ) {
         // Create a new object with fields in the desired order
         const orderedFields: IDataObject = {};
-        const outputStatusLabel = getTaskOutputStatusLabel((response.output as IDataObject).failed);
+        const outputStatusLabel = getTaskOutputStatusLabel(
+          (response.output as IDataObject).failed,
+        );
 
         // Copy fields in order, inserting output_status_label right after output
         for (const key of Object.keys(enrichedWithDates)) {
           orderedFields[key] = enrichedWithDates[key];
           // Add output_status_label immediately after output
-          if (key === 'output') {
+          if (key === "output") {
             orderedFields.output_status_label = outputStatusLabel;
           }
         }

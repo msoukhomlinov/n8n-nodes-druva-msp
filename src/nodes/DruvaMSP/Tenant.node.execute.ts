@@ -3,55 +3,65 @@ import type {
   INodeExecutionData,
   IDataObject,
   NodeApiError,
-} from 'n8n-workflow';
+} from "n8n-workflow";
 
 import {
   druvaMspApiRequest,
   druvaMspApiRequestAllItems,
   getTenantCustomerId,
-} from './GenericFunctions';
+} from "./GenericFunctions";
 import {
   enrichApiResponse,
   enrichApiResponseArray,
   getTenantStatusLabel,
   getTenantTypeLabel,
   getProductIdLabel,
-} from './helpers/ValueConverters';
-import { logger } from './helpers/LoggerHelper';
+} from "./helpers/ValueConverters";
+import { logger } from "./helpers/LoggerHelper";
+import {
+  DRUVA_TENANT_FEATURE_NAMES,
+  API_MAX_PAGE_SIZE,
+} from "./helpers/Constants";
 
 export async function executeTenantOperation(
   this: IExecuteFunctions,
   i: number,
 ): Promise<INodeExecutionData[]> {
-  const operation = this.getNodeParameter('operation', i, '') as string;
+  const operation = this.getNodeParameter("operation", i, "") as string;
   // Reverting back to let as it will be reassigned
   let responseData: IDataObject | IDataObject[] = [];
 
   const FEATURE_SCHEMAS: Record<
     string,
     {
-      type: 'boolean' | 'intAttrs';
+      type: "boolean" | "intAttrs";
       attrs?: string[];
     }
   > = {
-    'Enterprise Workloads': { type: 'boolean' },
-    'Enterprise Workloads Accelerated Ransomware Recovery': { type: 'boolean' },
-    'Long Term Retention': { type: 'boolean' },
-    M365: { type: 'intAttrs', attrs: ['userCount', 'preservedUserCount', 'educationLicenseState'] },
-    'Google Workspace': {
-      type: 'intAttrs',
-      attrs: ['userCount', 'preservedUserCount', 'educationLicenseState'],
+    [DRUVA_TENANT_FEATURE_NAMES.ENTERPRISE_WORKLOADS]: { type: "boolean" },
+    [DRUVA_TENANT_FEATURE_NAMES.ENTERPRISE_WORKLOADS_ARR]: { type: "boolean" },
+    [DRUVA_TENANT_FEATURE_NAMES.LONG_TERM_RETENTION]: { type: "boolean" },
+    [DRUVA_TENANT_FEATURE_NAMES.M365]: {
+      type: "intAttrs",
+      attrs: ["userCount", "preservedUserCount", "educationLicenseState"],
     },
-    Endpoints: { type: 'intAttrs', attrs: ['userCount', 'preservedUserCount'] },
-    'M365 Accelerated Ransomware Recovery': { type: 'boolean' },
-    'Endpoints Accelerated Ransomware Recovery': { type: 'boolean' },
-    'Google Workspace Accelerated Ransomware Recovery': { type: 'boolean' },
+    [DRUVA_TENANT_FEATURE_NAMES.GOOGLE_WORKSPACE]: {
+      type: "intAttrs",
+      attrs: ["userCount", "preservedUserCount", "educationLicenseState"],
+    },
+    [DRUVA_TENANT_FEATURE_NAMES.ENDPOINTS]: {
+      type: "intAttrs",
+      attrs: ["userCount", "preservedUserCount"],
+    },
+    [DRUVA_TENANT_FEATURE_NAMES.M365_ARR]: { type: "boolean" },
+    [DRUVA_TENANT_FEATURE_NAMES.ENDPOINTS_ARR]: { type: "boolean" },
+    [DRUVA_TENANT_FEATURE_NAMES.GOOGLE_WORKSPACE_ARR]: { type: "boolean" },
   };
 
   const parseStorageRegions = (raw: IDataObject): IDataObject[] => {
     const regions = (raw as IDataObject).region as IDataObject[] | undefined;
     if (!regions || regions.length === 0) {
-      throw new Error('At least one storage region is required.');
+      throw new Error("At least one storage region is required.");
     }
 
     return regions.map((entry, index) => {
@@ -73,9 +83,11 @@ export async function executeTenantOperation(
   };
 
   const parseFeatures = (raw: IDataObject): IDataObject[] => {
-    const featureItems = (raw as IDataObject).feature as IDataObject[] | undefined;
+    const featureItems = (raw as IDataObject).feature as
+      | IDataObject[]
+      | undefined;
     if (!featureItems || featureItems.length === 0) {
-      throw new Error('At least one feature is required.');
+      throw new Error("At least one feature is required.");
     }
 
     const parsed: IDataObject[] = [];
@@ -83,7 +95,7 @@ export async function executeTenantOperation(
     for (const featureItem of featureItems) {
       const featureName = featureItem.name as string | undefined;
       if (!featureName) {
-        throw new Error('Feature name is required.');
+        throw new Error("Feature name is required.");
       }
 
       const schema = FEATURE_SCHEMAS[featureName];
@@ -91,12 +103,16 @@ export async function executeTenantOperation(
         throw new Error(`Unsupported feature "${featureName}".`);
       }
 
-      if (schema.type === 'boolean') {
+      if (schema.type === "boolean") {
         // Boolean features must not carry attrs
         const attrsData = featureItem.attrs as IDataObject | undefined;
-        const attrArray = attrsData ? ((attrsData as IDataObject).attr as IDataObject[]) ?? [] : [];
+        const attrArray = attrsData
+          ? (((attrsData as IDataObject).attr as IDataObject[]) ?? [])
+          : [];
         if (attrArray.length > 0) {
-          throw new Error(`Feature "${featureName}" does not accept attributes.`);
+          throw new Error(
+            `Feature "${featureName}" does not accept attributes.`,
+          );
         }
 
         parsed.push({ name: featureName, attrs: [] });
@@ -104,10 +120,14 @@ export async function executeTenantOperation(
       }
 
       const attrsData = featureItem.attrs as IDataObject | undefined;
-      const attrArray = attrsData ? ((attrsData as IDataObject).attr as IDataObject[]) ?? [] : [];
+      const attrArray = attrsData
+        ? (((attrsData as IDataObject).attr as IDataObject[]) ?? [])
+        : [];
 
       if (!attrArray.length) {
-        throw new Error(`Feature "${featureName}" requires at least one attribute.`);
+        throw new Error(
+          `Feature "${featureName}" requires at least one attribute.`,
+        );
       }
 
       const allowedAttrs = schema.attrs ?? [];
@@ -116,18 +136,22 @@ export async function executeTenantOperation(
       for (const attr of attrArray) {
         const attrName = attr.name as string | undefined;
         if (!attrName) {
-          throw new Error(`Feature "${featureName}" has an attribute without a name.`);
+          throw new Error(
+            `Feature "${featureName}" has an attribute without a name.`,
+          );
         }
 
         if (!allowedAttrs.includes(attrName)) {
           throw new Error(
-            `Feature "${featureName}" does not support attribute "${attrName}". Allowed: ${allowedAttrs.join(', ')}`,
+            `Feature "${featureName}" does not support attribute "${attrName}". Allowed: ${allowedAttrs.join(", ")}`,
           );
         }
 
         const value = Number(attr.value);
         if (!Number.isFinite(value)) {
-          throw new Error(`Attribute "${attrName}" for feature "${featureName}" must be a number.`);
+          throw new Error(
+            `Attribute "${attrName}" for feature "${featureName}" must be a number.`,
+          );
         }
 
         attrs.push({
@@ -142,8 +166,12 @@ export async function executeTenantOperation(
     return parsed;
   };
 
-  const parseFeaturesForPatch = (raw: IDataObject): IDataObject[] | undefined => {
-    const featureItems = (raw as IDataObject).feature as IDataObject[] | undefined;
+  const parseFeaturesForPatch = (
+    raw: IDataObject,
+  ): IDataObject[] | undefined => {
+    const featureItems = (raw as IDataObject).feature as
+      | IDataObject[]
+      | undefined;
     if (!featureItems || featureItems.length === 0) {
       return undefined;
     }
@@ -153,7 +181,7 @@ export async function executeTenantOperation(
     for (const featureItem of featureItems) {
       const featureName = featureItem.name as string | undefined;
       if (!featureName) {
-        throw new Error('Feature name is required.');
+        throw new Error("Feature name is required.");
       }
 
       const schema = FEATURE_SCHEMAS[featureName];
@@ -163,15 +191,21 @@ export async function executeTenantOperation(
 
       const isEnabled = featureItem.isEnabled as boolean | undefined;
       if (isEnabled === undefined) {
-        throw new Error(`Feature "${featureName}" requires the isEnabled flag.`);
+        throw new Error(
+          `Feature "${featureName}" requires the isEnabled flag.`,
+        );
       }
 
       const attrsData = featureItem.attrs as IDataObject | undefined;
-      const attrArray = attrsData ? ((attrsData as IDataObject).attr as IDataObject[]) ?? [] : [];
+      const attrArray = attrsData
+        ? (((attrsData as IDataObject).attr as IDataObject[]) ?? [])
+        : [];
 
-      if (schema.type === 'boolean') {
+      if (schema.type === "boolean") {
         if (attrArray.length > 0) {
-          throw new Error(`Feature "${featureName}" does not accept attributes.`);
+          throw new Error(
+            `Feature "${featureName}" does not accept attributes.`,
+          );
         }
 
         parsed.push({ name: featureName, isEnabled, attrs: [] });
@@ -185,18 +219,22 @@ export async function executeTenantOperation(
       for (const attr of attrArray) {
         const attrName = attr.name as string | undefined;
         if (!attrName) {
-          throw new Error(`Feature "${featureName}" has an attribute without a name.`);
+          throw new Error(
+            `Feature "${featureName}" has an attribute without a name.`,
+          );
         }
 
         if (!allowedAttrs.includes(attrName)) {
           throw new Error(
-            `Feature "${featureName}" does not support attribute "${attrName}". Allowed: ${allowedAttrs.join(', ')}`,
+            `Feature "${featureName}" does not support attribute "${attrName}". Allowed: ${allowedAttrs.join(", ")}`,
           );
         }
 
         const value = Number(attr.value);
         if (!Number.isFinite(value)) {
-          throw new Error(`Attribute "${attrName}" for feature "${featureName}" must be a number.`);
+          throw new Error(
+            `Attribute "${attrName}" for feature "${featureName}" must be a number.`,
+          );
         }
 
         attrs.push({
@@ -212,21 +250,38 @@ export async function executeTenantOperation(
   };
 
   try {
-    if (operation === 'get') {
-      const tenantId = this.getNodeParameter('tenantId', i, '') as string;
+    if (operation === "get") {
+      const tenantId = this.getNodeParameter("tenantId", i, "") as string;
       if (!tenantId) {
-        throw new Error('Tenant ID is required for the get operation.');
+        throw new Error("Tenant ID is required for the get operation.");
       }
 
       // Automatically retrieve the customer ID for the tenant using v3 list lookup
       const customerId = await getTenantCustomerId.call(this, tenantId);
 
       if (!customerId) {
-        logger.warn(`Tenant: No customer ID found for tenant ${tenantId}; returning empty result`);
+        logger.warn(
+          `Tenant: No customer ID found for tenant ${tenantId}; returning empty result`,
+        );
         responseData = {};
       } else {
+        const includeFeatures = this.getNodeParameter(
+          "includeFeatures",
+          i,
+          false,
+        ) as boolean;
         const endpoint = `/msp/v3/customers/${customerId}/tenants/${tenantId}`;
-        let response = (await druvaMspApiRequest.call(this, 'GET', endpoint)) as IDataObject;
+        const qs: IDataObject = {};
+        if (includeFeatures) {
+          qs.includeFeatures = true;
+        }
+        let response = (await druvaMspApiRequest.call(
+          this,
+          "GET",
+          endpoint,
+          undefined,
+          qs,
+        )) as IDataObject;
 
         // Enrich the response with human-readable labels
         response = enrichApiResponse(response, {
@@ -235,36 +290,67 @@ export async function executeTenantOperation(
           productID: getProductIdLabel,
         });
 
+        // Derive isDruvaProvisioned from the customer's licenseManagementAllowed attribute:
+        //   "0" = Druva Provisioned, "1" = MSP Provisioned
+        const customerResponse = (await druvaMspApiRequest.call(
+          this,
+          "GET",
+          `/msp/v3/customers/${customerId}`,
+        )) as IDataObject;
+        const custAttrs = customerResponse.attributes as
+          | IDataObject[]
+          | undefined;
+        const licAttr = custAttrs?.find(
+          (a) => a.name === "licenseManagementAllowed",
+        );
+        response.isDruvaProvisioned = licAttr ? licAttr.value === "0" : false;
+
         responseData = response;
       }
-    } else if (operation === 'getMany') {
-      const returnAll = this.getNodeParameter('returnAll', i, false) as boolean;
-      const limit = this.getNodeParameter('limit', i, 50) as number;
+    } else if (operation === "getMany") {
+      const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
+      const limit = this.getNodeParameter("limit", i, 50) as number;
 
       // Get individual filter settings
-      const filterByCustomer = this.getNodeParameter('filterByCustomer', i, false) as boolean;
+      const filterByCustomer = this.getNodeParameter(
+        "filterByCustomer",
+        i,
+        false,
+      ) as boolean;
       const customerId = filterByCustomer
-        ? (this.getNodeParameter('customerId', i, '') as string)
+        ? (this.getNodeParameter("customerId", i, "") as string)
         : undefined;
 
-      const filterByStatus = this.getNodeParameter('filterByStatus', i, false) as boolean;
+      const filterByStatus = this.getNodeParameter(
+        "filterByStatus",
+        i,
+        false,
+      ) as boolean;
       const statusFilter = filterByStatus
-        ? (this.getNodeParameter('statusFilter', i, undefined) as number)
+        ? (this.getNodeParameter("statusFilter", i, undefined) as number)
         : undefined;
 
-      const filterByType = this.getNodeParameter('filterByType', i, false) as boolean;
+      const filterByType = this.getNodeParameter(
+        "filterByType",
+        i,
+        false,
+      ) as boolean;
       const typeFilter = filterByType
-        ? (this.getNodeParameter('typeFilter', i, undefined) as number)
+        ? (this.getNodeParameter("typeFilter", i, undefined) as number)
         : undefined;
 
-      const filterByProduct = this.getNodeParameter('filterByProduct', i, false) as boolean;
+      const filterByProduct = this.getNodeParameter(
+        "filterByProduct",
+        i,
+        false,
+      ) as boolean;
       const productFilter = filterByProduct
-        ? (this.getNodeParameter('productFilter', i, undefined) as number)
+        ? (this.getNodeParameter("productFilter", i, undefined) as number)
         : undefined;
 
-      const endpoint = '/msp/v3/tenants';
+      const endpoint = "/msp/v3/tenants";
 
-      const qs: IDataObject = { includeFeatures: false };
+      const qs: IDataObject = { includeFeatures: true };
 
       // Add customerId to query params if specified, but use 'customerIds' as the param name
       // as that's what the API expects according to the documentation
@@ -274,39 +360,79 @@ export async function executeTenantOperation(
       }
 
       // v3 API expects pageSize as a string
-      qs.pageSize = returnAll ? '100' : limit.toString();
+      qs.pageSize = returnAll ? String(API_MAX_PAGE_SIZE) : limit.toString();
+
+      // Fetch all customers once to build a map of customerID -> isDruvaProvisioned.
+      // isDruvaProvisioned is derived from the licenseManagementAllowed attribute:
+      //   "0" = Druva Provisioned, "1" = MSP Provisioned
+      const allCustomers = (await druvaMspApiRequestAllItems.call(
+        this,
+        "GET",
+        "/msp/v3/customers",
+        "customers",
+        {},
+        { pageSize: String(API_MAX_PAGE_SIZE) },
+      )) as IDataObject[];
+      const customerProvisionMap = new Map<string, boolean>();
+      for (const cust of allCustomers) {
+        const attrs = cust.attributes as IDataObject[] | undefined;
+        const licAttr = attrs?.find(
+          (a) => a.name === "licenseManagementAllowed",
+        );
+        customerProvisionMap.set(
+          cust.id as string,
+          licAttr ? licAttr.value === "0" : false,
+        );
+      }
 
       // Use the global responseData variable, don't redeclare it locally
       if (returnAll) {
         const tenants = (await druvaMspApiRequestAllItems.call(
           this,
-          'GET',
+          "GET",
           endpoint,
-          'tenants',
+          "tenants",
           {},
           qs,
         )) as IDataObject[];
 
-        // Enrich the response array with human-readable labels
+        // Enrich the response array with human-readable labels, then flag Druva Provisioned tenants
         responseData = enrichApiResponseArray(tenants, {
           status: getTenantStatusLabel,
           tenantType: getTenantTypeLabel,
           productID: getProductIdLabel,
-        });
+        }).map((t) => ({
+          ...t,
+          isDruvaProvisioned:
+            customerProvisionMap.get(t.customerID as string) ?? false,
+        }));
       } else {
-        const response = await druvaMspApiRequest.call(this, 'GET', endpoint, undefined, qs);
+        const response = await druvaMspApiRequest.call(
+          this,
+          "GET",
+          endpoint,
+          undefined,
+          qs,
+        );
         if (
-          typeof response === 'object' &&
+          typeof response === "object" &&
           response !== null &&
-          'tenants' in response &&
+          "tenants" in response &&
           Array.isArray(response.tenants)
         ) {
-          // Enrich the response array with human-readable labels
-          responseData = enrichApiResponseArray(response.tenants as IDataObject[], {
-            status: getTenantStatusLabel,
-            tenantType: getTenantTypeLabel,
-            productID: getProductIdLabel,
-          });
+          // Enrich the response array with human-readable labels, then flag Druva Provisioned tenants
+          responseData = enrichApiResponseArray(
+            response.tenants as IDataObject[],
+            {
+              status: getTenantStatusLabel,
+              tenantType: getTenantTypeLabel,
+              productID: getProductIdLabel,
+            },
+          ).map((t) => ({
+            ...t,
+            isDruvaProvisioned:
+              customerProvisionMap.get(t.customerID as string) ?? false,
+          }));
         } else {
           logger.warn(
             `Tenant: Unexpected response format for Tenant Get Many: ${JSON.stringify(response)}`,
@@ -317,7 +443,9 @@ export async function executeTenantOperation(
 
       // Filter by status if requested
       if (filterByStatus && statusFilter !== undefined) {
-        logger.info(`Tenant: Post-processing filter: Filtering tenants by status ${statusFilter}`);
+        logger.info(
+          `Tenant: Post-processing filter: Filtering tenants by status ${statusFilter}`,
+        );
         responseData = (responseData as IDataObject[]).filter(
           (tenant) => tenant.status === statusFilter,
         );
@@ -325,7 +453,9 @@ export async function executeTenantOperation(
 
       // Filter by tenant type if requested
       if (filterByType && typeFilter !== undefined) {
-        logger.info(`Tenant: Post-processing filter: Filtering tenants by type ${typeFilter}`);
+        logger.info(
+          `Tenant: Post-processing filter: Filtering tenants by type ${typeFilter}`,
+        );
         responseData = (responseData as IDataObject[]).filter(
           (tenant) => tenant.tenantType === typeFilter,
         );
@@ -348,11 +478,11 @@ export async function executeTenantOperation(
 
       // Add detailed debugging of the final data being returned
       await logger.debug(
-        `Tenant: Final response data structure: ${JSON.stringify(Array.isArray(responseData) && (responseData as IDataObject[]).length > 0 ? (responseData as IDataObject[])[0] : 'No data')}`,
+        `Tenant: Final response data structure: ${JSON.stringify(Array.isArray(responseData) && (responseData as IDataObject[]).length > 0 ? (responseData as IDataObject[])[0] : "No data")}`,
         this,
       );
       await logger.debug(
-        `Tenant: First 3 items in response: ${JSON.stringify(Array.isArray(responseData) ? (responseData as IDataObject[]).slice(0, 3) : 'Not an array')}`,
+        `Tenant: First 3 items in response: ${JSON.stringify(Array.isArray(responseData) ? (responseData as IDataObject[]).slice(0, 3) : "Not an array")}`,
         this,
       );
 
@@ -364,34 +494,59 @@ export async function executeTenantOperation(
         );
       } else {
         // Convert to array if not already
-        await logger.debug('Tenant: responseData is NOT an array, converting to array', this);
+        await logger.debug(
+          "Tenant: responseData is NOT an array, converting to array",
+          this,
+        );
         responseData = [responseData as IDataObject];
       }
 
       // Important debug statement right before moving to the next operation
       await logger.debug(
-        `Tenant: End of getMany operation, responseData has ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : 'unknown'} items`,
+        `Tenant: End of getMany operation, responseData has ${Array.isArray(responseData) ? (responseData as IDataObject[]).length : "unknown"} items`,
         this,
       );
-    } else if (operation === 'create') {
-      const customerId = this.getNodeParameter('customerId', i, '') as string;
+    } else if (operation === "create") {
+      const customerId = this.getNodeParameter("customerId", i, "") as string;
       if (!customerId) {
-        throw new Error('Customer ID is required for the create operation.');
+        throw new Error("Customer ID is required for the create operation.");
       }
 
-      const productID = this.getNodeParameter('productID', i, '') as string;
-      const servicePlanID = this.getNodeParameter('servicePlanID', i, '') as string;
-      const tenantType = this.getNodeParameter('tenantType', i, '') as string;
-      const licenseExpiryDate = this.getNodeParameter('licenseExpiryDate', i, '') as string;
-      const storageRegionsData = this.getNodeParameter('storageRegions', i, {}) as IDataObject;
-      const quota = this.getNodeParameter('quota', i, undefined) as number | undefined;
-      const quotaStartDate = this.getNodeParameter('quotaStartDate', i, undefined) as
-        | string
+      const productID = this.getNodeParameter("productID", i, "") as string;
+      const servicePlanID = this.getNodeParameter(
+        "servicePlanID",
+        i,
+        "",
+      ) as string;
+      const tenantType = this.getNodeParameter("tenantType", i, "") as string;
+      const licenseExpiryDate = this.getNodeParameter(
+        "licenseExpiryDate",
+        i,
+        "",
+      ) as string;
+      const storageRegionsData = this.getNodeParameter(
+        "storageRegions",
+        i,
+        {},
+      ) as IDataObject;
+      const quota = this.getNodeParameter("quota", i, undefined) as
+        | number
         | undefined;
-      const quotaEndDate = this.getNodeParameter('quotaEndDate', i, undefined) as
-        | string
-        | undefined;
-      const featuresData = this.getNodeParameter('features', i, {}) as IDataObject;
+      const quotaStartDate = this.getNodeParameter(
+        "quotaStartDate",
+        i,
+        undefined,
+      ) as string | undefined;
+      const quotaEndDate = this.getNodeParameter(
+        "quotaEndDate",
+        i,
+        undefined,
+      ) as string | undefined;
+      const featuresData = this.getNodeParameter(
+        "features",
+        i,
+        {},
+      ) as IDataObject;
 
       const storageRegions = parseStorageRegions(storageRegionsData);
       const features = parseFeatures(featuresData);
@@ -419,11 +574,14 @@ export async function executeTenantOperation(
 
       try {
         const endpoint = `/msp/v3/customers/${customerId}/tenants`;
-        await logger.debug(`Tenant: Creating tenant at endpoint: ${endpoint}`, this);
+        await logger.debug(
+          `Tenant: Creating tenant at endpoint: ${endpoint}`,
+          this,
+        );
 
         const createResponse = (await druvaMspApiRequest.call(
           this,
-          'POST',
+          "POST",
           endpoint,
           body,
         )) as IDataObject;
@@ -435,24 +593,46 @@ export async function executeTenantOperation(
       } catch (error) {
         throw new Error(`Failed to create tenant: ${(error as Error).message}`);
       }
-    } else if (operation === 'update') {
-      const tenantId = this.getNodeParameter('tenantId', i, '') as string;
+    } else if (operation === "update") {
+      const tenantId = this.getNodeParameter("tenantId", i, "") as string;
       if (!tenantId) {
-        throw new Error('Tenant ID is required for the update operation.');
+        throw new Error("Tenant ID is required for the update operation.");
       }
 
-      const servicePlanID = this.getNodeParameter('servicePlanID', i, '') as string;
-      const tenantType = this.getNodeParameter('tenantType', i, '') as string;
-      const licenseExpiryDate = this.getNodeParameter('licenseExpiryDate', i, '') as string;
-      const storageRegionsData = this.getNodeParameter('storageRegions', i, {}) as IDataObject;
-      const quota = this.getNodeParameter('quota', i, undefined) as number | undefined;
-      const quotaStartDate = this.getNodeParameter('quotaStartDate', i, undefined) as
-        | string
+      const servicePlanID = this.getNodeParameter(
+        "servicePlanID",
+        i,
+        "",
+      ) as string;
+      const tenantType = this.getNodeParameter("tenantType", i, "") as string;
+      const licenseExpiryDate = this.getNodeParameter(
+        "licenseExpiryDate",
+        i,
+        "",
+      ) as string;
+      const storageRegionsData = this.getNodeParameter(
+        "storageRegions",
+        i,
+        {},
+      ) as IDataObject;
+      const quota = this.getNodeParameter("quota", i, undefined) as
+        | number
         | undefined;
-      const quotaEndDate = this.getNodeParameter('quotaEndDate', i, undefined) as
-        | string
-        | undefined;
-      const featuresData = this.getNodeParameter('features', i, {}) as IDataObject;
+      const quotaStartDate = this.getNodeParameter(
+        "quotaStartDate",
+        i,
+        undefined,
+      ) as string | undefined;
+      const quotaEndDate = this.getNodeParameter(
+        "quotaEndDate",
+        i,
+        undefined,
+      ) as string | undefined;
+      const featuresData = this.getNodeParameter(
+        "features",
+        i,
+        {},
+      ) as IDataObject;
 
       // Get the customer ID for this tenant
       const customerId = await getTenantCustomerId.call(this, tenantId);
@@ -462,11 +642,14 @@ export async function executeTenantOperation(
 
       const hasStorageRegions =
         storageRegionsData &&
-        typeof storageRegionsData === 'object' &&
+        typeof storageRegionsData === "object" &&
         Array.isArray((storageRegionsData as IDataObject).region) &&
-        ((storageRegionsData as IDataObject).region as IDataObject[]).length > 0;
+        ((storageRegionsData as IDataObject).region as IDataObject[]).length >
+          0;
 
-      const storageRegions = hasStorageRegions ? parseStorageRegions(storageRegionsData) : undefined;
+      const storageRegions = hasStorageRegions
+        ? parseStorageRegions(storageRegionsData)
+        : undefined;
       const features = parseFeaturesForPatch(featuresData);
 
       // Build request body with provided fields only
@@ -498,16 +681,19 @@ export async function executeTenantOperation(
       }
 
       if (Object.keys(body).length === 0) {
-        throw new Error('Provide at least one field to update.');
+        throw new Error("Provide at least one field to update.");
       }
 
       try {
         const endpoint = `/msp/v3/customers/${customerId}/tenants/${tenantId}`;
-        await logger.debug(`Tenant: Updating tenant at endpoint: ${endpoint}`, this);
+        await logger.debug(
+          `Tenant: Updating tenant at endpoint: ${endpoint}`,
+          this,
+        );
 
         const updateResponse = (await druvaMspApiRequest.call(
           this,
-          'PATCH',
+          "PATCH",
           endpoint,
           body,
         )) as IDataObject;
@@ -519,11 +705,11 @@ export async function executeTenantOperation(
       } catch (error) {
         throw new Error(`Failed to update tenant: ${(error as Error).message}`);
       }
-    } else if (operation === 'suspend') {
+    } else if (operation === "suspend") {
       // Parameter
-      const tenantId = this.getNodeParameter('tenantId', i, '') as string;
+      const tenantId = this.getNodeParameter("tenantId", i, "") as string;
       if (!tenantId) {
-        throw new Error('Tenant ID is required for the suspend operation.');
+        throw new Error("Tenant ID is required for the suspend operation.");
       }
 
       // Get the customer ID for this tenant
@@ -535,12 +721,15 @@ export async function executeTenantOperation(
 
         // Use the correct API endpoint that includes both customer ID and tenant ID
         const endpoint = `/msp/v2/customers/${customerId}/tenants/${tenantId}/suspend`;
-        await logger.debug(`Tenant: Suspending tenant at endpoint: ${endpoint}`, this);
+        await logger.debug(
+          `Tenant: Suspending tenant at endpoint: ${endpoint}`,
+          this,
+        );
 
         // POST request with no body
         const suspendResponse = (await druvaMspApiRequest.call(
           this,
-          'POST',
+          "POST",
           endpoint,
         )) as IDataObject;
 
@@ -549,13 +738,15 @@ export async function executeTenantOperation(
         // in a workflow loop with a Wait node
         responseData = suspendResponse;
       } catch (error) {
-        throw new Error(`Failed to suspend tenant: ${(error as Error).message}`);
+        throw new Error(
+          `Failed to suspend tenant: ${(error as Error).message}`,
+        );
       }
-    } else if (operation === 'unsuspend') {
+    } else if (operation === "unsuspend") {
       // Parameter
-      const tenantId = this.getNodeParameter('tenantId', i, '') as string;
+      const tenantId = this.getNodeParameter("tenantId", i, "") as string;
       if (!tenantId) {
-        throw new Error('Tenant ID is required for the unsuspend operation.');
+        throw new Error("Tenant ID is required for the unsuspend operation.");
       }
 
       // Get the customer ID for this tenant
@@ -567,12 +758,15 @@ export async function executeTenantOperation(
 
         // Use the correct API endpoint that includes both customer ID and tenant ID
         const endpoint = `/msp/v2/customers/${customerId}/tenants/${tenantId}/unsuspend`;
-        await logger.debug(`Tenant: Unsuspending tenant at endpoint: ${endpoint}`, this);
+        await logger.debug(
+          `Tenant: Unsuspending tenant at endpoint: ${endpoint}`,
+          this,
+        );
 
         // POST request with no body
         const unsuspendResponse = (await druvaMspApiRequest.call(
           this,
-          'POST',
+          "POST",
           endpoint,
         )) as IDataObject;
 
@@ -582,7 +776,9 @@ export async function executeTenantOperation(
         // in a workflow loop with a Wait node
         responseData = unsuspendResponse;
       } catch (error) {
-        throw new Error(`Failed to unsuspend tenant: ${(error as Error).message}`);
+        throw new Error(
+          `Failed to unsuspend tenant: ${(error as Error).message}`,
+        );
       }
     }
   } catch (error) {
@@ -597,7 +793,7 @@ export async function executeTenantOperation(
 
   // Return the final data
   await logger.debug(
-    `Tenant: Finalizing execution, responseData has ${Array.isArray(responseData) ? responseData.length : 'unknown'} items`,
+    `Tenant: Finalizing execution, responseData has ${Array.isArray(responseData) ? responseData.length : "unknown"} items`,
     this,
   );
   await logger.debug(
@@ -609,12 +805,15 @@ export async function executeTenantOperation(
   let returnItems: INodeExecutionData[] = [];
 
   if (Array.isArray(responseData)) {
-    await logger.debug(`Tenant: Processing array response with ${responseData.length} items`, this);
+    await logger.debug(
+      `Tenant: Processing array response with ${responseData.length} items`,
+      this,
+    );
     returnItems = responseData.map((item) => ({
       json: item,
     }));
   } else {
-    await logger.debug('Tenant: Processing single item response', this);
+    await logger.debug("Tenant: Processing single item response", this);
     returnItems = [
       {
         json: responseData as IDataObject,
@@ -622,6 +821,9 @@ export async function executeTenantOperation(
     ];
   }
 
-  await logger.debug(`Tenant: Final return contains ${returnItems.length} items`, this);
+  await logger.debug(
+    `Tenant: Final return contains ${returnItems.length} items`,
+    this,
+  );
   return returnItems;
 }
