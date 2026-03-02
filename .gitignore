@@ -42,13 +42,14 @@ coverage/
 .cursorrules
 .cursor/
 
-# AI / Cursor tool configs (managed by private repo)
-/.claude
-/.cursor-rules
-/.docs
-/CLAUDE.md
+# Private bare git repo (must never be staged into the public repo)
+/.private-git/
 
 # AI / Cursor / docs configs (managed by private repo)
+/.claude
+/.cursor-rules
 /.cursor*
+/docs
+/CLAUDE.md
 /AGENT.md
 /.agent*

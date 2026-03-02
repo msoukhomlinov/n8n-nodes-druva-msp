@@ -21,9 +21,16 @@
 
 .NOTES
     Author: Max Soukhomlinov
-    Version: 2.3.2
+    Version: 2.3.3
 
     Changelog:
+    2.3.3 - fix: .private-git/ added to $PRIVATE_GIT_ALWAYS_IGNORE so it is always written to
+            .gitignore regardless of $PRIVATE_PATHS, preventing bare-repo internals from being
+            staged by `git add .` during release.
+            fix: gitignore presence check now matches actual gitignore lines (anchored regex)
+            instead of a raw substring search on the full file content, which previously caused
+            entries like `docs` to be considered "already covered" by matching the word in a
+            comment line, leaving /docs absent from .gitignore.
     2.3.2 - fix: Step 5 private push now compares local HEAD SHA vs remote SHA via ls-remote
             instead of rev-list "refs/remotes/origin/<branch>..HEAD". Bare repos have no remote
             tracking refs so the rev-list range silently returned nothing, causing the push to
@@ -86,6 +93,10 @@ $PRIVATE_GIT_DIR = ".private-git"
 
 # Paths managed by the private repo — supports exact names and glob patterns (e.g. ".cursor*")
 $PRIVATE_PATHS = @(".claude", ".cursor*", "docs", "CLAUDE.md", "AGENT.md", ".agent*")
+
+# Paths that must always be in .gitignore regardless of $PRIVATE_PATHS.
+# The bare private-git directory must never be staged into the public repo.
+$PRIVATE_GIT_ALWAYS_IGNORE = @($PRIVATE_GIT_DIR)
 
 #endregion
 
@@ -747,8 +758,18 @@ function Invoke-PrivateMigration {
 
     # --- Step 1: Ensure ALL private paths are in .gitignore ---
     $gitignorePath = Join-Path $root ".gitignore"
-    $existing = if (Test-Path $gitignorePath) { Get-Content $gitignorePath -Raw } else { "" }
-    $toAdd = $PRIVATE_PATHS | Where-Object { $existing -notmatch [regex]::Escape($_) }
+    $existingLines = if (Test-Path $gitignorePath) { Get-Content $gitignorePath } else { @() }
+
+    # Check for a line that matches the pattern as an actual gitignore entry (not in comments).
+    # Anchored to handle both /pattern and pattern forms.
+    function Test-GitignoreCoversPattern {
+        param([string]$Pat, [string[]]$Lines)
+        $escaped = [regex]::Escape($Pat)
+        return ($Lines | Where-Object { $_ -match "^/?$escaped/?$" }).Count -gt 0
+    }
+
+    $allRequiredPaths = $PRIVATE_PATHS + $PRIVATE_GIT_ALWAYS_IGNORE
+    $toAdd = $allRequiredPaths | Where-Object { -not (Test-GitignoreCoversPattern $_ $existingLines) }
     if ($toAdd.Count -gt 0) {
         Write-Info "  Updating .gitignore ($($toAdd -join ', '))..."
         $block = "`n# AI / Cursor / docs configs (managed by private repo)`n" + ($toAdd | ForEach-Object { "/$_" } | Out-String).TrimEnd()
