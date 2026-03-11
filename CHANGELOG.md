@@ -3,6 +3,12 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.4.0] - 2026-03-11
+
+### Added
+
+- **`DruvaMspAiTools` node** — AI Agent toolkit exposing 10 Druva MSP resources as LangChain `DynamicStructuredTool` instances: Admin, Customer, Event, Report - Cyber Resilience, Report - Endpoint, Report - Usage, Service Plan, Storage Region, Task, and Tenant. Each resource exposes its key operations with LLM-optimised descriptions and Zod schemas. Write operations (create, update, getToken, suspend, unsuspend) are gated behind an `allowWriteOperations` toggle (default: disabled). Compatible with n8n AI Agent and MCP Trigger nodes across n8n 2.9+ and older versions via runtime StructuredToolkit probe.
+
 ## [1.3.0] - 2026-03-02
 
 ### Added
