@@ -11,7 +11,7 @@ export function buildCustomerGetDescription(): string {
   return (
     "Fetch a single Druva MSP Customer record by its customer ID string. " +
     "ONLY call this when you already have a customer ID — never pass a name. " +
-    "If you only have a name, call druva_msp_customer_getMany with the customerName filter first, " +
+    "If you only have a name, call druva_msp_customer with operation 'getMany' with the customerName filter first, " +
     "extract the customerId from results, then call this."
   );
 }
@@ -38,7 +38,7 @@ export function buildCustomerUpdateDescription(): string {
   return (
     "Update an existing Druva MSP Customer by customer ID. " +
     "PREREQUISITE: you need the customerId. If you only have a name, " +
-    "call druva_msp_customer_getMany with customerName filter first to get the customerId. " +
+    "call druva_msp_customer with operation 'getMany' with customerName filter first to get the customerId. " +
     "Required: customerId and customerName. Optional: phoneNumber, address."
   );
 }
@@ -47,7 +47,7 @@ export function buildCustomerGetTokenDescription(): string {
   return (
     "Generate a customer-specific API access token for a Druva MSP Customer. " +
     "PREREQUISITE: you need the customerId. " +
-    "If you only have a name, call druva_msp_customer_getMany first to get the customerId. " +
+    "If you only have a name, call druva_msp_customer with operation 'getMany' first to get the customerId. " +
     "Returns an access token that can be used to call Druva APIs on behalf of the customer."
   );
 }
@@ -60,7 +60,7 @@ export function buildTenantGetDescription(): string {
   return (
     "Fetch a single Druva MSP Tenant record by its tenant ID string. " +
     "ONLY call this when you already have a tenant ID. " +
-    "If you only have a name or customer, call druva_msp_tenant_getMany with filters first, " +
+    "If you only have a name or customer, call druva_msp_tenant with operation 'getMany' with filters first, " +
     "extract the tenantId, then call this."
   );
 }
@@ -79,8 +79,8 @@ export function buildTenantSuspendDescription(): string {
   return (
     "Suspend a Druva MSP Tenant by tenant ID, preventing user access. " +
     "PREREQUISITE: you need the tenantId. " +
-    "If you only have a name or customer, call druva_msp_tenant_getMany first to get the tenantId. " +
-    "Returns a task object — use druva_msp_task_getById to monitor completion."
+    "If you only have a name or customer, call druva_msp_tenant with operation 'getMany' first to get the tenantId. " +
+    "Returns a task object — use druva_msp_task with operation 'get' to monitor completion."
   );
 }
 
@@ -88,8 +88,8 @@ export function buildTenantUnsuspendDescription(): string {
   return (
     "Unsuspend (restore access to) a previously suspended Druva MSP Tenant by tenant ID. " +
     "PREREQUISITE: you need the tenantId. " +
-    "If you only have a name or customer, call druva_msp_tenant_getMany first to get the tenantId. " +
-    "Returns a task object — use druva_msp_task_getById to monitor completion."
+    "If you only have a name or customer, call druva_msp_tenant with operation 'getMany' first to get the tenantId. " +
+    "Returns a task object — use druva_msp_task with operation 'get' to monitor completion."
   );
 }
 
@@ -127,7 +127,7 @@ export function buildEventGetManyCustomerEventsDescription(
     dateTimeReferenceSnippet(referenceUtc) +
     "List events for a specific Druva MSP Customer. " +
     "PREREQUISITE: you need the customerId. " +
-    "Call druva_msp_customer_getMany with customerName filter first if you only have a name. " +
+    "Call druva_msp_customer with operation 'getMany' with customerName filter first if you only have a name. " +
     "Note: Druva recommends polling at most once per 30 minutes per customer to avoid rate limits."
   );
 }
@@ -153,7 +153,7 @@ export function buildServicePlanGetDescription(): string {
   return (
     "Fetch a single Druva MSP Service Plan by its numeric or string service plan ID. " +
     "ONLY call this when you already have a service plan ID. " +
-    "If you only have a name, call druva_msp_servicePlan_getMany first to find the plan."
+    "If you only have a name, call druva_msp_servicePlan with operation 'getMany' first to find the plan."
   );
 }
 
@@ -276,4 +276,166 @@ export function buildReportEndpointGetAlertsDescription(
     "Filter by date range and/or customer IDs. " +
     "Returns alert type, severity, device, user, and timestamp for each alert."
   );
+}
+
+// ---------------------------------------------------------------------------
+// Unified description builder — composes per-operation summaries into a
+// single description for the unified tool.
+// ---------------------------------------------------------------------------
+
+const RESOURCE_INTROS: Record<string, string> = {
+  admin: "Manage Druva MSP administrator accounts.",
+  customer: "Manage Druva MSP customer organisations.",
+  event: "Query Druva MSP audit events and alerts.",
+  reportCyber: "Query Druva MSP cyber resilience reports.",
+  reportEndpoint: "Query Druva MSP endpoint backup reports.",
+  reportUsage: "Query Druva MSP usage and consumption reports.",
+  servicePlan: "Manage Druva MSP service plans.",
+  storageRegion: "Query available Druva MSP storage regions.",
+  task: "Check status of Druva MSP async tasks.",
+  tenant: "Manage Druva MSP tenant environments.",
+};
+
+// Resources that need UTC reference in their descriptions
+const DATETIME_RESOURCES = new Set([
+  "event",
+  "reportCyber",
+  "reportEndpoint",
+  "reportUsage",
+]);
+
+/**
+ * Builds per-operation description using existing per-op builders.
+ * Returns the builder output truncated to first sentence for brevity.
+ */
+function getOperationSummary(
+  resource: string,
+  operation: string,
+  referenceUtc: string,
+): string {
+  const full = buildToolDescriptionForOp(resource, operation, referenceUtc);
+  // Strip the dateTimeReferenceSnippet prefix if present (it's added at unified level)
+  const stripped = full.replace(
+    /^Reference: current UTC.*?queries — do not assume a different date\. /,
+    "",
+  );
+  // Take first sentence only
+  const firstSentence = stripped.split(". ")[0];
+  return firstSentence.endsWith(".") ? firstSentence : firstSentence + ".";
+}
+
+/** Dispatch to existing per-operation description builders */
+function buildToolDescriptionForOp(
+  resource: string,
+  operation: string,
+  referenceUtc: string,
+): string {
+  switch (resource) {
+    case "customer":
+      switch (operation) {
+        case "get":
+          return buildCustomerGetDescription();
+        case "getMany":
+          return buildCustomerGetManyDescription();
+        case "create":
+          return buildCustomerCreateDescription();
+        case "update":
+          return buildCustomerUpdateDescription();
+        case "getToken":
+          return buildCustomerGetTokenDescription();
+      }
+      break;
+    case "tenant":
+      switch (operation) {
+        case "get":
+          return buildTenantGetDescription();
+        case "getMany":
+          return buildTenantGetManyDescription();
+        case "suspend":
+          return buildTenantSuspendDescription();
+        case "unsuspend":
+          return buildTenantUnsuspendDescription();
+      }
+      break;
+    case "admin":
+      if (operation === "getMany") return buildAdminGetManyDescription();
+      break;
+    case "event":
+      switch (operation) {
+        case "getManyMspEvents":
+          return buildEventGetManyMspEventsDescription(referenceUtc);
+        case "getManyCustomerEvents":
+          return buildEventGetManyCustomerEventsDescription(referenceUtc);
+      }
+      break;
+    case "task":
+      if (operation === "get") return buildTaskGetDescription();
+      break;
+    case "servicePlan":
+      switch (operation) {
+        case "get":
+          return buildServicePlanGetDescription();
+        case "getMany":
+          return buildServicePlanGetManyDescription();
+      }
+      break;
+    case "storageRegion":
+      if (operation === "getMany")
+        return buildStorageRegionGetManyDescription();
+      break;
+    case "reportUsage":
+      switch (operation) {
+        case "getGlobalReport":
+          return buildReportUsageGetGlobalReportDescription(referenceUtc);
+        case "getItemizedConsumption":
+          return buildReportUsageGetItemizedConsumptionDescription(
+            referenceUtc,
+          );
+        case "getItemizedQuota":
+          return buildReportUsageGetItemizedQuotaDescription(referenceUtc);
+      }
+      break;
+    case "reportCyber":
+      switch (operation) {
+        case "getRollbackActions":
+          return buildReportCyberGetRollbackActionsDescription(referenceUtc);
+        case "getDataProtectionRisk":
+          return buildReportCyberGetDataProtectionRiskDescription(referenceUtc);
+      }
+      break;
+    case "reportEndpoint":
+      switch (operation) {
+        case "getUsers":
+          return buildReportEndpointGetUsersDescription(referenceUtc);
+        case "getLastBackupStatus":
+          return buildReportEndpointGetLastBackupStatusDescription();
+        case "getAlerts":
+          return buildReportEndpointGetAlertsDescription(referenceUtc);
+      }
+      break;
+  }
+  return `Perform ${operation} on ${resource}.`;
+}
+
+export function buildUnifiedDescription(
+  resource: string,
+  operations: string[],
+  referenceUtc: string,
+): string {
+  const intro = RESOURCE_INTROS[resource] ?? `Manage Druva MSP ${resource}.`;
+  const parts: string[] = [];
+
+  // Add datetime reference for time-sensitive resources
+  if (DATETIME_RESOURCES.has(resource)) {
+    parts.push(dateTimeReferenceSnippet(referenceUtc));
+  }
+
+  parts.push(`${intro} Choose an operation:`);
+
+  for (const op of operations) {
+    const summary = getOperationSummary(resource, op, referenceUtc);
+    parts.push(`- ${op}: ${summary}`);
+  }
+
+  return parts.join("\n");
 }

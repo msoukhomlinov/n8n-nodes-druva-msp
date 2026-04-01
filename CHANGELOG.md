@@ -3,6 +3,29 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.5.0] - 2026-04-02
+
+### Changed
+
+- **DruvaMspAiTools — unified single-tool architecture**: migrated from multi-tool (one `DynamicStructuredTool` per operation, 28 total) to unified single-tool per resource (one tool with an `operation` enum field, 10 total). **Breaking**: tool names changed from `druva_msp_{resource}_{operation}` to `druva_msp_{resource}` — cached MCP tool lists require refresh
+- **DruvaMspAiTools — runtime class resolution** (`runtime.ts`): resolves `DynamicStructuredTool` and `Zod` from n8n's module tree via `createRequire()` + Proxy pattern so `instanceof` checks pass across module boundaries; deferred error pattern allows node registration even if resolution fails
+- **DruvaMspAiTools — response envelope standard** (`error-formatter.ts`): replaced custom `StructuredToolError`/`fmtSingle`/`fmtMany`/`fmtWrite` with unified `wrapSuccess`/`wrapError` envelope (`schemaVersion: "1"`, consistent `items` key for getMany)
+- **DruvaMspAiTools — schema unification** (`schema-generator.ts`, `schema-converter.ts`): added `buildUnifiedSchema()` that merges per-operation Zod schemas into a single `z.object` with required `operation` enum; `toRuntimeZodSchema()` handles Zod v3/v4 dual compatibility
+- **DruvaMspAiTools — unified descriptions** (`description-builders.ts`): added `buildUnifiedDescription()` composing per-operation summaries into a single tool description; all `nextAction` strings updated to reference unified tool names
+- **DruvaMspAiTools — null/empty guards**: `get` operations now return `ENTITY_NOT_FOUND` for null API responses instead of wrapping null in a success envelope; `getMany` with filters returning zero results now returns `NO_RESULTS_FOUND` with filter context
+- **DruvaMspAiTools — event date filtering**: added client-side date filtering for `getManyMspEvents` and `getManyCustomerEvents` operations; `startDate`/`endDate` params were accepted by schema but never applied (Druva event API does not support server-side date filtering)
+- **DruvaMspAiTools — event severity scoping**: `severity` filter now only applied to `getManyMspEvents` (not customer events endpoint which does not support it)
+- **DruvaMspAiTools — execute() error clarity**: invalid operations now return specific error listing valid operations; pre-2.14 n8n versions receive clear version-requirement message instead of generic error
+- **DruvaMspAiTools — admin pageSize**: changed from number to string for consistency with all other endpoints
+
+## [1.4.1] - 2026-04-02
+
+### Fixed
+
+- **DruvaMspAiTools — n8n 2.14+ compatibility**: `execute()` now detects tool invocations via `item.json.operation` (n8n 2.14+) in addition to the legacy `item.json.tool` field; previously all 2.14+ tool calls were misclassified as "Test step" clicks and returned a stub response
+- **DruvaMspAiTools — write safety (Layer 3)**: `execute()` now re-checks `allowWriteOperations` before dispatching write operations, closing a bypass where the `supplyData()` filter could be circumvented via direct execute dispatch
+- **DruvaMspAiTools — metadata stripping**: added `operation` to `N8N_METADATA_FIELDS` to prevent it leaking into API request bodies via the execute() path
+
 ## [1.4.0] - 2026-03-11
 
 ### Added

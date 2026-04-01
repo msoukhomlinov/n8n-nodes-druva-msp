@@ -5,7 +5,15 @@ import {
   getTenantCustomerId,
   getDruvaMspAccessToken,
 } from "../GenericFunctions";
-import { formatApiError, formatMissingIdError } from "./error-formatter";
+import {
+  wrapSuccess,
+  wrapError,
+  ERROR_TYPES,
+  formatApiError,
+  formatMissingIdError,
+  formatNotFoundError,
+  formatNoResultsFound,
+} from "./error-formatter";
 
 // ---------------------------------------------------------------------------
 // n8n framework metadata fields injected into every DynamicStructuredTool call.
@@ -19,6 +27,7 @@ const N8N_METADATA_FIELDS = new Set([
   "tool",
   "toolName",
   "toolCallId",
+  "operation", // n8n 2.14+ injects operation into item.json — must strip to prevent API body leaks
 ]);
 
 // ---------------------------------------------------------------------------
@@ -103,25 +112,60 @@ function buildReportV2FilterBy(params: Record<string, unknown>): IDataObject[] {
 }
 
 // ---------------------------------------------------------------------------
-// Response formatters
+// Response helpers
 // ---------------------------------------------------------------------------
 
-function fmtSingle(result: unknown): string {
-  return JSON.stringify({ result });
-}
-
-function fmtMany(results: unknown[], params: Record<string, unknown>): string {
+/** Build a standard getMany success envelope with truncation info */
+function manySuccess(
+  resource: string,
+  operation: string,
+  items: unknown[],
+  params: Record<string, unknown>,
+): string {
   const limit = typeof params.limit === "number" ? params.limit : 50;
-  const out: Record<string, unknown> = { results, count: results.length };
-  if (results.length >= limit) {
+  const out: Record<string, unknown> = { items, count: items.length };
+  if (items.length >= limit) {
     out.truncated = true;
     out.note = `Results capped at ${limit}. Use filters to narrow or increase 'limit' (max 200).`;
   }
-  return JSON.stringify(out);
+  return JSON.stringify(wrapSuccess(resource, operation, out));
 }
 
-function fmtWrite(operation: string, result: unknown, id?: unknown): string {
-  return JSON.stringify({ success: true, operation, itemId: id, result });
+/** Check if any client-side filters were applied */
+function hasFilters(
+  params: Record<string, unknown>,
+  ...keys: string[]
+): boolean {
+  return keys.some((k) => params[k] !== undefined && params[k] !== "");
+}
+
+/**
+ * Client-side date filtering for events — startDate/endDate are NOT valid
+ * query params per the Druva API; timeStamp is epoch seconds.
+ */
+function filterEventsByDate(
+  events: IDataObject[],
+  params: Record<string, unknown>,
+): IDataObject[] {
+  let filtered = events;
+  if (params.startDate && typeof params.startDate === "string") {
+    const startSec = new Date(params.startDate).getTime() / 1000;
+    filtered = filtered.filter((e) => Number(e.timeStamp) >= startSec);
+  }
+  if (params.endDate && typeof params.endDate === "string") {
+    const endSec = new Date(params.endDate).getTime() / 1000;
+    filtered = filtered.filter((e) => Number(e.timeStamp) <= endSec);
+  }
+  return filtered;
+}
+
+/** Null/empty guard for single-entity responses */
+function isNullOrEmpty(resp: unknown): boolean {
+  if (resp == null) return true;
+  if (Array.isArray(resp) && resp.length === 0) return true;
+  if (typeof resp === "object" && Object.keys(resp as object).length === 0)
+    return true;
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,31 +187,40 @@ export async function executeDruvaMspAiTool(
   try {
     switch (resource) {
       case "customer":
-        return await executeCustomer(context, operation, params);
+        return await executeCustomer(context, resource, operation, params);
       case "tenant":
-        return await executeTenant(context, operation, params);
+        return await executeTenant(context, resource, operation, params);
       case "admin":
-        return await executeAdmin(context, operation, params);
+        return await executeAdmin(context, resource, operation, params);
       case "event":
-        return await executeEvent(context, operation, params);
+        return await executeEvent(context, resource, operation, params);
       case "task":
-        return await executeTask(context, operation, params);
+        return await executeTask(context, resource, operation, params);
       case "servicePlan":
-        return await executeServicePlan(context, operation, params);
+        return await executeServicePlan(context, resource, operation, params);
       case "storageRegion":
-        return await executeStorageRegion(context, operation, params);
+        return await executeStorageRegion(context, resource, operation, params);
       case "reportUsage":
-        return await executeReportUsage(context, operation, params);
+        return await executeReportUsage(context, resource, operation, params);
       case "reportCyber":
-        return await executeReportCyber(context, operation, params);
+        return await executeReportCyber(context, resource, operation, params);
       case "reportEndpoint":
-        return await executeReportEndpoint(context, operation, params);
+        return await executeReportEndpoint(
+          context,
+          resource,
+          operation,
+          params,
+        );
       default:
-        return JSON.stringify({
-          error: true,
-          errorType: "UNSUPPORTED_RESOURCE",
-          message: `Unsupported resource: ${resource}`,
-        });
+        return JSON.stringify(
+          wrapError(
+            resource,
+            operation,
+            ERROR_TYPES.INVALID_OPERATION,
+            `Unsupported resource: ${resource}`,
+            "Check the resource name and try again.",
+          ),
+        );
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -181,13 +234,14 @@ export async function executeDruvaMspAiTool(
 
 async function executeCustomer(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   switch (operation) {
     case "get": {
       if (!params.customerId)
-        return JSON.stringify(formatMissingIdError("customer", "get"));
+        return JSON.stringify(formatMissingIdError(resource, operation));
       const qs: IDataObject = {};
       if (params.includeFeatures) qs.includeFeatures = true;
       const resp = await druvaMspApiRequest.call(
@@ -197,7 +251,11 @@ async function executeCustomer(
         undefined,
         qs,
       );
-      return fmtSingle(resp);
+      if (isNullOrEmpty(resp))
+        return JSON.stringify(
+          formatNotFoundError(resource, operation, params.customerId as string),
+        );
+      return JSON.stringify(wrapSuccess(resource, operation, resp));
     }
 
     case "getMany": {
@@ -229,13 +287,25 @@ async function executeCustomer(
             .includes(search),
         );
       }
-      return fmtMany(customers, params);
+
+      if (
+        hasFilters(params, "customerName", "accountName") &&
+        customers.length === 0
+      ) {
+        return JSON.stringify(
+          formatNoResultsFound(resource, operation, {
+            customerName: params.customerName,
+            accountName: params.accountName,
+          }),
+        );
+      }
+      return manySuccess(resource, operation, customers, params);
     }
 
     case "create": {
       if (!params.customerName) {
         return JSON.stringify(
-          formatApiError("customerName is required", "customer", "create"),
+          formatApiError("customerName is required", resource, operation),
         );
       }
       const body: IDataObject = {
@@ -250,15 +320,20 @@ async function executeCustomer(
         "/msp/v3/customers",
         body,
       );
-      return fmtWrite("create", resp, (resp as IDataObject)?.id);
+      return JSON.stringify(
+        wrapSuccess(resource, operation, {
+          id: (resp as IDataObject)?.id,
+          ...(resp as IDataObject),
+        }),
+      );
     }
 
     case "update": {
       if (!params.customerId)
-        return JSON.stringify(formatMissingIdError("customer", "update"));
+        return JSON.stringify(formatMissingIdError(resource, operation));
       if (!params.customerName) {
         return JSON.stringify(
-          formatApiError("customerName is required", "customer", "update"),
+          formatApiError("customerName is required", resource, operation),
         );
       }
       const body: IDataObject = {
@@ -273,12 +348,17 @@ async function executeCustomer(
         `/msp/v3/customers/${params.customerId}`,
         body,
       );
-      return fmtWrite("update", resp, params.customerId);
+      return JSON.stringify(
+        wrapSuccess(resource, operation, {
+          id: params.customerId,
+          ...(resp as IDataObject),
+        }),
+      );
     }
 
     case "getToken": {
       if (!params.customerId)
-        return JSON.stringify(formatMissingIdError("customer", "getToken"));
+        return JSON.stringify(formatMissingIdError(resource, operation));
       const mspAccessToken = await getDruvaMspAccessToken.call(ctx);
       const credentials = await ctx.getCredentials("druvaMspApi");
       const baseUrl =
@@ -294,15 +374,23 @@ async function executeCustomer(
         body: "grant_type=client_credentials",
         json: true,
       });
-      return fmtSingle(resp);
+      if (isNullOrEmpty(resp))
+        return JSON.stringify(
+          formatNotFoundError(resource, operation, params.customerId as string),
+        );
+      return JSON.stringify(wrapSuccess(resource, operation, resp));
     }
 
     default:
-      return JSON.stringify({
-        error: true,
-        errorType: "UNSUPPORTED_OPERATION",
-        message: `Unsupported operation for customer: ${operation}`,
-      });
+      return JSON.stringify(
+        wrapError(
+          resource,
+          operation,
+          ERROR_TYPES.INVALID_OPERATION,
+          `Unsupported operation for customer: ${operation}`,
+          "Check the operation name and try again.",
+        ),
+      );
   }
 }
 
@@ -312,13 +400,14 @@ async function executeCustomer(
 
 async function executeTenant(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   switch (operation) {
     case "get": {
       if (!params.tenantId)
-        return JSON.stringify(formatMissingIdError("tenant", "get"));
+        return JSON.stringify(formatMissingIdError(resource, operation));
       const customerId = await getTenantCustomerId.call(
         ctx,
         params.tenantId as string,
@@ -327,8 +416,8 @@ async function executeTenant(
         return JSON.stringify(
           formatApiError(
             `Could not find customer for tenant ${params.tenantId}`,
-            "tenant",
-            "get",
+            resource,
+            operation,
           ),
         );
       }
@@ -337,7 +426,11 @@ async function executeTenant(
         "GET",
         `/msp/v3/customers/${customerId}/tenants/${params.tenantId}`,
       );
-      return fmtSingle(resp);
+      if (isNullOrEmpty(resp))
+        return JSON.stringify(
+          formatNotFoundError(resource, operation, params.tenantId as string),
+        );
+      return JSON.stringify(wrapSuccess(resource, operation, resp));
     }
 
     case "getMany": {
@@ -365,12 +458,32 @@ async function executeTenant(
       if (params.productFilter !== undefined) {
         tenants = tenants.filter((t) => t.productID === params.productFilter);
       }
-      return fmtMany(tenants, params);
+
+      if (
+        hasFilters(
+          params,
+          "customerId",
+          "statusFilter",
+          "typeFilter",
+          "productFilter",
+        ) &&
+        tenants.length === 0
+      ) {
+        return JSON.stringify(
+          formatNoResultsFound(resource, operation, {
+            customerId: params.customerId,
+            statusFilter: params.statusFilter,
+            typeFilter: params.typeFilter,
+            productFilter: params.productFilter,
+          }),
+        );
+      }
+      return manySuccess(resource, operation, tenants, params);
     }
 
     case "suspend": {
       if (!params.tenantId)
-        return JSON.stringify(formatMissingIdError("tenant", "suspend"));
+        return JSON.stringify(formatMissingIdError(resource, operation));
       const customerId = await getTenantCustomerId.call(
         ctx,
         params.tenantId as string,
@@ -379,8 +492,8 @@ async function executeTenant(
         return JSON.stringify(
           formatApiError(
             `Could not find customer for tenant ${params.tenantId}`,
-            "tenant",
-            "suspend",
+            resource,
+            operation,
           ),
         );
       }
@@ -389,12 +502,17 @@ async function executeTenant(
         "POST",
         `/msp/v2/customers/${customerId}/tenants/${params.tenantId}/suspend`,
       );
-      return fmtWrite("suspend", resp);
+      return JSON.stringify(
+        wrapSuccess(resource, operation, {
+          id: params.tenantId,
+          ...(resp as IDataObject),
+        }),
+      );
     }
 
     case "unsuspend": {
       if (!params.tenantId)
-        return JSON.stringify(formatMissingIdError("tenant", "unsuspend"));
+        return JSON.stringify(formatMissingIdError(resource, operation));
       const customerId = await getTenantCustomerId.call(
         ctx,
         params.tenantId as string,
@@ -403,8 +521,8 @@ async function executeTenant(
         return JSON.stringify(
           formatApiError(
             `Could not find customer for tenant ${params.tenantId}`,
-            "tenant",
-            "unsuspend",
+            resource,
+            operation,
           ),
         );
       }
@@ -413,15 +531,24 @@ async function executeTenant(
         "POST",
         `/msp/v2/customers/${customerId}/tenants/${params.tenantId}/unsuspend`,
       );
-      return fmtWrite("unsuspend", resp);
+      return JSON.stringify(
+        wrapSuccess(resource, operation, {
+          id: params.tenantId,
+          ...(resp as IDataObject),
+        }),
+      );
     }
 
     default:
-      return JSON.stringify({
-        error: true,
-        errorType: "UNSUPPORTED_OPERATION",
-        message: `Unsupported operation for tenant: ${operation}`,
-      });
+      return JSON.stringify(
+        wrapError(
+          resource,
+          operation,
+          ERROR_TYPES.INVALID_OPERATION,
+          `Unsupported operation for tenant: ${operation}`,
+          "Check the operation name and try again.",
+        ),
+      );
   }
 }
 
@@ -431,19 +558,24 @@ async function executeTenant(
 
 async function executeAdmin(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   if (operation !== "getMany") {
-    return JSON.stringify({
-      error: true,
-      errorType: "UNSUPPORTED_OPERATION",
-      message: `Unsupported operation for admin: ${operation}`,
-    });
+    return JSON.stringify(
+      wrapError(
+        resource,
+        operation,
+        ERROR_TYPES.INVALID_OPERATION,
+        `Unsupported operation for admin: ${operation}`,
+        "Check the operation name and try again.",
+      ),
+    );
   }
 
   const limit = typeof params.limit === "number" ? params.limit : 50;
-  const qs: IDataObject = { pageSize: limit };
+  const qs: IDataObject = { pageSize: String(limit) };
   if (params.email) qs.email = params.email;
   if (params.role && Array.isArray(params.role) && params.role.length > 0) {
     qs.role = (params.role as string[]).join(",");
@@ -457,7 +589,16 @@ async function executeAdmin(
     qs,
   );
   const admins = ((resp as IDataObject)?.admins as IDataObject[]) || [];
-  return fmtMany(admins, params);
+
+  if (hasFilters(params, "email", "role") && admins.length === 0) {
+    return JSON.stringify(
+      formatNoResultsFound(resource, operation, {
+        email: params.email,
+        role: params.role,
+      }),
+    );
+  }
+  return manySuccess(resource, operation, admins, params);
 }
 
 // ---------------------------------------------------------------------------
@@ -466,16 +607,18 @@ async function executeAdmin(
 
 async function executeEvent(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   const limit = typeof params.limit === "number" ? params.limit : 50;
   const qs: IDataObject = { pageSize: Math.min(limit, 500) };
   if (params.category) qs.category = params.category;
-  if (params.severity !== undefined)
-    qs.syslogSeverity = Number(params.severity);
 
   if (operation === "getManyMspEvents") {
+    // severity is only supported as a query param on the MSP-level events endpoint
+    if (params.severity !== undefined)
+      qs.syslogSeverity = Number(params.severity);
     const resp = await druvaMspApiRequest.call(
       ctx,
       "GET",
@@ -483,15 +626,31 @@ async function executeEvent(
       undefined,
       qs,
     );
-    const events = ((resp as IDataObject)?.events as IDataObject[]) || [];
-    return fmtMany(events, params);
+    let events = ((resp as IDataObject)?.events as IDataObject[]) || [];
+
+    // Client-side date filtering — startDate/endDate are NOT valid query params
+    // per Druva API; timeStamp is epoch seconds
+    events = filterEventsByDate(events, params);
+
+    if (
+      hasFilters(params, "category", "severity", "startDate", "endDate") &&
+      events.length === 0
+    ) {
+      return JSON.stringify(
+        formatNoResultsFound(resource, operation, {
+          category: params.category,
+          severity: params.severity,
+          startDate: params.startDate,
+          endDate: params.endDate,
+        }),
+      );
+    }
+    return manySuccess(resource, operation, events, params);
   }
 
   if (operation === "getManyCustomerEvents") {
     if (!params.customerId) {
-      return JSON.stringify(
-        formatMissingIdError("event", "getManyCustomerEvents"),
-      );
+      return JSON.stringify(formatMissingIdError(resource, operation));
     }
     const resp = await druvaMspApiRequest.call(
       ctx,
@@ -500,15 +659,36 @@ async function executeEvent(
       undefined,
       qs,
     );
-    const events = ((resp as IDataObject)?.events as IDataObject[]) || [];
-    return fmtMany(events, params);
+    let events = ((resp as IDataObject)?.events as IDataObject[]) || [];
+
+    // Client-side date filtering — same as MSP events
+    events = filterEventsByDate(events, params);
+
+    if (
+      hasFilters(params, "category", "startDate", "endDate") &&
+      events.length === 0
+    ) {
+      return JSON.stringify(
+        formatNoResultsFound(resource, operation, {
+          customerId: params.customerId,
+          category: params.category,
+          startDate: params.startDate,
+          endDate: params.endDate,
+        }),
+      );
+    }
+    return manySuccess(resource, operation, events, params);
   }
 
-  return JSON.stringify({
-    error: true,
-    errorType: "UNSUPPORTED_OPERATION",
-    message: `Unsupported operation for event: ${operation}`,
-  });
+  return JSON.stringify(
+    wrapError(
+      resource,
+      operation,
+      ERROR_TYPES.INVALID_OPERATION,
+      `Unsupported operation for event: ${operation}`,
+      "Check the operation name and try again.",
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -517,24 +697,33 @@ async function executeEvent(
 
 async function executeTask(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   if (operation !== "get") {
-    return JSON.stringify({
-      error: true,
-      errorType: "UNSUPPORTED_OPERATION",
-      message: `Unsupported operation for task: ${operation}`,
-    });
+    return JSON.stringify(
+      wrapError(
+        resource,
+        operation,
+        ERROR_TYPES.INVALID_OPERATION,
+        `Unsupported operation for task: ${operation}`,
+        "Check the operation name and try again.",
+      ),
+    );
   }
   if (!params.taskId)
-    return JSON.stringify(formatMissingIdError("task", "get"));
+    return JSON.stringify(formatMissingIdError(resource, operation));
   const resp = await druvaMspApiRequest.call(
     ctx,
     "GET",
     `/msp/v2/tasks/${params.taskId}`,
   );
-  return fmtSingle(resp);
+  if (isNullOrEmpty(resp))
+    return JSON.stringify(
+      formatNotFoundError(resource, operation, params.taskId as string),
+    );
+  return JSON.stringify(wrapSuccess(resource, operation, resp));
 }
 
 // ---------------------------------------------------------------------------
@@ -543,19 +732,28 @@ async function executeTask(
 
 async function executeServicePlan(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
   if (operation === "get") {
     if (!params.servicePlanId) {
-      return JSON.stringify(formatMissingIdError("servicePlan", "get"));
+      return JSON.stringify(formatMissingIdError(resource, operation));
     }
     const resp = await druvaMspApiRequest.call(
       ctx,
       "GET",
       `/msp/v3/servicePlans/${params.servicePlanId}`,
     );
-    return fmtSingle(resp);
+    if (isNullOrEmpty(resp))
+      return JSON.stringify(
+        formatNotFoundError(
+          resource,
+          operation,
+          params.servicePlanId as string,
+        ),
+      );
+    return JSON.stringify(wrapSuccess(resource, operation, resp));
   }
 
   if (operation === "getMany") {
@@ -581,14 +779,27 @@ async function executeServicePlan(
     if (params.status !== undefined) {
       plans = plans.filter((p) => p.status === params.status);
     }
-    return fmtMany(plans, params);
+
+    if (hasFilters(params, "nameContains", "status") && plans.length === 0) {
+      return JSON.stringify(
+        formatNoResultsFound(resource, operation, {
+          nameContains: params.nameContains,
+          status: params.status,
+        }),
+      );
+    }
+    return manySuccess(resource, operation, plans, params);
   }
 
-  return JSON.stringify({
-    error: true,
-    errorType: "UNSUPPORTED_OPERATION",
-    message: `Unsupported operation for servicePlan: ${operation}`,
-  });
+  return JSON.stringify(
+    wrapError(
+      resource,
+      operation,
+      ERROR_TYPES.INVALID_OPERATION,
+      `Unsupported operation for servicePlan: ${operation}`,
+      "Check the operation name and try again.",
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -597,15 +808,20 @@ async function executeServicePlan(
 
 async function executeStorageRegion(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   _params: Record<string, unknown>,
 ): Promise<string> {
   if (operation !== "getMany") {
-    return JSON.stringify({
-      error: true,
-      errorType: "UNSUPPORTED_OPERATION",
-      message: `Unsupported operation for storageRegion: ${operation}`,
-    });
+    return JSON.stringify(
+      wrapError(
+        resource,
+        operation,
+        ERROR_TYPES.INVALID_OPERATION,
+        `Unsupported operation for storageRegion: ${operation}`,
+        "Check the operation name and try again.",
+      ),
+    );
   }
 
   const resp = await druvaMspApiRequest.call(
@@ -627,7 +843,12 @@ async function executeStorageRegion(
       });
     }
   }
-  return JSON.stringify({ results: flatItems, count: flatItems.length });
+  return JSON.stringify(
+    wrapSuccess(resource, operation, {
+      items: flatItems,
+      count: flatItems.length,
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -636,6 +857,7 @@ async function executeStorageRegion(
 
 async function executeReportUsage(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
@@ -646,18 +868,35 @@ async function executeReportUsage(
   };
   const endpoint = endpointMap[operation];
   if (!endpoint) {
-    return JSON.stringify({
-      error: true,
-      errorType: "UNSUPPORTED_OPERATION",
-      message: `Unsupported operation for reportUsage: ${operation}`,
-    });
+    return JSON.stringify(
+      wrapError(
+        resource,
+        operation,
+        ERROR_TYPES.INVALID_OPERATION,
+        `Unsupported operation for reportUsage: ${operation}`,
+        "Check the operation name and try again.",
+      ),
+    );
   }
 
   const filterBy = buildReportV2FilterBy(params);
   const body = buildReportBody(params, filterBy);
   const resp = await druvaMspApiRequest.call(ctx, "POST", endpoint, body);
   const items = ((resp as IDataObject)?.data as IDataObject[]) ?? [];
-  return fmtMany(items, params);
+
+  if (
+    hasFilters(params, "startDate", "endDate", "customerIds") &&
+    items.length === 0
+  ) {
+    return JSON.stringify(
+      formatNoResultsFound(resource, operation, {
+        startDate: params.startDate,
+        endDate: params.endDate,
+        customerIds: params.customerIds,
+      }),
+    );
+  }
+  return manySuccess(resource, operation, items, params);
 }
 
 // ---------------------------------------------------------------------------
@@ -666,6 +905,7 @@ async function executeReportUsage(
 
 async function executeReportCyber(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
@@ -675,18 +915,35 @@ async function executeReportCyber(
   };
   const endpoint = endpointMap[operation];
   if (!endpoint) {
-    return JSON.stringify({
-      error: true,
-      errorType: "UNSUPPORTED_OPERATION",
-      message: `Unsupported operation for reportCyber: ${operation}`,
-    });
+    return JSON.stringify(
+      wrapError(
+        resource,
+        operation,
+        ERROR_TYPES.INVALID_OPERATION,
+        `Unsupported operation for reportCyber: ${operation}`,
+        "Check the operation name and try again.",
+      ),
+    );
   }
 
   const filterBy = buildReportFilterBy(params);
   const body = buildReportBody(params, filterBy);
   const resp = await druvaMspApiRequest.call(ctx, "POST", endpoint, body);
   const items = ((resp as IDataObject)?.data as IDataObject[]) ?? [];
-  return fmtMany(items, params);
+
+  if (
+    hasFilters(params, "startDate", "endDate", "customerIds") &&
+    items.length === 0
+  ) {
+    return JSON.stringify(
+      formatNoResultsFound(resource, operation, {
+        startDate: params.startDate,
+        endDate: params.endDate,
+        customerIds: params.customerIds,
+      }),
+    );
+  }
+  return manySuccess(resource, operation, items, params);
 }
 
 // ---------------------------------------------------------------------------
@@ -695,6 +952,7 @@ async function executeReportCyber(
 
 async function executeReportEndpoint(
   ctx: IExecuteFunctions,
+  resource: string,
   operation: string,
   params: Record<string, unknown>,
 ): Promise<string> {
@@ -705,16 +963,33 @@ async function executeReportEndpoint(
   };
   const endpoint = endpointMap[operation];
   if (!endpoint) {
-    return JSON.stringify({
-      error: true,
-      errorType: "UNSUPPORTED_OPERATION",
-      message: `Unsupported operation for reportEndpoint: ${operation}`,
-    });
+    return JSON.stringify(
+      wrapError(
+        resource,
+        operation,
+        ERROR_TYPES.INVALID_OPERATION,
+        `Unsupported operation for reportEndpoint: ${operation}`,
+        "Check the operation name and try again.",
+      ),
+    );
   }
 
   const filterBy = buildReportFilterBy(params);
   const body = buildReportBody(params, filterBy);
   const resp = await druvaMspApiRequest.call(ctx, "POST", endpoint, body);
   const items = ((resp as IDataObject)?.data as IDataObject[]) ?? [];
-  return fmtMany(items, params);
+
+  if (
+    hasFilters(params, "startDate", "endDate", "customerIds") &&
+    items.length === 0
+  ) {
+    return JSON.stringify(
+      formatNoResultsFound(resource, operation, {
+        startDate: params.startDate,
+        endDate: params.endDate,
+        customerIds: params.customerIds,
+      }),
+    );
+  }
+  return manySuccess(resource, operation, items, params);
 }

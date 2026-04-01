@@ -33,7 +33,7 @@ const customerIdsSchema = z
   .array(z.string())
   .optional()
   .describe(
-    "Filter by specific customer global IDs (strings). If unknown, call druva_msp_customer_getMany first to find customer IDs.",
+    "Filter by specific customer global IDs (strings). If unknown, call druva_msp_customer with operation 'getMany' first to find customer IDs.",
   );
 
 // ---------------------------------------------------------------------------
@@ -45,7 +45,7 @@ export function getCustomerGetSchema() {
     customerId: z
       .string()
       .describe(
-        "Customer ID string (from a prior druva_msp_customer_getMany result). Must not be empty.",
+        "Customer ID string (from a prior druva_msp_customer with operation 'getMany' result). Must not be empty.",
       ),
     includeFeatures: z
       .boolean()
@@ -94,7 +94,7 @@ export function getCustomerUpdateSchema() {
     customerId: z
       .string()
       .describe(
-        "Customer ID to update (from a prior druva_msp_customer_getMany result). Required.",
+        "Customer ID to update (from a prior druva_msp_customer with operation 'getMany' result). Required.",
       ),
     customerName: z
       .string()
@@ -113,7 +113,7 @@ export function getCustomerGetTokenSchema() {
     customerId: z
       .string()
       .describe(
-        "Customer ID for which to generate an API token (from a prior druva_msp_customer_getMany result). Required.",
+        "Customer ID for which to generate an API token (from a prior druva_msp_customer with operation 'getMany' result). Required.",
       ),
   });
 }
@@ -127,7 +127,7 @@ export function getTenantGetSchema() {
     tenantId: z
       .string()
       .describe(
-        "Tenant ID string (from a prior druva_msp_tenant_getMany result). Required.",
+        "Tenant ID string (from a prior druva_msp_tenant with operation 'getMany' result). Required.",
       ),
   });
 }
@@ -138,7 +138,7 @@ export function getTenantGetManySchema() {
       .string()
       .optional()
       .describe(
-        "Filter by customer ID. If unknown, call druva_msp_customer_getMany first to find the customer ID.",
+        "Filter by customer ID. If unknown, call druva_msp_customer with operation 'getMany' first to find the customer ID.",
       ),
     statusFilter: z
       .number()
@@ -166,7 +166,7 @@ export function getTenantSuspendSchema() {
     tenantId: z
       .string()
       .describe(
-        "Tenant ID to suspend (from a prior druva_msp_tenant_getMany result). Required.",
+        "Tenant ID to suspend (from a prior druva_msp_tenant with operation 'getMany' result). Required.",
       ),
   });
 }
@@ -176,7 +176,7 @@ export function getTenantUnsuspendSchema() {
     tenantId: z
       .string()
       .describe(
-        "Tenant ID to unsuspend/restore (from a prior druva_msp_tenant_getMany result). Required.",
+        "Tenant ID to unsuspend/restore (from a prior druva_msp_tenant with operation 'getMany' result). Required.",
       ),
   });
 }
@@ -228,7 +228,7 @@ export function getEventGetManyCustomerEventsSchema() {
     customerId: z
       .string()
       .describe(
-        "Customer ID for which to retrieve events (from a prior druva_msp_customer_getMany result). Required.",
+        "Customer ID for which to retrieve events (from a prior druva_msp_customer with operation 'getMany' result). Required.",
       ),
     startDate: startDateSchema,
     endDate: endDateSchema,
@@ -263,7 +263,7 @@ export function getServicePlanGetSchema() {
     servicePlanId: z
       .string()
       .describe(
-        "Service plan ID (from a prior druva_msp_servicePlan_getMany result). Required.",
+        "Service plan ID (from a prior druva_msp_servicePlan with operation 'getMany' result). Required.",
       ),
   });
 }
@@ -472,4 +472,79 @@ export function getSchema(
       break;
   }
   return z.object({});
+}
+
+// ---------------------------------------------------------------------------
+// Unified schema builder — merges per-operation schemas into a single z.object
+// with a required 'operation' enum field.
+// ---------------------------------------------------------------------------
+
+const OPERATION_LABELS: Record<string, string> = {
+  get: "Get by ID",
+  getMany: "List/Search",
+  create: "Create",
+  update: "Update",
+  getToken: "Get Token",
+  suspend: "Suspend",
+  unsuspend: "Unsuspend",
+  getManyMspEvents: "List MSP Events",
+  getManyCustomerEvents: "List Customer Events",
+  getRollbackActions: "Get Rollback Actions",
+  getDataProtectionRisk: "Get Data Protection Risk",
+  getUsers: "Get Users",
+  getLastBackupStatus: "Get Last Backup Status",
+  getAlerts: "Get Alerts",
+  getGlobalReport: "Get Global Report",
+  getItemizedConsumption: "Get Itemized Consumption",
+  getItemizedQuota: "Get Itemized Quota",
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function buildUnifiedSchema(
+  resource: string,
+  operations: string[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): z.ZodObject<any> {
+  if (operations.length === 0) {
+    return z.object({
+      operation: z.string().describe("Operation to perform"),
+    });
+  }
+
+  const operationEnum = z
+    .enum(operations as [string, ...string[]])
+    .describe(
+      `Operation to perform. Allowed: ${operations.map((op) => `'${op}' (${OPERATION_LABELS[op] ?? op})`).join(", ")}.`,
+    );
+
+  // Collect field schemas and track which operations use each field
+  const fieldSources = new Map<string, z.ZodTypeAny>();
+  const fieldOps = new Map<string, Set<string>>();
+
+  for (const operation of operations) {
+    const schema = getSchema(resource, operation);
+    const shape = schema.shape as Record<string, z.ZodTypeAny>;
+    for (const [field, fieldSchema] of Object.entries(shape)) {
+      if (!fieldSources.has(field)) fieldSources.set(field, fieldSchema);
+      if (!fieldOps.has(field)) fieldOps.set(field, new Set<string>());
+      fieldOps.get(field)?.add(operation);
+    }
+  }
+
+  // Build merged shape: operation enum (required) + all fields (optional)
+  const mergedShape: Record<string, z.ZodTypeAny> = {
+    operation: operationEnum,
+  };
+
+  for (const [field, fieldSchema] of fieldSources.entries()) {
+    const opsForField = Array.from(fieldOps.get(field) ?? []);
+    const baseDescription = fieldSchema.description ?? "";
+    const opsDescription = `Used by: ${opsForField.map((op) => OPERATION_LABELS[op] ?? op).join(", ")}.`;
+    const description = baseDescription
+      ? `${baseDescription} ${opsDescription}`
+      : opsDescription;
+    mergedShape[field] = fieldSchema.optional().describe(description);
+  }
+
+  return z.object(mergedShape);
 }

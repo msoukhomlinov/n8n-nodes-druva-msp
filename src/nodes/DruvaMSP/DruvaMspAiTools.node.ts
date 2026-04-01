@@ -9,78 +9,13 @@ import type {
   ISupplyDataFunctions,
   SupplyData,
 } from "n8n-workflow";
-import { DynamicStructuredTool } from "@langchain/core/tools";
+import type { DynamicStructuredTool } from "@langchain/core/tools";
 
+import { RuntimeDynamicStructuredTool, runtimeZod } from "./ai-tools/runtime";
+import { getRuntimeSchemaBuilders } from "./ai-tools/schema-converter";
 import { executeDruvaMspAiTool } from "./ai-tools/tool-executor";
-import { getSchema } from "./ai-tools/schema-generator";
-import {
-  buildCustomerGetDescription,
-  buildCustomerGetManyDescription,
-  buildCustomerCreateDescription,
-  buildCustomerUpdateDescription,
-  buildCustomerGetTokenDescription,
-  buildTenantGetDescription,
-  buildTenantGetManyDescription,
-  buildTenantSuspendDescription,
-  buildTenantUnsuspendDescription,
-  buildAdminGetManyDescription,
-  buildEventGetManyMspEventsDescription,
-  buildEventGetManyCustomerEventsDescription,
-  buildTaskGetDescription,
-  buildServicePlanGetDescription,
-  buildServicePlanGetManyDescription,
-  buildStorageRegionGetManyDescription,
-  buildReportUsageGetGlobalReportDescription,
-  buildReportUsageGetItemizedConsumptionDescription,
-  buildReportUsageGetItemizedQuotaDescription,
-  buildReportCyberGetRollbackActionsDescription,
-  buildReportCyberGetDataProtectionRiskDescription,
-  buildReportEndpointGetUsersDescription,
-  buildReportEndpointGetLastBackupStatusDescription,
-  buildReportEndpointGetAlertsDescription,
-} from "./ai-tools/description-builders";
-
-// ---------------------------------------------------------------------------
-// Toolkit compatibility — n8n 2.9+ vs older n8n
-//
-// n8n >= 2.9  exports StructuredToolkit from n8n-core.
-// Older n8n   uses Toolkit from @langchain/classic/agents.
-//
-// The AI Agent checks `toolOrToolkit instanceof <ToolkitBase>` to flatten tools.
-// We MUST extend the EXACT same constructor n8n loaded, so instanceof passes.
-// Probe n8n-core first; fall back to classic if StructuredToolkit is absent.
-// ---------------------------------------------------------------------------
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let LangChainToolkitBase: new (...args: any[]) => {
-  tools?: DynamicStructuredTool[];
-  getTools?(): DynamicStructuredTool[];
-};
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-  const nCore = require("n8n-core") as Record<string, unknown>;
-  const StructuredToolkit = nCore["StructuredToolkit"];
-  if (typeof StructuredToolkit !== "function") throw new Error("not found");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  LangChainToolkitBase = StructuredToolkit as any;
-} catch {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-  ({ Toolkit: LangChainToolkitBase } = require("@langchain/classic/agents") as {
-    Toolkit: typeof LangChainToolkitBase;
-  });
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-class DruvaMspToolkit extends (LangChainToolkitBase as any) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  declare tools: any[];
-  constructor(toolList: DynamicStructuredTool[]) {
-    super();
-    this.tools = toolList;
-  }
-  getTools(): DynamicStructuredTool[] {
-    return this.tools as DynamicStructuredTool[];
-  }
-}
+import { buildUnifiedDescription } from "./ai-tools/description-builders";
+import { wrapError, ERROR_TYPES } from "./ai-tools/error-formatter";
 
 // ---------------------------------------------------------------------------
 // Resource → operations map
@@ -125,109 +60,18 @@ const RESOURCE_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Description resolver
+// Runtime schema builders — resolved once at module level
 // ---------------------------------------------------------------------------
 
-function buildToolDescription(
-  resource: string,
-  operation: string,
-  referenceUtc: string,
-): string {
-  switch (resource) {
-    case "customer":
-      switch (operation) {
-        case "get":
-          return buildCustomerGetDescription();
-        case "getMany":
-          return buildCustomerGetManyDescription();
-        case "create":
-          return buildCustomerCreateDescription();
-        case "update":
-          return buildCustomerUpdateDescription();
-        case "getToken":
-          return buildCustomerGetTokenDescription();
-      }
-      break;
-    case "tenant":
-      switch (operation) {
-        case "get":
-          return buildTenantGetDescription();
-        case "getMany":
-          return buildTenantGetManyDescription();
-        case "suspend":
-          return buildTenantSuspendDescription();
-        case "unsuspend":
-          return buildTenantUnsuspendDescription();
-      }
-      break;
-    case "admin":
-      if (operation === "getMany") return buildAdminGetManyDescription();
-      break;
-    case "event":
-      switch (operation) {
-        case "getManyMspEvents":
-          return buildEventGetManyMspEventsDescription(referenceUtc);
-        case "getManyCustomerEvents":
-          return buildEventGetManyCustomerEventsDescription(referenceUtc);
-      }
-      break;
-    case "task":
-      if (operation === "get") return buildTaskGetDescription();
-      break;
-    case "servicePlan":
-      switch (operation) {
-        case "get":
-          return buildServicePlanGetDescription();
-        case "getMany":
-          return buildServicePlanGetManyDescription();
-      }
-      break;
-    case "storageRegion":
-      if (operation === "getMany")
-        return buildStorageRegionGetManyDescription();
-      break;
-    case "reportUsage":
-      switch (operation) {
-        case "getGlobalReport":
-          return buildReportUsageGetGlobalReportDescription(referenceUtc);
-        case "getItemizedConsumption":
-          return buildReportUsageGetItemizedConsumptionDescription(
-            referenceUtc,
-          );
-        case "getItemizedQuota":
-          return buildReportUsageGetItemizedQuotaDescription(referenceUtc);
-      }
-      break;
-    case "reportCyber":
-      switch (operation) {
-        case "getRollbackActions":
-          return buildReportCyberGetRollbackActionsDescription(referenceUtc);
-        case "getDataProtectionRisk":
-          return buildReportCyberGetDataProtectionRiskDescription(referenceUtc);
-      }
-      break;
-    case "reportEndpoint":
-      switch (operation) {
-        case "getUsers":
-          return buildReportEndpointGetUsersDescription(referenceUtc);
-        case "getLastBackupStatus":
-          return buildReportEndpointGetLastBackupStatusDescription();
-        case "getAlerts":
-          return buildReportEndpointGetAlertsDescription(referenceUtc);
-      }
-      break;
-  }
-  return `Perform ${operation} on ${resource}.`;
-}
+const runtimeSchemas = getRuntimeSchemaBuilders(runtimeZod);
 
 // ---------------------------------------------------------------------------
-// Tool name helper
+// Tool name helper — unified: one tool per resource, no operation suffix
 // ---------------------------------------------------------------------------
 
-function toolName(resource: string, operation: string): string {
-  // Use getById suffix for bare 'get' — signals to LLM that an ID is required
-  const suffix = operation === "get" ? "getById" : operation;
-  return `druva_msp_${resource}_${suffix}`;
+function toolName(resource: string): string {
+  // Complies with MCP regex: ^[a-zA-Z0-9_-]{1,128}$
+  return `druva_msp_${resource}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +86,7 @@ export class DruvaMspAiTools implements INodeType {
     group: ["output"],
     version: 1,
     description:
-      "Expose Druva MSP operations as individual AI tools for use with the AI Agent node",
+      "Expose Druva MSP operations as AI tools for use with the AI Agent node",
     defaults: { name: "Druva MSP AI Tools" },
     inputs: [],
     outputs: [{ type: "ai_tool" as NodeConnectionType, displayName: "Tools" }],
@@ -267,7 +111,7 @@ export class DruvaMspAiTools implements INodeType {
           { name: "Tenant", value: "tenant" },
         ],
         default: "customer",
-        description: "The Druva MSP resource to expose as AI tools",
+        description: "The Druva MSP resource to expose as an AI tool",
       },
       {
         displayName: "Allow Write Operations",
@@ -303,70 +147,94 @@ export class DruvaMspAiTools implements INodeType {
       );
     }
 
-    const referenceUtc = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const supplyDataContext = this;
-    const tools: DynamicStructuredTool[] = [];
+    // Layer 1: filter write operations based on toggle
+    const enabledOps = operations.filter(
+      (op) => allowWriteOperations || !WRITE_OPERATIONS.has(op),
+    );
 
-    for (const operation of operations) {
-      if (WRITE_OPERATIONS.has(operation) && !allowWriteOperations) continue;
-
-      const name = toolName(resource, operation);
-      const description = buildToolDescription(
-        resource,
-        operation,
-        referenceUtc,
-      );
-      const schema = getSchema(resource, operation);
-
-      tools.push(
-        new DynamicStructuredTool({
-          name,
-          description,
-          // Pass raw Zod — do NOT pre-convert. n8n/LangChain handles schema→JSON conversion
-          // internally. func() is never called by n8n's AI Agent dispatch path.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          schema: schema as any,
-          func: async (params: Record<string, unknown>) => {
-            return executeDruvaMspAiTool(
-              supplyDataContext as unknown as IExecuteFunctions,
-              resource,
-              operation,
-              params,
-            );
-          },
-        }),
-      );
-    }
-
-    if (tools.length === 0) {
+    if (enabledOps.length === 0) {
       throw new NodeOperationError(
         this.getNode(),
-        `No tools to expose for resource "${RESOURCE_LABELS[resource] ?? resource}". ` +
+        `No operations to expose for resource "${RESOURCE_LABELS[resource] ?? resource}". ` +
           'Enable "Allow Write Operations" to include mutating operations.',
       );
     }
 
-    const toolkit = new DruvaMspToolkit(tools);
-    return { response: toolkit };
+    const referenceUtc = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const supplyDataContext = this;
+
+    const name = toolName(resource);
+    const description = buildUnifiedDescription(
+      resource,
+      enabledOps,
+      referenceUtc,
+    );
+    const schema = runtimeSchemas.buildUnifiedSchema(resource, enabledOps);
+
+    const unifiedTool = new RuntimeDynamicStructuredTool({
+      name,
+      description,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      schema: schema as any,
+      func: async (params: Record<string, unknown>) => {
+        const operation = params.operation as string;
+
+        // Layer 2: validate operation + write-safety re-check in func()
+        if (!enabledOps.includes(operation)) {
+          if (WRITE_OPERATIONS.has(operation) && !allowWriteOperations) {
+            return JSON.stringify(
+              wrapError(
+                resource,
+                operation,
+                ERROR_TYPES.WRITE_OPERATION_BLOCKED,
+                `Write operation "${operation}" is disabled.`,
+                'Enable "Allow Write Operations" on this node to use mutating operations.',
+              ),
+            );
+          }
+          return JSON.stringify(
+            wrapError(
+              resource,
+              operation,
+              ERROR_TYPES.INVALID_OPERATION,
+              `Invalid operation "${operation}" for resource "${resource}".`,
+              `Valid operations: ${enabledOps.join(", ")}.`,
+            ),
+          );
+        }
+
+        // Strip operation from params before passing to executor
+        // (executor's N8N_METADATA_FIELDS also strips it as defense-in-depth)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { operation: _op, ...apiParams } = params;
+        return executeDruvaMspAiTool(
+          supplyDataContext as unknown as IExecuteFunctions,
+          resource,
+          operation,
+          apiParams,
+        );
+      },
+    });
+
+    return { response: unifiedTool as unknown as DynamicStructuredTool };
   }
 
   /**
    * execute() is called by n8n for BOTH "Test step" clicks AND real AI Agent tool invocations.
    *
-   * CRITICAL: n8n's AI Agent routes tool calls through execute(), NOT DynamicStructuredTool.func().
-   * supplyData() + getTools() only provide tool definitions (names, schemas, descriptions) to the LLM.
-   * When the LLM calls a tool, n8n dispatches via execute() with LLM-provided params merged into
-   * the input item JSON alongside n8n metadata fields (tool, toolCallId, sessionId, etc).
-   *
-   * Detect real calls by checking for the 'tool' field. Absent = "Test step", return stub.
+   * n8n 2.14+ CHANGE: tool invocations arrive with params in item.json (including 'operation')
+   * but WITHOUT a 'tool' field. Detect tool calls by checking for 'operation' (2.14+) OR
+   * 'tool' (pre-2.14). If neither is present, it's a "Test step" click.
    */
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
-    const firstItemTool = items[0]?.json?.["tool"] as string | undefined;
+    const firstItem = items[0]?.json ?? {};
+    const firstItemTool = firstItem["tool"] as string | undefined;
+    const firstItemOperation = firstItem["operation"] as string | undefined;
 
-    // No 'tool' field → "Test step" click, not a real AI Agent tool invocation
-    if (!firstItemTool) {
+    // Neither 'tool' nor 'operation' → "Test step" click
+    if (!firstItemTool && !firstItemOperation) {
       const resource = this.getNodeParameter("resource", 0, "") as string;
       const allowWriteOperations = this.getNodeParameter(
         "allowWriteOperations",
@@ -384,7 +252,8 @@ export class DruvaMspAiTools implements INodeType {
                 "This is an AI Tool node. Connect it to an AI Agent node to use it.",
               configured: {
                 resource,
-                exposedTools: ops.map((op) => toolName(resource, op)),
+                tool: toolName(resource),
+                operations: ops,
               },
             } as IDataObject,
             pairedItem: { item: 0 },
@@ -393,25 +262,38 @@ export class DruvaMspAiTools implements INodeType {
       ];
     }
 
-    // Real AI Agent tool call — resolve resource + operation from tool name
-    let resource = "";
+    // Resolve resource + operation
+    const resource = this.getNodeParameter("resource", 0, "") as string;
     let operation = "";
-    outer: for (const [res, ops] of Object.entries(RESOURCE_OPERATIONS)) {
-      for (const op of ops) {
-        if (firstItemTool === toolName(res, op)) {
-          resource = res;
-          operation = op;
-          break outer;
-        }
-      }
-    }
 
-    if (!resource || !operation) {
+    if (firstItemOperation) {
+      // n8n 2.14+ path (or unified tool func path): operation directly in item.json
+      const ops = RESOURCE_OPERATIONS[resource];
+      if (ops?.includes(firstItemOperation)) {
+        operation = firstItemOperation;
+      } else {
+        // Operation provided but not recognized — return clear error
+        return [
+          [
+            {
+              json: {
+                error: `Invalid operation "${firstItemOperation}" for resource "${resource}". Valid operations: ${(ops ?? []).join(", ")}`,
+              } as IDataObject,
+              pairedItem: { item: 0 },
+            },
+          ],
+        ];
+      }
+    } else if (firstItemTool) {
+      // Pre-2.14: unified architecture requires 'operation' in item.json.
+      // Pre-2.14 n8n does not inject it, so this path cannot recover.
       return [
         [
           {
             json: {
-              error: `Unknown tool: ${firstItemTool}`,
+              error:
+                `Tool "${firstItemTool}" invoked without an "operation" field. ` +
+                "This node requires n8n 2.14+ which includes the operation in tool call params.",
             } as IDataObject,
             pairedItem: { item: 0 },
           },
@@ -419,9 +301,51 @@ export class DruvaMspAiTools implements INodeType {
       ];
     }
 
+    if (!resource || !operation) {
+      return [
+        [
+          {
+            json: {
+              error: `Could not resolve resource or operation: resource=${resource || "none"}, operation=${firstItemOperation ?? "none"}`,
+            } as IDataObject,
+            pairedItem: { item: 0 },
+          },
+        ],
+      ];
+    }
+
+    // Layer 3: write safety re-check in execute() path
+    const allowWriteOperations = this.getNodeParameter(
+      "allowWriteOperations",
+      0,
+      false,
+    ) as boolean;
+
     const returnData: INodeExecutionData[] = [];
     for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-      const rawParams = items[itemIndex].json as Record<string, unknown>;
+      // Write-block guard
+      if (WRITE_OPERATIONS.has(operation) && !allowWriteOperations) {
+        returnData.push({
+          json: JSON.parse(
+            JSON.stringify(
+              wrapError(
+                resource,
+                operation,
+                ERROR_TYPES.WRITE_OPERATION_BLOCKED,
+                `Write operation "${operation}" is disabled.`,
+                'Enable "Allow Write Operations" on this node.',
+              ),
+            ),
+          ) as IDataObject,
+          pairedItem: { item: itemIndex },
+        });
+        continue;
+      }
+
+      // Strip operation from params before passing to executor
+      const rawParams = { ...items[itemIndex].json } as Record<string, unknown>;
+      delete rawParams.operation;
+
       try {
         const resultStr = await executeDruvaMspAiTool(
           this,

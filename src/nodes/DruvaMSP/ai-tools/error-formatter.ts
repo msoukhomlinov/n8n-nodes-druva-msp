@@ -1,21 +1,75 @@
-export interface StructuredToolError {
-  error: true;
-  errorType: string;
-  message: string;
+// ---------------------------------------------------------------------------
+// Envelope standard — unified response format for all AI tool responses
+// ---------------------------------------------------------------------------
+
+interface ToolEnvelope {
+  schemaVersion: string;
+  success: boolean;
   operation: string;
-  nextAction: string;
-  context?: Record<string, unknown>;
+  resource: string;
 }
 
-function buildOperation(resource: string, operation: string): string {
-  return `${resource}.${operation}`;
+export interface SuccessEnvelope extends ToolEnvelope {
+  success: true;
+  result: unknown;
 }
+
+export interface ErrorEnvelope extends ToolEnvelope {
+  success: false;
+  error: {
+    errorType: string;
+    message: string;
+    nextAction: string;
+    context?: Record<string, unknown>;
+  };
+}
+
+export const ERROR_TYPES = {
+  API_ERROR: "API_ERROR",
+  ENTITY_NOT_FOUND: "ENTITY_NOT_FOUND",
+  NO_RESULTS_FOUND: "NO_RESULTS_FOUND",
+  MISSING_REQUIRED_FIELD: "MISSING_REQUIRED_FIELD",
+  MISSING_ENTITY_ID: "MISSING_ENTITY_ID",
+  INVALID_OPERATION: "INVALID_OPERATION",
+  WRITE_OPERATION_BLOCKED: "WRITE_OPERATION_BLOCKED",
+  PERMISSION_DENIED: "PERMISSION_DENIED",
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+} as const;
+
+export function wrapSuccess(
+  resource: string,
+  operation: string,
+  result: unknown,
+): SuccessEnvelope {
+  return { schemaVersion: "1", success: true, operation, resource, result };
+}
+
+export function wrapError(
+  resource: string,
+  operation: string,
+  errorType: string,
+  message: string,
+  nextAction: string,
+  context?: Record<string, unknown>,
+): ErrorEnvelope {
+  return {
+    schemaVersion: "1",
+    success: false,
+    operation,
+    resource,
+    error: { errorType, message, nextAction, ...(context ? { context } : {}) },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Thin wrappers — preserve call-site ergonomics, delegate to wrapError()
+// ---------------------------------------------------------------------------
 
 export function formatApiError(
   message: string,
   resource: string,
   operation: string,
-): StructuredToolError {
+): ErrorEnvelope {
   const lower = message.toLowerCase();
 
   if (
@@ -23,74 +77,101 @@ export function formatApiError(
     lower.includes("unauthor") ||
     lower.includes("permission")
   ) {
-    return {
-      error: true,
-      errorType: "PERMISSION_DENIED",
+    return wrapError(
+      resource,
+      operation,
+      ERROR_TYPES.PERMISSION_DENIED,
       message,
-      operation: buildOperation(resource, operation),
-      nextAction: "Verify API credentials and permissions, then retry.",
-    };
+      "Verify API credentials and permissions, then retry.",
+    );
   }
   if (
     lower.includes("not found") ||
     lower.includes("does not exist") ||
     lower.includes("404")
   ) {
-    return {
-      error: true,
-      errorType: "ENTITY_NOT_FOUND",
+    return wrapError(
+      resource,
+      operation,
+      ERROR_TYPES.ENTITY_NOT_FOUND,
       message,
-      operation: buildOperation(resource, operation),
-      nextAction: `Call druva_msp_${resource}_getMany with name or ID filters to find the record, extract its ID, then retry.`,
-    };
+      `Call druva_msp_${resource} with operation 'getMany' and name or ID filters to find the record, extract its ID, then retry.`,
+    );
   }
   if (
     lower.includes("required") ||
     lower.includes("missing") ||
     lower.includes("blank")
   ) {
-    return {
-      error: true,
-      errorType: "MISSING_REQUIRED_FIELDS",
+    return wrapError(
+      resource,
+      operation,
+      ERROR_TYPES.MISSING_REQUIRED_FIELD,
       message,
-      operation: buildOperation(resource, operation),
-      nextAction:
-        "Check required fields for this operation and retry with all required parameters.",
-    };
+      "Check required fields for this resource and retry with all required parameters.",
+    );
   }
   if (
     lower.includes("validation") ||
     lower.includes("invalid") ||
     lower.includes("unprocessable")
   ) {
-    return {
-      error: true,
-      errorType: "VALIDATION_ERROR",
+    return wrapError(
+      resource,
+      operation,
+      ERROR_TYPES.VALIDATION_ERROR,
       message,
-      operation: buildOperation(resource, operation),
-      nextAction:
-        "Check field values and types, then retry with corrected parameters.",
-    };
+      "Check field values and types, then retry with corrected parameters.",
+    );
   }
 
-  return {
-    error: true,
-    errorType: "API_ERROR",
+  return wrapError(
+    resource,
+    operation,
+    ERROR_TYPES.API_ERROR,
     message,
-    operation: buildOperation(resource, operation),
-    nextAction: "Verify parameter names and values, then retry.",
-  };
+    "Verify parameter names and values, then retry.",
+  );
 }
 
 export function formatMissingIdError(
   resource: string,
   operation: string,
-): StructuredToolError {
-  return {
-    error: true,
-    errorType: "MISSING_ENTITY_ID",
-    message: `An entity ID is required for ${buildOperation(resource, operation)}.`,
-    operation: buildOperation(resource, operation),
-    nextAction: `Call druva_msp_${resource}_getMany with name or status filters to find the record and get its ID, then retry.`,
-  };
+): ErrorEnvelope {
+  return wrapError(
+    resource,
+    operation,
+    ERROR_TYPES.MISSING_ENTITY_ID,
+    `An entity ID is required for ${resource}.${operation}.`,
+    `Call druva_msp_${resource} with operation 'getMany' and name or status filters to find the record and get its ID, then retry.`,
+  );
+}
+
+export function formatNotFoundError(
+  resource: string,
+  operation: string,
+  entityId: string | number,
+): ErrorEnvelope {
+  return wrapError(
+    resource,
+    operation,
+    ERROR_TYPES.ENTITY_NOT_FOUND,
+    `No ${resource} record found with ID ${entityId}.`,
+    `Call druva_msp_${resource} with operation 'getMany' and name or status filters to find the correct record, then use the ID from results.`,
+  );
+}
+
+export function formatNoResultsFound(
+  resource: string,
+  operation: string,
+  filters: Record<string, unknown>,
+): ErrorEnvelope {
+  return wrapError(
+    resource,
+    operation,
+    ERROR_TYPES.NO_RESULTS_FOUND,
+    `No ${resource} records matched the provided filters.`,
+    "Broaden your search criteria, check for typos, or verify the record exists.",
+    { filtersUsed: filters },
+  );
 }
