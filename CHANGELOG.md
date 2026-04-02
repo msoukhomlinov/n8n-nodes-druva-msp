@@ -3,6 +3,12 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.5.1] - 2026-04-02
+
+### Fixed
+
+- **DruvaMspAiTools — strip `Prompt__*` framework fields on execute() path**: n8n Agent Tool Node v3 injects keys like `Prompt__User_Message_` into `item.json` on the `execute()` path (unlike `supplyData()` where Zod strips unknown keys). These leaked into field validation causing `INVALID_WRITE_FIELDS` errors on write operations. Added `N8N_METADATA_PREFIXES` to strip all keys matching the `Prompt__` prefix alongside the existing exact-match set.
+
 ## [1.5.0] - 2026-04-02
 
 ### Changed

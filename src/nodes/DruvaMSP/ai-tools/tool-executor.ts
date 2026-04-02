@@ -30,6 +30,10 @@ const N8N_METADATA_FIELDS = new Set([
   "operation", // n8n 2.14+ injects operation into item.json — must strip to prevent API body leaks
 ]);
 
+// n8n Agent Tool Node v3 injects keys with these prefixes (e.g. Prompt__User_Message_)
+// into item.json on the execute() path. Strip them to prevent INVALID_WRITE_FIELDS errors.
+const N8N_METADATA_PREFIXES = ["Prompt__"];
+
 // ---------------------------------------------------------------------------
 // Report API helpers
 // ---------------------------------------------------------------------------
@@ -178,10 +182,12 @@ export async function executeDruvaMspAiTool(
   operation: string,
   rawParams: Record<string, unknown>,
 ): Promise<string> {
-  // Strip n8n framework metadata
+  // Strip n8n framework metadata (exact keys + prefix-matched keys like Prompt__*)
   const params: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(rawParams)) {
-    if (!N8N_METADATA_FIELDS.has(key)) params[key] = value;
+    if (N8N_METADATA_FIELDS.has(key)) continue;
+    if (N8N_METADATA_PREFIXES.some((p) => key.startsWith(p))) continue;
+    params[key] = value;
   }
 
   try {
