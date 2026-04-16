@@ -20,12 +20,25 @@ The Druva MSP integration provides access to the following resources:
   - Generate customer-specific access tokens for API operations
   - List and filter customers; includes computed `isDruvaProvisioned` field
 
+- **Alert Summary**
+  - Aggregate alerts from Endpoints, Enterprise Workloads, Microsoft 365, and Google Workspace into a single normalised feed
+  - All alerts normalised to a unified schema: `workload`, `entity`, `alertDetails`, `severity`, `timestamp`, `isActive`
+  - Parallel fetch across all selected workloads; sorted by timestamp descending
+  - Filter by workload, date range, and specific customers; supports return-all or limit
+
+- **Backup Health Summary**
+  - Aggregate endpoint last-backup-status into per-customer health summaries
+  - Reports device counts by status (completed / failed / not-started / in-progress), success rate, and failure rate
+  - Configurable `criticalThresholdPercent` determines `healthy` / `warning` / `critical` classification
+  - Results sorted critical → warning → healthy; filter output by `returnLevel` (all / unhealthy only / critical only)
+
 - **Consumption Billing Analyzer**
   - Process consumption data with custom calculation methods for billing purposes
   - Apply configurable rounding and byte-value conversion
   - Returns a fully flattened data structure for easy processing in n8n workflows
   - Filter by specific customers, date ranges, and service plans
   - Optional auto-generated deterministic key for database storage
+  - **Compare consumption against quota** (`analyzeConsumptionWithQuota`): fetches consumption and quota in parallel, joins by customer/product/feature, and appends `quotaAllocated`, `isOverQuota`, `overageAmount`, and `headroomPercent` to each row; optional `showOnlyOverages` filter
 
 - **Event Monitoring**
   - Access MSP-level and customer-level events with client-side date filtering
