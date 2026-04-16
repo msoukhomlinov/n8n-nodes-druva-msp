@@ -90,6 +90,13 @@ import {
 } from "./AlertSummary.node.options";
 import { executeAlertSummaryOperation } from "./AlertSummary.node.execute";
 
+// Import Backup Health Summary resource
+import {
+  backupHealthSummaryOperations,
+  backupHealthSummaryFields,
+} from "./BackupHealthSummary.node.options";
+import { executeBackupHealthSummaryOperation } from "./BackupHealthSummary.node.execute";
+
 // Import central logger
 import { logger } from "./helpers/LoggerHelper";
 import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
@@ -169,6 +176,10 @@ export class DruvaMsp implements INodeType {
             value: "alertSummary",
           },
           {
+            name: "Backup Health Summary",
+            value: "backupHealthSummary",
+          },
+          {
             name: "Consumption Billing Analyzer",
             value: "consumptionBillingAnalyzer",
           },
@@ -220,6 +231,7 @@ export class DruvaMsp implements INodeType {
       // Operations for each resource
       ...adminOperations,
       ...alertSummaryOperations,
+      ...backupHealthSummaryOperations,
       ...consumptionBillingAnalyzerOperations,
       ...customerOperations,
       ...tenantOperations,
@@ -235,6 +247,7 @@ export class DruvaMsp implements INodeType {
       // Fields for each resource/operation
       ...adminFields,
       ...alertSummaryFields,
+      ...backupHealthSummaryFields,
       ...consumptionBillingAnalyzerFields,
       ...customerFields,
       ...tenantFields,
@@ -627,8 +640,9 @@ export class DruvaMsp implements INodeType {
       task: (index) => executeTaskOperation.call(this, index),
       event: (index) => executeEventOperation.call(this, index),
       admin: (index) => executeAdminOperation.call(this, index),
-      alertSummary: (index) =>
-        executeAlertSummaryOperation.call(this, index),
+      alertSummary: (index) => executeAlertSummaryOperation.call(this, index),
+      backupHealthSummary: (index) =>
+        executeBackupHealthSummaryOperation.call(this, index),
       reportUsage: (index) => executeReportUsageOperation.call(this, index),
       reportCyber: (index) => executeReportCyberOperation.call(this, index),
       reportEndpoint: (index) =>
