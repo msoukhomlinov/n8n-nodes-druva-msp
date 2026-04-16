@@ -83,6 +83,13 @@ import {
 } from "./StorageRegion.node.options";
 import { executeStorageRegionOperation } from "./StorageRegion.node.execute";
 
+// Import Alert Summary resource
+import {
+  alertSummaryOperations,
+  alertSummaryFields,
+} from "./AlertSummary.node.options";
+import { executeAlertSummaryOperation } from "./AlertSummary.node.execute";
+
 // Import central logger
 import { logger } from "./helpers/LoggerHelper";
 import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
@@ -158,6 +165,10 @@ export class DruvaMsp implements INodeType {
             value: "admin",
           },
           {
+            name: "Alert Summary",
+            value: "alertSummary",
+          },
+          {
             name: "Consumption Billing Analyzer",
             value: "consumptionBillingAnalyzer",
           },
@@ -208,6 +219,7 @@ export class DruvaMsp implements INodeType {
 
       // Operations for each resource
       ...adminOperations,
+      ...alertSummaryOperations,
       ...consumptionBillingAnalyzerOperations,
       ...customerOperations,
       ...tenantOperations,
@@ -222,6 +234,7 @@ export class DruvaMsp implements INodeType {
 
       // Fields for each resource/operation
       ...adminFields,
+      ...alertSummaryFields,
       ...consumptionBillingAnalyzerFields,
       ...customerFields,
       ...tenantFields,
@@ -614,6 +627,8 @@ export class DruvaMsp implements INodeType {
       task: (index) => executeTaskOperation.call(this, index),
       event: (index) => executeEventOperation.call(this, index),
       admin: (index) => executeAdminOperation.call(this, index),
+      alertSummary: (index) =>
+        executeAlertSummaryOperation.call(this, index),
       reportUsage: (index) => executeReportUsageOperation.call(this, index),
       reportCyber: (index) => executeReportCyberOperation.call(this, index),
       reportEndpoint: (index) =>
