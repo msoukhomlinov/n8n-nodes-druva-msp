@@ -51,6 +51,7 @@ coverage/
 /.cursor*
 /docs
 /scripts
+/tests
 /CLAUDE.md
 /AGENT.md
 /.agent*
