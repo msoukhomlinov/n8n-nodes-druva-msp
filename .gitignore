@@ -50,6 +50,8 @@ coverage/
 /.cursor-rules
 /.cursor*
 /docs
+/scripts
 /CLAUDE.md
 /AGENT.md
 /.agent*
+docs/api-sync-report-*.md
