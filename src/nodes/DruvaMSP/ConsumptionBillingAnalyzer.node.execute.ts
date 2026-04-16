@@ -834,6 +834,101 @@ function flattenConsumptionData(
 }
 
 /**
+ * Builds a lookup map from quota records: key = "customerGlobalId|productId|featureName"
+ * @param quotaData Raw quota records from quotaItemized API
+ * @returns Map keyed by "customerGlobalId|productId|featureName"
+ */
+export function buildQuotaLookup(
+  quotaData: IDataObject[],
+): Map<string, IDataObject> {
+  const map = new Map<string, IDataObject>();
+  for (const record of quotaData) {
+    // API may return customerGlobalId or customerId depending on version
+    const customerId =
+      (record.customerGlobalId as string) ||
+      (record.customerId as string) ||
+      (record.customerID as string);
+    const productId = record.productId ?? record.productID;
+    const featureName = record.featureName as string;
+
+    if (!customerId || productId == null || !featureName) continue;
+
+    const key = `${customerId}|${productId}|${featureName}`;
+    map.set(key, record);
+  }
+  return map;
+}
+
+/**
+ * Joins flattened consumption records with quota data, appending overage fields.
+ * @param consumptionRows Flattened consumption records (output of flattenConsumptionData)
+ * @param quotaMap Lookup built by buildQuotaLookup
+ * @param showOnlyOverages When true, returns only rows where isOverQuota === true
+ * @returns Enriched records with quota fields appended
+ */
+export function joinConsumptionWithQuota(
+  consumptionRows: IDataObject[],
+  quotaMap: Map<string, IDataObject>,
+  showOnlyOverages: boolean,
+): IDataObject[] {
+  const result: IDataObject[] = [];
+
+  for (const row of consumptionRows) {
+    const customerId =
+      (row.customerGlobalId as string) || (row.customerId as string);
+    const productId = row.productId ?? row.productID;
+    // productModuleName in consumption corresponds to featureName in quota
+    const featureName =
+      (row.productModuleName as string) || (row.featureName as string);
+
+    const key = `${customerId}|${productId}|${featureName}`;
+    const quota = quotaMap.get(key);
+
+    let enriched: IDataObject;
+
+    if (!quota) {
+      enriched = {
+        ...row,
+        quotaAllocated: null,
+        quotaConsumed: null,
+        quotaConsumedPercentage: null,
+        quotaEffectiveDate: null,
+        quotaEndDate: null,
+        overageAmount: null,
+        isOverQuota: null,
+        headroomPercent: null,
+      };
+    } else {
+      const allocated = Number(quota.quotaAllocated ?? 0);
+      const consumed = Number(quota.quotaConsumed ?? 0);
+      const isOverQuota = consumed > allocated;
+      const overageAmount = isOverQuota ? consumed - allocated : 0;
+      const headroomPercent =
+        allocated > 0
+          ? Math.max(0, ((allocated - consumed) / allocated) * 100)
+          : 0;
+
+      enriched = {
+        ...row,
+        quotaAllocated: allocated,
+        quotaConsumed: consumed,
+        quotaConsumedPercentage: Number(quota.quotaConsumedPercentage ?? 0),
+        quotaEffectiveDate: quota.quotaEffectiveDate ?? null,
+        quotaEndDate: quota.quotaEndDate ?? null,
+        overageAmount,
+        isOverQuota,
+        headroomPercent: Math.round(headroomPercent * 100) / 100,
+      };
+    }
+
+    if (showOnlyOverages && enriched.isOverQuota !== true) continue;
+    result.push(enriched);
+  }
+
+  return result;
+}
+
+/**
  * Executes the Consumption Billing Analyzer operation.
  * @param this The context object.
  * @param i The index of the current item.
@@ -1066,6 +1161,182 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       // Return the flattened data
       responseData = this.helpers.returnJsonArray(flattenedData);
+    } else if (operation === "analyzeConsumptionWithQuota") {
+      // Resolve dates (same logic as analyzeConsumption)
+      const dateSelectionMethod = this.getNodeParameter(
+        "dateSelectionMethod",
+        i,
+        "relativeDates",
+      ) as string;
+      let startDate = "";
+      let endDate = "";
+
+      if (dateSelectionMethod === "specificDates") {
+        startDate = this.getNodeParameter("startDate", i, "") as string;
+        endDate = this.getNodeParameter("endDate", i, "") as string;
+      } else {
+        const relativeDateRange = this.getNodeParameter(
+          "relativeDateRange",
+          i,
+          "previousMonth1",
+        ) as string;
+        const dateRange = getRelativeDateRange(relativeDateRange);
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
+      }
+
+      // Calculation parameters
+      const calculationMethod = this.getNodeParameter(
+        "calculationMethod",
+        i,
+        "average",
+      ) as "average" | "highWaterMark";
+      const roundingDirection = this.getNodeParameter(
+        "roundingDirection",
+        i,
+        "up",
+      ) as "up" | "down";
+      const decimalPlaces = this.getNodeParameter(
+        "decimalPlaces",
+        i,
+        2,
+      ) as number;
+      const filterOutZeroUsage = this.getNodeParameter(
+        "filterOutZeroUsage",
+        i,
+        false,
+      ) as boolean;
+      const applyRounding = this.getNodeParameter(
+        "applyRounding",
+        i,
+        false,
+      ) as boolean;
+      const convertByteValues = this.getNodeParameter(
+        "convertByteValues",
+        i,
+        false,
+      ) as boolean;
+      const byteConversionUnit = this.getNodeParameter(
+        "byteConversionUnit",
+        i,
+        "TB",
+      ) as "GB" | "TB";
+      const addAutoGeneratedKey = this.getNodeParameter(
+        "addAutoGeneratedKey",
+        i,
+        false,
+      ) as boolean;
+      const keyFieldName = this.getNodeParameter(
+        "keyFieldName",
+        i,
+        "id",
+      ) as string;
+      const showOnlyOverages = this.getNodeParameter(
+        "showOnlyOverages",
+        i,
+        false,
+      ) as boolean;
+
+      // Build filterBy array
+      const filterBy: IReportFilter[] = [];
+      filterBy.push(...createDateRangeFilter(startDate, endDate));
+
+      const filterByCustomers = this.getNodeParameter(
+        "filterByCustomers",
+        i,
+        false,
+      ) as boolean;
+      let customerIds: string[] = [];
+      if (filterByCustomers) {
+        customerIds = this.getNodeParameter("customerIds", i, []) as string[];
+        if (customerIds.length > 0) {
+          filterBy.push(createCustomerFilter(customerIds));
+        }
+      }
+
+      const body: IDataObject = {
+        filters: createReportFilters(100, filterBy),
+      };
+
+      logger.info("ConsumptionQuota: Fetching consumption and quota data in parallel...");
+
+      // Fetch both in parallel
+      const [consumptionData, quotaData] = await Promise.all([
+        druvaMspApiRequestAllReportV2Items.call(
+          this,
+          "/msp/reporting/v2/reports/consumptionItemized",
+          body,
+          "data",
+        ) as Promise<IDataObject[]>,
+        druvaMspApiRequestAllReportV2Items.call(
+          this,
+          "/msp/reporting/v2/reports/quotaItemized",
+          body,
+          "data",
+        ) as Promise<IDataObject[]>,
+      ]);
+
+      logger.info(
+        `ConsumptionQuota: Retrieved ${consumptionData.length} consumption rows, ${quotaData.length} quota rows`,
+      );
+
+      if (!consumptionData.length) {
+        return this.helpers.returnJsonArray({
+          success: false,
+          message: "No consumption data found for the selected period and filters",
+        });
+      }
+
+      // Fetch customers for name enrichment (same as analyzeConsumption)
+      const customers = (await druvaMspApiRequestAllItems.call(
+        this,
+        "GET",
+        "/msp/v3/customers",
+        "customers",
+        {},
+        { pageSize: String(API_MAX_PAGE_SIZE) },
+      )) as IDataObject[];
+      const customerLookup = createCustomerLookup(customers);
+
+      // Process consumption the same way as analyzeConsumption
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+
+      const processedData = buildHierarchicalConsumptionData(
+        consumptionData,
+        customerLookup,
+        {
+          calculationMethod,
+          roundingDirection,
+          decimalPlaces,
+          filterOutZeroUsage,
+          applyRounding,
+          convertByteValues,
+          byteConversionUnit,
+        },
+        startDateObj,
+        endDateObj,
+      );
+
+      const flattenedData = flattenConsumptionData(
+        processedData,
+        addAutoGeneratedKey,
+        keyFieldName,
+      );
+
+      // Build quota lookup and join
+      const quotaMap = buildQuotaLookup(quotaData);
+      const enrichedData = joinConsumptionWithQuota(
+        flattenedData,
+        quotaMap,
+        showOnlyOverages,
+      );
+
+      logger.info(
+        `ConsumptionQuota: Returning ${enrichedData.length} enriched records`,
+      );
+
+      responseData = this.helpers.returnJsonArray(enrichedData);
     }
 
     return responseData;
