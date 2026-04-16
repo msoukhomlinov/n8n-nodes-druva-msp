@@ -21,6 +21,13 @@ export const consumptionBillingAnalyzerOperations: INodeProperties[] = [
         description:
           "Process consumption data with custom calculation methods for billing purposes",
       },
+      {
+        name: "Analyze Consumption with Quota Comparison",
+        value: "analyzeConsumptionWithQuota",
+        action: "Analyze consumption with quota comparison",
+        description:
+          "Compare consumption against quota allocation to identify overages and headroom per customer",
+      },
     ],
     default: "analyzeConsumption",
   },
@@ -50,7 +57,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
       },
     },
   },
@@ -62,7 +69,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         dateSelectionMethod: ["specificDates"],
       },
     },
@@ -77,7 +84,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         dateSelectionMethod: ["specificDates"],
       },
     },
@@ -91,7 +98,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         dateSelectionMethod: ["relativeDates"],
       },
     },
@@ -111,7 +118,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
       },
     },
     default: false,
@@ -127,7 +134,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         filterByCustomers: [true],
       },
     },
@@ -161,7 +168,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
       },
     },
   },
@@ -178,7 +185,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
       },
     },
   },
@@ -203,7 +210,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         applyRounding: [true],
       },
     },
@@ -223,7 +230,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         applyRounding: [true],
       },
     },
@@ -242,7 +249,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
       },
     },
   },
@@ -260,7 +267,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
       },
     },
   },
@@ -285,7 +292,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         convertByteValues: [true],
       },
     },
@@ -305,7 +312,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
       },
     },
   },
@@ -318,8 +325,26 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["consumptionBillingAnalyzer"],
-        operation: ["analyzeConsumption"],
+        operation: ["analyzeConsumption", "analyzeConsumptionWithQuota"],
         addAutoGeneratedKey: [true],
+      },
+    },
+  },
+
+  /* -------------------------------------------------------------------------- */
+  /*                        Quota Comparison Fields                             */
+  /* -------------------------------------------------------------------------- */
+  {
+    displayName: "Show Only Overages",
+    name: "showOnlyOverages",
+    type: "boolean",
+    default: false,
+    description:
+      "Whether to return only records where consumption exceeds quota allocation",
+    displayOptions: {
+      show: {
+        resource: ["consumptionBillingAnalyzer"],
+        operation: ["analyzeConsumptionWithQuota"],
       },
     },
   },
