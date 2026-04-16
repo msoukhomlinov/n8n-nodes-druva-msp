@@ -56,3 +56,4 @@ coverage/
 /AGENT.md
 /.agent*
 docs/api-sync-report-*.md
+.worktrees/
