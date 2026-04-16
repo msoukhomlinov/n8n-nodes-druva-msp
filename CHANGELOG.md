@@ -3,6 +3,16 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.6.0] - 2026-04-16
+
+### Added
+
+- **Consumption Billing Analyzer — `analyzeConsumptionWithQuota` operation**: new operation that fetches consumption and quota data in parallel, joins them by customer/product/feature, and appends overage fields (`quotaAllocated`, `quotaConsumed`, `quotaConsumedPercentage`, `isOverQuota`, `overageAmount`, `headroomPercent`) to each flattened consumption row. Supports all existing date, customer, and calculation options. Optional `showOnlyOverages` flag filters results to only customers exceeding their quota allocation.
+
+- **Alert Summary resource** (`alertSummary`): new resource with `getUnifiedAlerts` operation that aggregates alerts from four workloads (Endpoints via `mspEPAlert`, Enterprise Workloads via `mspEWAlertHistory`, Microsoft 365 via `mspM365Alerts`, Google Workspace via `mspGoogleAlerts`) in parallel. All alerts are normalised into a unified schema (`workload`, `customerGlobalId`, `customerName`, `entity`, `alertDetails`, `severity`, `timestamp`, `isActive`, `raw`) and sorted by timestamp descending. Supports workload selection, date range filtering (all/specific/relative), customer filter, and return-all/limit controls.
+
+- **Backup Health Summary resource** (`backupHealthSummary`): new resource with `getBackupHealthByCustomer` operation that fetches endpoint last-backup-status records (`mspEPLastBackupStatus`) and aggregates them into per-customer health summaries. Each summary includes device counts by status (completed/failed/not-started/in-progress), success rate, failure rate, and an `overallHealthStatus` (`healthy` / `warning` / `critical`) determined by a configurable `criticalThresholdPercent` threshold. Results are sorted critical → warning → healthy and support filtering by `returnLevel` (all / unhealthy only / critical only).
+
 ## [1.5.1] - 2026-04-02
 
 ### Fixed
