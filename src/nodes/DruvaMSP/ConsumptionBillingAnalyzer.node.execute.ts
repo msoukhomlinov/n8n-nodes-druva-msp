@@ -1258,7 +1258,9 @@ export async function executeConsumptionBillingAnalyzerOperation(
         filters: createReportFilters(100, filterBy),
       };
 
-      logger.info("ConsumptionQuota: Fetching consumption and quota data in parallel...");
+      logger.info(
+        "ConsumptionQuota: Fetching consumption and quota data in parallel...",
+      );
 
       // Fetch both in parallel
       const [consumptionData, quotaData] = await Promise.all([
@@ -1283,7 +1285,8 @@ export async function executeConsumptionBillingAnalyzerOperation(
       if (!consumptionData.length) {
         return this.helpers.returnJsonArray({
           success: false,
-          message: "No consumption data found for the selected period and filters",
+          message:
+            "No consumption data found for the selected period and filters",
         });
       }
 
