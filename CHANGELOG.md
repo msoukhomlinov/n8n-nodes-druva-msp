@@ -3,6 +3,12 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [Unreleased]
+
+### Added
+
+- **Consumption Billing Analyzer — tenant enrichment**: `analyzeConsumption` and `analyzeConsumptionWithQuota` now append four tenant-sourced fields to every output row, joined on `tenantId` from `GET /msp/v3/tenants`: `activeSince`, `licenseExpiryDate`, `tenantStatus` (raw), `tenantStatus_label`. Tenant and customer data are fetched in parallel after confirming consumption data exists. `keyFieldName` collision guard extended to cover all four enrichment field names.
+
 ## [1.6.0] - 2026-04-16
 
 ### Added
