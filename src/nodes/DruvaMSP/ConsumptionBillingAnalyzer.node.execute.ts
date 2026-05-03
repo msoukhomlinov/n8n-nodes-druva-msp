@@ -1094,7 +1094,45 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       logger.info("Consumption: Starting data retrieval phase...");
 
-      // Fetch customer and tenant data in parallel for enrichment
+      // Fetch consumption first so we can exit early if no data
+      logger.info("Consumption: Fetching consumption data...");
+      const body: IDataObject = {
+        filters: createReportFilters(100, filterBy),
+      };
+
+      const consumptionData = (await druvaMspApiRequestAllReportV2Items.call(
+        this,
+        "/msp/reporting/v2/reports/consumptionItemized",
+        body,
+        "data",
+      )) as IDataObject[];
+
+      logger.info(
+        `Consumption: Retrieved ${consumptionData.length} consumption records`,
+      );
+
+      if (!consumptionData.length) {
+        logger.warn(
+          "Consumption: No consumption data found for the selected period and filters",
+        );
+
+        return this.helpers.returnJsonArray({
+          success: false,
+          message:
+            "No consumption data found for the selected period and filters",
+          parameters: {
+            startDate,
+            endDate,
+            calculationMethod,
+            roundingDirection,
+            decimalPlaces,
+            filterOutZeroUsage,
+            customerFilter: filterByCustomers ? "Applied" : "Not applied",
+          },
+        });
+      }
+
+      // Only fetch enrichment data once we know there is consumption to process
       logger.info(
         "Consumption: Fetching customer and tenant data for enrichment...",
       );
@@ -1123,52 +1161,6 @@ export async function executeConsumptionBillingAnalyzerOperation(
       logger.info(
         `Consumption: Retrieved ${customers.length} customers, ${tenants.length} tenants`,
       );
-
-      // Fetch Consumption Data
-      logger.info("Consumption: Fetching consumption data...");
-      const consumptionEndpoint =
-        "/msp/reporting/v2/reports/consumptionItemized";
-
-      // Prepare request body with the correct structure - always fetch all data with maximum page size
-      const body: IDataObject = {
-        filters: createReportFilters(100, filterBy), // Always use maximum page size to get all data
-        // Zero usage filtering handled in post-processing
-      };
-
-      // Use the specific helper for report v2 endpoints which handles pagination correctly
-      const consumptionData = (await druvaMspApiRequestAllReportV2Items.call(
-        this,
-        consumptionEndpoint,
-        body,
-        "data",
-      )) as IDataObject[];
-
-      logger.info(
-        `Consumption: Retrieved ${consumptionData.length} consumption records`,
-      );
-
-      // Validate the data retrieved
-      if (!consumptionData.length) {
-        logger.warn(
-          "Consumption: No consumption data found for the selected period and filters",
-        );
-
-        // Return informative error when no data is found
-        return this.helpers.returnJsonArray({
-          success: false,
-          message:
-            "No consumption data found for the selected period and filters",
-          parameters: {
-            startDate,
-            endDate,
-            calculationMethod,
-            roundingDirection,
-            decimalPlaces,
-            filterOutZeroUsage,
-            customerFilter: filterByCustomers ? "Applied" : "Not applied",
-          },
-        });
-      }
 
       // ------- PROCESSING PHASE -------
 
