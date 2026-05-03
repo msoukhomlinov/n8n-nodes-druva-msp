@@ -152,6 +152,13 @@ interface ITenantFields {
   tenantStatus_label: string | null;
 }
 
+const TENANT_ENRICHMENT_FIELDS = new Set([
+  "activeSince",
+  "licenseExpiryDate",
+  "tenantStatus",
+  "tenantStatus_label",
+]);
+
 function createTenantLookup(
   tenants: IDataObject[],
 ): Map<string, ITenantFields> {
@@ -823,7 +830,10 @@ function flattenConsumptionData(
           if (addKey) {
             // Validate field name doesn't conflict (only need to check once)
             if (!fieldNameValidated) {
-              if (keyFieldName in record) {
+              if (
+                keyFieldName in record ||
+                TENANT_ENRICHMENT_FIELDS.has(keyFieldName)
+              ) {
                 throw new Error(
                   `Key field name "${keyFieldName}" conflicts with an existing field in the record. Please choose a different field name.`,
                 );
@@ -1320,41 +1330,24 @@ export async function executeConsumptionBillingAnalyzerOperation(
         "ConsumptionQuota: Fetching consumption, quota, customer, and tenant data in parallel...",
       );
 
-      // Fetch all data in parallel
-      const [consumptionData, quotaData, customers, tenants] =
-        (await Promise.all([
-          druvaMspApiRequestAllReportV2Items.call(
-            this,
-            "/msp/reporting/v2/reports/consumptionItemized",
-            body,
-            "data",
-          ),
-          druvaMspApiRequestAllReportV2Items.call(
-            this,
-            "/msp/reporting/v2/reports/quotaItemized",
-            body,
-            "data",
-          ),
-          druvaMspApiRequestAllItems.call(
-            this,
-            "GET",
-            "/msp/v3/customers",
-            "customers",
-            {},
-            { pageSize: String(API_MAX_PAGE_SIZE) },
-          ),
-          druvaMspApiRequestAllItems.call(
-            this,
-            "GET",
-            "/msp/v3/tenants",
-            "tenants",
-            {},
-            { pageSize: String(API_MAX_PAGE_SIZE) },
-          ),
-        ])) as [IDataObject[], IDataObject[], IDataObject[], IDataObject[]];
+      // Fetch consumption and quota in parallel first so we can exit early if no data
+      const [consumptionData, quotaData] = (await Promise.all([
+        druvaMspApiRequestAllReportV2Items.call(
+          this,
+          "/msp/reporting/v2/reports/consumptionItemized",
+          body,
+          "data",
+        ),
+        druvaMspApiRequestAllReportV2Items.call(
+          this,
+          "/msp/reporting/v2/reports/quotaItemized",
+          body,
+          "data",
+        ),
+      ])) as [IDataObject[], IDataObject[]];
 
       logger.info(
-        `ConsumptionQuota: Retrieved ${consumptionData.length} consumption rows, ${quotaData.length} quota rows, ${customers.length} customers, ${tenants.length} tenants`,
+        `ConsumptionQuota: Retrieved ${consumptionData.length} consumption rows, ${quotaData.length} quota rows`,
       );
 
       if (!consumptionData.length) {
@@ -1364,6 +1357,30 @@ export async function executeConsumptionBillingAnalyzerOperation(
             "No consumption data found for the selected period and filters",
         });
       }
+
+      // Only fetch enrichment data once we know there is consumption to process
+      const [customers, tenants] = (await Promise.all([
+        druvaMspApiRequestAllItems.call(
+          this,
+          "GET",
+          "/msp/v3/customers",
+          "customers",
+          {},
+          { pageSize: String(API_MAX_PAGE_SIZE) },
+        ),
+        druvaMspApiRequestAllItems.call(
+          this,
+          "GET",
+          "/msp/v3/tenants",
+          "tenants",
+          {},
+          { pageSize: String(API_MAX_PAGE_SIZE) },
+        ),
+      ])) as [IDataObject[], IDataObject[]];
+
+      logger.info(
+        `ConsumptionQuota: Retrieved ${customers.length} customers, ${tenants.length} tenants`,
+      );
 
       const customerLookup = createCustomerLookup(customers);
       const tenantLookup = createTenantLookup(tenants);
