@@ -2,6 +2,7 @@ import {
   druvaMspApiRequestAllItems,
   druvaMspApiRequestAllReportV2Items,
 } from "./GenericFunctions";
+import { getTenantStatusLabel } from "./helpers/ValueConverters";
 import { type IReportFilter, API_MAX_PAGE_SIZE } from "./helpers/Constants";
 import { getRelativeDateRange } from "./helpers/DateHelpers";
 import {
@@ -142,6 +143,55 @@ function createCustomerLookup(customers: IDataObject[]): {
   }
 
   return lookup;
+}
+
+interface ITenantFields {
+  activeSince: string | null;
+  licenseExpiryDate: string | null;
+  tenantStatus: number | null;
+  tenantStatus_label: string | null;
+}
+
+const TENANT_ENRICHMENT_FIELDS = new Set([
+  "activeSince",
+  "licenseExpiryDate",
+  "tenantStatus",
+  "tenantStatus_label",
+]);
+
+function createTenantLookup(
+  tenants: IDataObject[],
+): Map<string, ITenantFields> {
+  const map = new Map<string, ITenantFields>();
+  for (const tenant of tenants) {
+    const id = tenant.id as string;
+    if (!id) continue;
+    const status = tenant.status != null ? (tenant.status as number) : null;
+    map.set(id, {
+      activeSince: (tenant.activeSince as string) ?? null,
+      licenseExpiryDate: (tenant.licenseExpiryDate as string) ?? null,
+      tenantStatus: status,
+      tenantStatus_label: status != null ? getTenantStatusLabel(status) : null,
+    });
+  }
+  return map;
+}
+
+function applyTenantDateEnrichment(
+  rows: IDataObject[],
+  tenantLookup: Map<string, ITenantFields>,
+): IDataObject[] {
+  return rows.map((row) => {
+    const tenantId = row.tenantId as string;
+    const tenantData = tenantLookup.get(tenantId);
+    return {
+      ...row,
+      activeSince: tenantData?.activeSince ?? null,
+      licenseExpiryDate: tenantData?.licenseExpiryDate ?? null,
+      tenantStatus: tenantData?.tenantStatus ?? null,
+      tenantStatus_label: tenantData?.tenantStatus_label ?? null,
+    };
+  });
 }
 
 /**
@@ -780,7 +830,10 @@ function flattenConsumptionData(
           if (addKey) {
             // Validate field name doesn't conflict (only need to check once)
             if (!fieldNameValidated) {
-              if (keyFieldName in record) {
+              if (
+                keyFieldName in record ||
+                TENANT_ENRICHMENT_FIELDS.has(keyFieldName)
+              ) {
                 throw new Error(
                   `Key field name "${keyFieldName}" conflicts with an existing field in the record. Please choose a different field name.`,
                 );
@@ -1041,38 +1094,15 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       logger.info("Consumption: Starting data retrieval phase...");
 
-      // Fetch Customer data for enrichment
-      logger.info("Consumption: Fetching customer data for enrichment...");
-      const customersEndpoint = "/msp/v3/customers";
-      const customers = (await druvaMspApiRequestAllItems.call(
-        this,
-        "GET",
-        customersEndpoint,
-        "customers",
-        {},
-        { pageSize: String(API_MAX_PAGE_SIZE) },
-      )) as IDataObject[];
-
-      // Create a lookup object for quick customer reference
-      const customerLookup = createCustomerLookup(customers);
-
-      logger.info(`Consumption: Retrieved ${customers.length} customers`);
-
-      // Fetch Consumption Data
+      // Fetch consumption first so we can exit early if no data
       logger.info("Consumption: Fetching consumption data...");
-      const consumptionEndpoint =
-        "/msp/reporting/v2/reports/consumptionItemized";
-
-      // Prepare request body with the correct structure - always fetch all data with maximum page size
       const body: IDataObject = {
-        filters: createReportFilters(100, filterBy), // Always use maximum page size to get all data
-        // Zero usage filtering handled in post-processing
+        filters: createReportFilters(100, filterBy),
       };
 
-      // Use the specific helper for report v2 endpoints which handles pagination correctly
       const consumptionData = (await druvaMspApiRequestAllReportV2Items.call(
         this,
-        consumptionEndpoint,
+        "/msp/reporting/v2/reports/consumptionItemized",
         body,
         "data",
       )) as IDataObject[];
@@ -1081,13 +1111,11 @@ export async function executeConsumptionBillingAnalyzerOperation(
         `Consumption: Retrieved ${consumptionData.length} consumption records`,
       );
 
-      // Validate the data retrieved
       if (!consumptionData.length) {
         logger.warn(
           "Consumption: No consumption data found for the selected period and filters",
         );
 
-        // Return informative error when no data is found
         return this.helpers.returnJsonArray({
           success: false,
           message:
@@ -1103,6 +1131,36 @@ export async function executeConsumptionBillingAnalyzerOperation(
           },
         });
       }
+
+      // Only fetch enrichment data once we know there is consumption to process
+      logger.info(
+        "Consumption: Fetching customer and tenant data for enrichment...",
+      );
+      const [customers, tenants] = (await Promise.all([
+        druvaMspApiRequestAllItems.call(
+          this,
+          "GET",
+          "/msp/v3/customers",
+          "customers",
+          {},
+          { pageSize: String(API_MAX_PAGE_SIZE) },
+        ),
+        druvaMspApiRequestAllItems.call(
+          this,
+          "GET",
+          "/msp/v3/tenants",
+          "tenants",
+          {},
+          { pageSize: String(API_MAX_PAGE_SIZE) },
+        ),
+      ])) as [IDataObject[], IDataObject[]];
+
+      const customerLookup = createCustomerLookup(customers);
+      const tenantLookup = createTenantLookup(tenants);
+
+      logger.info(
+        `Consumption: Retrieved ${customers.length} customers, ${tenants.length} tenants`,
+      );
 
       // ------- PROCESSING PHASE -------
 
@@ -1159,8 +1217,10 @@ export async function executeConsumptionBillingAnalyzerOperation(
         `Consumption: Flattened data into ${flattenedData.length} records`,
       );
 
-      // Return the flattened data
-      responseData = this.helpers.returnJsonArray(flattenedData);
+      // Enrich with tenant fields (activeSince, licenseExpiryDate, tenantStatus, tenantStatus_label)
+      const finalData = applyTenantDateEnrichment(flattenedData, tenantLookup);
+
+      responseData = this.helpers.returnJsonArray(finalData);
     } else if (operation === "analyzeConsumptionWithQuota") {
       // Resolve dates (same logic as analyzeConsumption)
       const dateSelectionMethod = this.getNodeParameter(
@@ -1259,24 +1319,24 @@ export async function executeConsumptionBillingAnalyzerOperation(
       };
 
       logger.info(
-        "ConsumptionQuota: Fetching consumption and quota data in parallel...",
+        "ConsumptionQuota: Fetching consumption, quota, customer, and tenant data in parallel...",
       );
 
-      // Fetch both in parallel
-      const [consumptionData, quotaData] = await Promise.all([
+      // Fetch consumption and quota in parallel first so we can exit early if no data
+      const [consumptionData, quotaData] = (await Promise.all([
         druvaMspApiRequestAllReportV2Items.call(
           this,
           "/msp/reporting/v2/reports/consumptionItemized",
           body,
           "data",
-        ) as Promise<IDataObject[]>,
+        ),
         druvaMspApiRequestAllReportV2Items.call(
           this,
           "/msp/reporting/v2/reports/quotaItemized",
           body,
           "data",
-        ) as Promise<IDataObject[]>,
-      ]);
+        ),
+      ])) as [IDataObject[], IDataObject[]];
 
       logger.info(
         `ConsumptionQuota: Retrieved ${consumptionData.length} consumption rows, ${quotaData.length} quota rows`,
@@ -1290,16 +1350,32 @@ export async function executeConsumptionBillingAnalyzerOperation(
         });
       }
 
-      // Fetch customers for name enrichment (same as analyzeConsumption)
-      const customers = (await druvaMspApiRequestAllItems.call(
-        this,
-        "GET",
-        "/msp/v3/customers",
-        "customers",
-        {},
-        { pageSize: String(API_MAX_PAGE_SIZE) },
-      )) as IDataObject[];
+      // Only fetch enrichment data once we know there is consumption to process
+      const [customers, tenants] = (await Promise.all([
+        druvaMspApiRequestAllItems.call(
+          this,
+          "GET",
+          "/msp/v3/customers",
+          "customers",
+          {},
+          { pageSize: String(API_MAX_PAGE_SIZE) },
+        ),
+        druvaMspApiRequestAllItems.call(
+          this,
+          "GET",
+          "/msp/v3/tenants",
+          "tenants",
+          {},
+          { pageSize: String(API_MAX_PAGE_SIZE) },
+        ),
+      ])) as [IDataObject[], IDataObject[]];
+
+      logger.info(
+        `ConsumptionQuota: Retrieved ${customers.length} customers, ${tenants.length} tenants`,
+      );
+
       const customerLookup = createCustomerLookup(customers);
+      const tenantLookup = createTenantLookup(tenants);
 
       // Process consumption the same way as analyzeConsumption
       const startDateObj = new Date(startDate);
@@ -1335,11 +1411,14 @@ export async function executeConsumptionBillingAnalyzerOperation(
         showOnlyOverages,
       );
 
+      // Enrich with tenant fields (activeSince, licenseExpiryDate, tenantStatus, tenantStatus_label)
+      const finalData = applyTenantDateEnrichment(enrichedData, tenantLookup);
+
       logger.info(
-        `ConsumptionQuota: Returning ${enrichedData.length} enriched records`,
+        `ConsumptionQuota: Returning ${finalData.length} enriched records`,
       );
 
-      responseData = this.helpers.returnJsonArray(enrichedData);
+      responseData = this.helpers.returnJsonArray(finalData);
     }
 
     return responseData;
