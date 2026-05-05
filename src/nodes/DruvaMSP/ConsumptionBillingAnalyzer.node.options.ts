@@ -162,10 +162,10 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
         description: "Use the highest daily usage value in the period",
       },
       {
-        name: "Druva API (÷30 Normalized)",
+        name: "Druva API (Billing Accurate)",
         value: "druvaApi",
         description:
-          "Normalize seat-based usage to a 30-day equivalent to match Druva's internal CU billing formula (seats × rate ÷ 30 per day)",
+          "Match Druva's internal CU billing formulae: seat items normalised by ÷30 per day (adjustedUsage = rawSum × 30/totalDays); storage items scaled by ×12/365 per day (adjustedUsage = avgDaily × totalDays × 12/365). Result: expectedCU = price_CUPerUnit × usageAmount ≈ cuConsumed",
       },
     ],
     default: "average",

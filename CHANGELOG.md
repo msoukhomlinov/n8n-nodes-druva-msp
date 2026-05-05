@@ -3,6 +3,12 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.6.3] - 2026-05-05
+
+### Fixed
+
+- **Consumption Billing Analyzer — `druvaApi` option label and description**: renamed option from "Druva API (÷30 Normalized)" to "Druva API (Billing Accurate)" and updated description to cover both seat (`×30/totalDays`) and storage (`×totalDays×12/365`) adjustments.
+
 ## [1.6.2] - 2026-05-05
 
 ### Added
