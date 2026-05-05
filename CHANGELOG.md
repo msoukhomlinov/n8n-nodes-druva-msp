@@ -3,6 +3,15 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.6.2] - 2026-05-05
+
+### Added
+
+- **Consumption Billing Analyzer — `druvaApi` calculation method**: new option "Druva API (÷30 Normalized)" that applies Druva's actual internal billing formulae to both seat and storage items, making `expectedCU = price_CUPerUnit × usageAmount ≈ cuConsumed`.
+  - **Seat-based items** (`usageUnit` matches `user`/`seat`, case-insensitive): `adjustedUsage = rawSum × (30 / totalDays)` — normalises to Druva's 30-day seat denominator (+3.33% for 31-day months, −6.67% for February).
+  - **Storage items** (`usageUnit` matches `tb`/`gb`, etc.): `adjustedUsage = averageDaily × totalDays × (12 / 365)` — matches Druva's `monthly_rate × 12/365` daily storage rate (+1.92% for 31-day months, −1.37% for 30-day months).
+  - Every output row includes diagnostic fields: `calc_method`, `calc_totalDays`, `calc_dayFactor`. Storage items additionally include `calc_rawUsageAmount` (pre-adjustment average) and `calc_storageDenominator` (`365/12`).
+
 ## [1.6.1] - 2026-05-03
 
 ### Added

@@ -161,6 +161,12 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
         value: "highWaterMark",
         description: "Use the highest daily usage value in the period",
       },
+      {
+        name: "Druva API (÷30 Normalized)",
+        value: "druvaApi",
+        description:
+          "Normalize seat-based usage to a 30-day equivalent to match Druva's internal CU billing formula (seats × rate ÷ 30 per day)",
+      },
     ],
     default: "average",
     description:

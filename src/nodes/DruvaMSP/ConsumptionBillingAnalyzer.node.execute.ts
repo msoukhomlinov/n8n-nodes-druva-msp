@@ -25,6 +25,19 @@ interface IUsageItem {
   usageAmount: number;
   usageUnit: string;
   cuConsumed: number;
+  calc_method: string;
+  calc_totalDays: number;
+  calc_dayFactor: number;
+  calc_rawUsageAmount: number | null;
+  calc_storageDenominator: number | null;
+}
+
+interface ICalculationResult {
+  value: number;
+  totalDays: number;
+  dayFactor: number;
+  rawValue?: number;
+  storageDenominator?: number;
 }
 
 interface IProductModule {
@@ -81,24 +94,27 @@ function roundValue(
 /**
  * Helper function to apply the calculation method to usage data
  * @param usageData Array of daily usage records
- * @param calculationMethod Method to apply: 'average' or 'highWaterMark'
+ * @param calculationMethod Method to apply: 'average', 'highWaterMark', or 'druvaApi'
  * @param startDate Start date of the billing period
  * @param endDate End date of the billing period
- * @returns The calculated value
+ * @returns The calculated value plus diagnostic fields (totalDays, dayFactor)
  */
 export function calculateUsageValue(
   usageData: IDataObject[],
-  calculationMethod: "average" | "highWaterMark",
+  calculationMethod: "average" | "highWaterMark" | "druvaApi",
   startDate: Date,
   endDate: Date,
-): number {
-  // If no usage data, return 0
+): ICalculationResult {
   if (!usageData.length) {
-    return 0;
+    return { value: 0, totalDays: 0, dayFactor: 1 };
   }
 
+  const totalDays =
+    Math.floor(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    ) + 1;
+
   if (calculationMethod === "highWaterMark") {
-    // Find the maximum usage value in the data
     let maxUsage = 0;
     for (const record of usageData) {
       const usageAmount = Number(record.usageAmount || 0);
@@ -106,24 +122,43 @@ export function calculateUsageValue(
         maxUsage = usageAmount;
       }
     }
-    return maxUsage;
+    return { value: maxUsage, totalDays, dayFactor: 1 };
   }
 
-  // Average method
-  // Calculate the total number of days in the period
-  const totalDays =
-    Math.floor(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
-    ) + 1;
-
-  // Sum all usage values
   let totalUsage = 0;
   for (const record of usageData) {
     totalUsage += Number(record.usageAmount || 0);
   }
 
-  // Calculate the average (total usage divided by number of days)
-  return totalUsage / totalDays;
+  if (calculationMethod === "druvaApi") {
+    // Druva hardcodes a 30-day denominator for seat billing (seats × rate ÷ 30 per day).
+    // Normalising seat usage by × (30 / totalDays) makes usageAmount match cuConsumed
+    // when validated as: expectedCU = price_CUPerUnit × usageAmount.
+    const usageUnit = String(usageData[0]?.usageUnit ?? "");
+    const isSeatBased = /user|seat/i.test(usageUnit);
+    if (isSeatBased) {
+      const dayFactor = 30 / totalDays;
+      return { value: totalUsage * dayFactor, totalDays, dayFactor };
+    }
+    // Druva storage daily rate = monthly_rate × 12/365; total CU = average_daily × totalDays × 12/365.
+    // dayFactor = totalDays × 12/365 (e.g. 31-day month → 1.0192, 30-day → 0.9863).
+    const rawValue = totalUsage / totalDays;
+    const dayFactor = totalDays * (12 / 365);
+    return {
+      value: rawValue * totalDays * (12 / 365),
+      totalDays,
+      dayFactor,
+      rawValue,
+      storageDenominator: 365 / 12,
+    };
+  }
+
+  // Average method: total usage divided by number of calendar days
+  return {
+    value: totalUsage / totalDays,
+    totalDays,
+    dayFactor: totalDays / 30,
+  };
 }
 
 /**
@@ -314,7 +349,7 @@ function groupByUsageItem(
  * Interface for the consumption data processing parameters
  */
 interface IProcessingParams {
-  calculationMethod: "average" | "highWaterMark";
+  calculationMethod: "average" | "highWaterMark" | "druvaApi";
   roundingDirection: "up" | "down";
   decimalPlaces: number;
   filterOutZeroUsage: boolean;
@@ -487,7 +522,7 @@ function processCustomerConsumptionData(
           "Unknown Service Plan";
 
         // Calculate usage value based on calculation method
-        const calculatedValue = calculateUsageValue(
+        const calcResult = calculateUsageValue(
           usageData,
           params.calculationMethod,
           startDate,
@@ -496,7 +531,7 @@ function processCustomerConsumptionData(
 
         // Apply rounding to the calculated value
         const roundedValue = roundValue(
-          calculatedValue,
+          calcResult.value,
           params.roundingDirection,
           params.decimalPlaces,
           params.applyRounding,
@@ -565,6 +600,11 @@ function processCustomerConsumptionData(
               : finalUsageAmount,
           usageUnit: finalUsageUnit,
           cuConsumed,
+          calc_method: params.calculationMethod,
+          calc_totalDays: calcResult.totalDays,
+          calc_dayFactor: calcResult.dayFactor,
+          calc_rawUsageAmount: calcResult.rawValue ?? null,
+          calc_storageDenominator: calcResult.storageDenominator ?? null,
         };
 
         usageItems.push(usageItem);
@@ -824,6 +864,11 @@ function flattenConsumptionData(
             usageAmount: usageItem.usageAmount,
             usageUnit: usageItem.usageUnit,
             cuConsumed: usageItem.cuConsumed,
+            calc_method: usageItem.calc_method,
+            calc_totalDays: usageItem.calc_totalDays,
+            calc_dayFactor: usageItem.calc_dayFactor,
+            calc_rawUsageAmount: usageItem.calc_rawUsageAmount,
+            calc_storageDenominator: usageItem.calc_storageDenominator,
           };
 
           // Add auto-generated key if enabled
@@ -1026,7 +1071,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
         "calculationMethod",
         i,
         "average",
-      ) as "average" | "highWaterMark";
+      ) as "average" | "highWaterMark" | "druvaApi";
       const roundingDirection = this.getNodeParameter(
         "roundingDirection",
         i,
@@ -1250,7 +1295,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
         "calculationMethod",
         i,
         "average",
-      ) as "average" | "highWaterMark";
+      ) as "average" | "highWaterMark" | "druvaApi";
       const roundingDirection = this.getNodeParameter(
         "roundingDirection",
         i,
