@@ -3,6 +3,12 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.6.4] - 2026-05-05
+
+### Fixed
+
+- **Consumption Billing Analyzer — `druvaApi` seat-based `usageAmount` 30× overstatement**: the formula `totalUsage × (30 / totalDays)` was equivalent to `average × 30`, producing ~30× inflated values (e.g. 6376 users instead of ~219). Fixed to `totalUsage / 30` (Druva's 30-day seat billing normalisation). For a 31-day month the corrected result is `average × 31/30` (~3.3% above calendar average), correctly reflecting what Druva charges. `calc_dayFactor` updated from `30/totalDays` to `totalDays/30` for consistency with the average method's diagnostic semantics.
+
 ## [1.6.3] - 2026-05-05
 
 ### Fixed

@@ -131,14 +131,14 @@ export function calculateUsageValue(
   }
 
   if (calculationMethod === "druvaApi") {
-    // Druva hardcodes a 30-day denominator for seat billing (seats × rate ÷ 30 per day).
-    // Normalising seat usage by × (30 / totalDays) makes usageAmount match cuConsumed
-    // when validated as: expectedCU = price_CUPerUnit × usageAmount.
+    // Druva bills seats as: total_user_days / 30 × cuPerUnit.
+    // usageAmount = totalUsage / 30 (Druva's 30-day normalisation).
+    // For a 31-day month this is ~3.3% above the calendar average; for 28-day ~6.7% below.
     const usageUnit = String(usageData[0]?.usageUnit ?? "");
     const isSeatBased = /user|seat/i.test(usageUnit);
     if (isSeatBased) {
-      const dayFactor = 30 / totalDays;
-      return { value: totalUsage * dayFactor, totalDays, dayFactor };
+      const dayFactor = totalDays / 30;
+      return { value: totalUsage / 30, totalDays, dayFactor };
     }
     // Druva storage daily rate = monthly_rate × 12/365; total CU = average_daily × totalDays × 12/365.
     // dayFactor = totalDays × 12/365 (e.g. 31-day month → 1.0192, 30-day → 0.9863).

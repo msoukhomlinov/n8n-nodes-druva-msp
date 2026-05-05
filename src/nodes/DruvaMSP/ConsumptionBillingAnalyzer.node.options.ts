@@ -165,7 +165,7 @@ export const consumptionBillingAnalyzerFields: INodeProperties[] = [
         name: "Druva API (Billing Accurate)",
         value: "druvaApi",
         description:
-          "Match Druva's internal CU billing formulae: seat items normalised by ÷30 per day (adjustedUsage = rawSum × 30/totalDays); storage items scaled by ×12/365 per day (adjustedUsage = avgDaily × totalDays × 12/365). Result: expectedCU = price_CUPerUnit × usageAmount ≈ cuConsumed",
+          "Match Druva's internal CU billing formulae: seat items normalised to Druva's 30-day denominator (adjustedUsage = rawSum / 30 = avgDaily × totalDays/30); storage items scaled by ×12/365 per day (adjustedUsage = avgDaily × totalDays × 12/365). Result: expectedCU = price_CUPerUnit × usageAmount ≈ cuConsumed",
       },
     ],
     default: "average",
