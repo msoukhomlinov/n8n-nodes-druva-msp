@@ -297,10 +297,52 @@ export function getStorageRegionGetManySchema() {
 // Report - Usage schemas
 // ---------------------------------------------------------------------------
 
+const mspGlobalIdSchema = z
+  .string()
+  .optional()
+  .describe("Filter by MSP global ID (exact match). Omit to include all MSPs.");
+
+const mspNameSchema = z
+  .string()
+  .optional()
+  .describe("Filter by MSP name (exact match). Omit to include all MSPs.");
+
 export function getReportUsageGetGlobalReportSchema() {
   return z.object({
-    startDate: startDateSchema,
-    endDate: endDateSchema,
+    accountName: z
+      .string()
+      .optional()
+      .describe("Filter by account name (exact match). Omit to include all."),
+    customerName: z
+      .string()
+      .optional()
+      .describe("Filter by customer name (exact match). Omit to include all."),
+    editions: z
+      .array(z.enum(["Business", "Enterprise", "Elite"]))
+      .optional()
+      .describe(
+        "Filter by one or more editions (Business, Enterprise, Elite). Omit to include all.",
+      ),
+    tenantType: z
+      .enum(["Commercial", "Evaluation"])
+      .optional()
+      .describe(
+        "Filter by tenant type: 'Commercial' or 'Evaluation'. Omit to include all.",
+      ),
+    productModules: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Filter by product module names (e.g. 'Enterprise Workloads', 'Microsoft 365', 'Endpoints', 'Google Workspace'). Omit to include all.",
+      ),
+    servicePlan: z
+      .string()
+      .optional()
+      .describe(
+        "Filter by service plan name (exact match). Omit to include all.",
+      ),
+    mspGlobalId: mspGlobalIdSchema,
+    mspName: mspNameSchema,
     limit: limitSchema,
   });
 }
@@ -310,6 +352,8 @@ export function getReportUsageGetItemizedConsumptionSchema() {
     startDate: startDateSchema,
     endDate: endDateSchema,
     customerIds: customerIdsSchema,
+    mspGlobalId: mspGlobalIdSchema,
+    mspName: mspNameSchema,
     limit: limitSchema,
   });
 }
@@ -319,6 +363,8 @@ export function getReportUsageGetItemizedQuotaSchema() {
     startDate: startDateSchema,
     endDate: endDateSchema,
     customerIds: customerIdsSchema,
+    mspGlobalId: mspGlobalIdSchema,
+    mspName: mspNameSchema,
     limit: limitSchema,
   });
 }

@@ -66,6 +66,22 @@ function buildReportFilterBy(params: Record<string, unknown>): IDataObject[] {
     });
   }
 
+  if (params.mspGlobalId && typeof params.mspGlobalId === "string") {
+    filterBy.push({
+      fieldName: "mspGlobalId",
+      operator: "EQUAL",
+      value: params.mspGlobalId,
+    });
+  }
+
+  if (params.mspName && typeof params.mspName === "string") {
+    filterBy.push({
+      fieldName: "mspName",
+      operator: "EQUAL",
+      value: params.mspName,
+    });
+  }
+
   return filterBy;
 }
 
@@ -87,14 +103,14 @@ function buildReportV2FilterBy(params: Record<string, unknown>): IDataObject[] {
 
   if (params.startDate) {
     filterBy.push({
-      fieldName: "startDate",
+      fieldName: "date",
       operator: "GTE",
       value: params.startDate,
     });
   }
   if (params.endDate) {
     filterBy.push({
-      fieldName: "endDate",
+      fieldName: "date",
       operator: "LTE",
       value: params.endDate,
     });
@@ -109,6 +125,102 @@ function buildReportV2FilterBy(params: Record<string, unknown>): IDataObject[] {
       fieldName: "customerGlobalId",
       operator: "CONTAINS",
       value: params.customerIds,
+    });
+  }
+
+  if (params.mspGlobalId && typeof params.mspGlobalId === "string") {
+    filterBy.push({
+      fieldName: "mspGlobalId",
+      operator: "EQUAL",
+      value: params.mspGlobalId,
+    });
+  }
+
+  if (params.mspName && typeof params.mspName === "string") {
+    filterBy.push({
+      fieldName: "mspName",
+      operator: "EQUAL",
+      value: params.mspName,
+    });
+  }
+
+  return filterBy;
+}
+
+function buildGlobalUsageFilterBy(
+  params: Record<string, unknown>,
+): IDataObject[] {
+  const filterBy: IDataObject[] = [];
+
+  if (params.accountName && typeof params.accountName === "string") {
+    filterBy.push({
+      fieldName: "accountName",
+      operator: "EQUAL",
+      value: params.accountName,
+    });
+  }
+
+  if (params.customerName && typeof params.customerName === "string") {
+    filterBy.push({
+      fieldName: "customerName",
+      operator: "EQUAL",
+      value: params.customerName,
+    });
+  }
+
+  if (
+    params.editions &&
+    Array.isArray(params.editions) &&
+    params.editions.length > 0
+  ) {
+    filterBy.push({
+      fieldName: "edition",
+      operator: "CONTAINS",
+      value: params.editions,
+    });
+  }
+
+  if (params.tenantType && typeof params.tenantType === "string") {
+    filterBy.push({
+      fieldName: "tenantType",
+      operator: "EQUAL",
+      value: params.tenantType,
+    });
+  }
+
+  if (
+    params.productModules &&
+    Array.isArray(params.productModules) &&
+    params.productModules.length > 0
+  ) {
+    filterBy.push({
+      fieldName: "productModule",
+      operator: "CONTAINS",
+      value: params.productModules,
+    });
+  }
+
+  if (params.servicePlan && typeof params.servicePlan === "string") {
+    filterBy.push({
+      fieldName: "servicePlan",
+      operator: "EQUAL",
+      value: params.servicePlan,
+    });
+  }
+
+  if (params.mspGlobalId && typeof params.mspGlobalId === "string") {
+    filterBy.push({
+      fieldName: "mspGlobalId",
+      operator: "EQUAL",
+      value: params.mspGlobalId,
+    });
+  }
+
+  if (params.mspName && typeof params.mspName === "string") {
+    filterBy.push({
+      fieldName: "mspName",
+      operator: "EQUAL",
+      value: params.mspName,
     });
   }
 
@@ -868,9 +980,9 @@ async function executeReportUsage(
   params: Record<string, unknown>,
 ): Promise<string> {
   const endpointMap: Record<string, string> = {
-    getGlobalReport: "/msp/reporting/v2/reports/mspGlobalUsage",
-    getItemizedConsumption: "/msp/reporting/v2/reports/consumptionItemized",
-    getItemizedQuota: "/msp/reporting/v2/reports/quotaItemized",
+    getGlobalReport: "/msp/reporting/v3/reports/mspGlobalUsage",
+    getItemizedConsumption: "/msp/reporting/v3/reports/consumptionItemized",
+    getItemizedQuota: "/msp/reporting/v3/reports/quotaItemized",
   };
   const endpoint = endpointMap[operation];
   if (!endpoint) {
@@ -885,21 +997,36 @@ async function executeReportUsage(
     );
   }
 
-  const filterBy = buildReportV2FilterBy(params);
+  const filterBy =
+    operation === "getGlobalReport"
+      ? buildGlobalUsageFilterBy(params)
+      : buildReportV2FilterBy(params);
   const body = buildReportBody(params, filterBy);
   const resp = await druvaMspApiRequest.call(ctx, "POST", endpoint, body);
   const items = ((resp as IDataObject)?.data as IDataObject[]) ?? [];
 
-  if (
-    hasFilters(params, "startDate", "endDate", "customerIds") &&
-    items.length === 0
-  ) {
+  const activeFilterKeys =
+    operation === "getGlobalReport"
+      ? [
+          "accountName",
+          "customerName",
+          "editions",
+          "tenantType",
+          "productModules",
+          "servicePlan",
+          "mspGlobalId",
+          "mspName",
+        ]
+      : ["startDate", "endDate", "customerIds", "mspGlobalId", "mspName"];
+
+  if (hasFilters(params, ...activeFilterKeys) && items.length === 0) {
+    const activeFilters = Object.fromEntries(
+      activeFilterKeys
+        .filter((k) => params[k] !== undefined && params[k] !== "")
+        .map((k) => [k, params[k]]),
+    );
     return JSON.stringify(
-      formatNoResultsFound(resource, operation, {
-        startDate: params.startDate,
-        endDate: params.endDate,
-        customerIds: params.customerIds,
-      }),
+      formatNoResultsFound(resource, operation, activeFilters),
     );
   }
   return manySuccess(resource, operation, items, params);

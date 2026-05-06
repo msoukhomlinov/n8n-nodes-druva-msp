@@ -220,14 +220,21 @@ export type TaskOutputStatusLabel =
 export const REPORT_FIELD_NAMES = {
   DATE: "date",
   CUSTOMER_GLOBAL_ID: "customerGlobalId",
+  CUSTOMER_NAME: "customerName",
   ACCOUNT_NAME: "accountName",
   TENANT_ID: "tenantId",
   PRODUCT_ID: "productId",
   PRODUCT_MODULE_ID: "productModuleId",
+  PRODUCT_MODULE: "productModule",
   USAGE_DESCRIPTION: "usageDescription",
   EDITION_NAME: "editionName",
+  EDITION: "edition",
   SERVICE_PLAN_ID: "servicePlanId",
+  SERVICE_PLAN: "servicePlan",
+  TENANT_TYPE: "tenantType",
   WORKLOAD_NAME: "workloadName",
+  MSP_GLOBAL_ID: "mspGlobalId",
+  MSP_NAME: "mspName",
 } as const;
 
 // Define a type for report field names

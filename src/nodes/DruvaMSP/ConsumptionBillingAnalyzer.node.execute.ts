@@ -1147,7 +1147,7 @@ export async function executeConsumptionBillingAnalyzerOperation(
 
       const consumptionData = (await druvaMspApiRequestAllReportV2Items.call(
         this,
-        "/msp/reporting/v2/reports/consumptionItemized",
+        "/msp/reporting/v3/reports/consumptionItemized",
         body,
         "data",
       )) as IDataObject[];
@@ -1371,13 +1371,13 @@ export async function executeConsumptionBillingAnalyzerOperation(
       const [consumptionData, quotaData] = (await Promise.all([
         druvaMspApiRequestAllReportV2Items.call(
           this,
-          "/msp/reporting/v2/reports/consumptionItemized",
+          "/msp/reporting/v3/reports/consumptionItemized",
           body,
           "data",
         ),
         druvaMspApiRequestAllReportV2Items.call(
           this,
-          "/msp/reporting/v2/reports/quotaItemized",
+          "/msp/reporting/v3/reports/quotaItemized",
           body,
           "data",
         ),

@@ -119,6 +119,98 @@ export function createUsageDescriptionFilter(
 }
 
 /**
+ * Create an account name filter for Druva MSP report APIs (Global Usage)
+ */
+export function createAccountNameFilter(accountName: string): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.ACCOUNT_NAME,
+    REPORT_OPERATORS.EQUAL,
+    accountName,
+  );
+}
+
+/**
+ * Create a customer name filter for Druva MSP report APIs (Global Usage)
+ */
+export function createCustomerNameFilter(customerName: string): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.CUSTOMER_NAME,
+    REPORT_OPERATORS.EQUAL,
+    customerName,
+  );
+}
+
+/**
+ * Create an edition filter for Druva MSP report APIs (Global Usage — fieldName "edition")
+ */
+export function createEditionFilter(editions: string[]): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.EDITION,
+    REPORT_OPERATORS.CONTAINS,
+    editions,
+  );
+}
+
+/**
+ * Create a product module filter for Druva MSP report APIs (Global Usage — fieldName "productModule")
+ */
+export function createProductModuleFilter(
+  productModules: string[],
+): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.PRODUCT_MODULE,
+    REPORT_OPERATORS.CONTAINS,
+    productModules,
+  );
+}
+
+/**
+ * Create a service plan name filter for Druva MSP report APIs (Global Usage — fieldName "servicePlan")
+ */
+export function createServicePlanNameFilter(
+  servicePlan: string,
+): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.SERVICE_PLAN,
+    REPORT_OPERATORS.EQUAL,
+    servicePlan,
+  );
+}
+
+/**
+ * Create a tenant type filter for Druva MSP report APIs (Global Usage)
+ */
+export function createTenantTypeFilter(tenantType: string): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.TENANT_TYPE,
+    REPORT_OPERATORS.EQUAL,
+    tenantType,
+  );
+}
+
+/**
+ * Create an MSP global ID filter for Druva MSP report APIs
+ */
+export function createMspGlobalIdFilter(mspGlobalId: string): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.MSP_GLOBAL_ID,
+    REPORT_OPERATORS.EQUAL,
+    mspGlobalId,
+  );
+}
+
+/**
+ * Create an MSP name filter for Druva MSP report APIs
+ */
+export function createMspNameFilter(mspName: string): IReportFilter {
+  return createReportFilter(
+    REPORT_FIELD_NAMES.MSP_NAME,
+    REPORT_OPERATORS.EQUAL,
+    mspName,
+  );
+}
+
+/**
  * Create a service plan filter for Druva MSP report APIs
  * @param servicePlanIds Array of service plan IDs to filter by
  * @returns Promise<Filter object for service plans>
@@ -176,14 +268,21 @@ export async function getReportFieldNameOptions() {
   return [
     { name: "Date", value: REPORT_FIELD_NAMES.DATE },
     { name: "Customer ID", value: REPORT_FIELD_NAMES.CUSTOMER_GLOBAL_ID },
+    { name: "Customer Name", value: REPORT_FIELD_NAMES.CUSTOMER_NAME },
     { name: "Account Name", value: REPORT_FIELD_NAMES.ACCOUNT_NAME },
     { name: "Tenant ID", value: REPORT_FIELD_NAMES.TENANT_ID },
     { name: "Product ID", value: REPORT_FIELD_NAMES.PRODUCT_ID },
     { name: "Product Module ID", value: REPORT_FIELD_NAMES.PRODUCT_MODULE_ID },
+    { name: "Product Module", value: REPORT_FIELD_NAMES.PRODUCT_MODULE },
     { name: "Usage Description", value: REPORT_FIELD_NAMES.USAGE_DESCRIPTION },
     { name: "Edition Name", value: REPORT_FIELD_NAMES.EDITION_NAME },
+    { name: "Edition", value: REPORT_FIELD_NAMES.EDITION },
     { name: "Service Plan ID", value: REPORT_FIELD_NAMES.SERVICE_PLAN_ID },
+    { name: "Service Plan", value: REPORT_FIELD_NAMES.SERVICE_PLAN },
+    { name: "Tenant Type", value: REPORT_FIELD_NAMES.TENANT_TYPE },
     { name: "Workload Name", value: REPORT_FIELD_NAMES.WORKLOAD_NAME },
+    { name: "MSP Global ID", value: REPORT_FIELD_NAMES.MSP_GLOBAL_ID },
+    { name: "MSP Name", value: REPORT_FIELD_NAMES.MSP_NAME },
   ];
 }
 

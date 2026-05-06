@@ -3,6 +3,24 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [1.6.5] - 2026-05-06
+
+### Added
+
+- **Report - Usage — MSP Global ID and MSP Name filters**: `getGlobalReport`, `getItemizedConsumption`, and `getItemizedQuota` now support filtering by `mspGlobalId` (exact match) and `mspName` (exact match), exposed as boolean toggles in the UI and as optional params in AI tools. These are v3-only filter fields.
+- **Report - Usage — Global Usage additional filters**: `getGlobalReport` now exposes all v3 swagger-supported filter fields: `accountName`, `customerName`, `editions` (multi-select: Business/Enterprise/Elite), `tenantType` (Commercial/Evaluation), `productModules` (Enterprise Workloads/Microsoft 365/Endpoints/Google Workspace), and `servicePlan` (exact name match). All exposed in UI (boolean toggles) and AI tools schema.
+
+### Changed
+
+- **Report - Usage — migrate 3 endpoints to v3**: `getGlobalReport`, `getItemizedConsumption`, and `getItemizedQuota` now call `/msp/reporting/v3/reports/` endpoints (`mspGlobalUsage`, `consumptionItemized`, `quotaItemized`). The v2 equivalents were deprecated August 28, 2026. Request body structure, filters, and pagination are identical — no workflow changes required.
+- **Report - Usage — `getGlobalReport` date filter removed**: the v3 `mspGlobalUsage` swagger schema (`FilterAttributeForGlobalUsageV3`) does not include `date` as a valid filter field — the endpoint returns a billing snapshot with no date dimension. Date selection UI and filter logic removed from `getGlobalReport`; date filtering remains unchanged for `getItemizedConsumption` and `getItemizedQuota`.
+
+### Fixed
+
+- **AI tools — Report Usage date filter field name**: `buildReportV2FilterBy` was sending `fieldName: "startDate"` and `fieldName: "endDate"` — invalid field names rejected by the v3 API. Fixed to use `fieldName: "date"` (the only valid date field per the v3 swagger), matching the non-AI execute path.
+- **AI tools — Report Usage mspGlobalId/mspName not applied**: `buildReportV2FilterBy` checked `hasFilters` for `mspGlobalId`/`mspName` but did not add them to the filter array. Both now correctly added for `getItemizedConsumption`/`getItemizedQuota`.
+- **AI tools — `getGlobalReport` used wrong filter builder**: `buildReportV2FilterBy` (which adds `date` and `customerGlobalId` filters) was used for all three operations, including `getGlobalReport`. The global usage endpoint rejects both field names. `getGlobalReport` now uses a dedicated `buildGlobalUsageFilterBy` with only the fields valid per `FilterAttributeForGlobalUsageV3`.
+
 ## [1.6.4] - 2026-05-05
 
 ### Fixed

@@ -9,11 +9,19 @@ import {
 } from "./helpers/Constants";
 import { getRelativeDateRange } from "./helpers/DateHelpers";
 import {
+  createAccountNameFilter,
   createCustomerFilter,
+  createCustomerNameFilter,
   createDateRangeFilter,
+  createEditionFilter,
+  createMspGlobalIdFilter,
+  createMspNameFilter,
   createProductFilter,
+  createProductModuleFilter,
   createReportFilter,
   createReportFilters,
+  createServicePlanNameFilter,
+  createTenantTypeFilter,
   createUsageDescriptionFilter,
 } from "./helpers/ReportHelpers";
 import { logger } from "./helpers/LoggerHelper";
@@ -70,16 +78,83 @@ export async function executeReportUsageOperation(
     if (operation === "getGlobalReport") {
       // Get Global Usage Report implementation (migrated from deprecated summary endpoint)
       // This endpoint returns paginated itemized consumption records
-      const endpoint = "/msp/reporting/v2/reports/mspGlobalUsage";
+      const endpoint = "/msp/reporting/v3/reports/mspGlobalUsage";
       const returnAll = this.getNodeParameter("returnAll", i, false) as boolean;
       const limit = this.getNodeParameter("limit", i, 50) as number;
 
       // Create filters array for all filters
       const filterBy: IReportFilter[] = [];
 
-      // Add date range filter if not using "All Dates"
-      if (dateSelectionMethod !== "allDates" && startDate && endDate) {
-        filterBy.push(...createDateRangeFilter(startDate, endDate));
+      // Add account name filter if specified
+      if (this.getNodeParameter("filterByAccountName", i, false) as boolean) {
+        const accountName = this.getNodeParameter(
+          "accountName",
+          i,
+          "",
+        ) as string;
+        if (accountName) filterBy.push(createAccountNameFilter(accountName));
+      }
+
+      // Add customer name filter if specified
+      if (this.getNodeParameter("filterByCustomerName", i, false) as boolean) {
+        const customerName = this.getNodeParameter(
+          "customerName",
+          i,
+          "",
+        ) as string;
+        if (customerName) filterBy.push(createCustomerNameFilter(customerName));
+      }
+
+      // Add edition filter if specified
+      if (this.getNodeParameter("filterByEditions", i, false) as boolean) {
+        const editions = this.getNodeParameter("editions", i, []) as string[];
+        if (editions.length > 0) filterBy.push(createEditionFilter(editions));
+      }
+
+      // Add tenant type filter if specified
+      if (this.getNodeParameter("filterByTenantType", i, false) as boolean) {
+        const tenantType = this.getNodeParameter("tenantType", i, "") as string;
+        if (tenantType) filterBy.push(createTenantTypeFilter(tenantType));
+      }
+
+      // Add product module filter if specified
+      if (
+        this.getNodeParameter("filterByProductModules", i, false) as boolean
+      ) {
+        const productModules = this.getNodeParameter(
+          "productModules",
+          i,
+          [],
+        ) as string[];
+        if (productModules.length > 0)
+          filterBy.push(createProductModuleFilter(productModules));
+      }
+
+      // Add service plan filter if specified
+      if (this.getNodeParameter("filterByServicePlan", i, false) as boolean) {
+        const servicePlan = this.getNodeParameter(
+          "servicePlan",
+          i,
+          "",
+        ) as string;
+        if (servicePlan)
+          filterBy.push(createServicePlanNameFilter(servicePlan));
+      }
+
+      // Add MSP global ID filter if specified
+      if (this.getNodeParameter("filterByMspGlobalId", i, false) as boolean) {
+        const mspGlobalId = this.getNodeParameter(
+          "mspGlobalId",
+          i,
+          "",
+        ) as string;
+        if (mspGlobalId) filterBy.push(createMspGlobalIdFilter(mspGlobalId));
+      }
+
+      // Add MSP name filter if specified
+      if (this.getNodeParameter("filterByMspName", i, false) as boolean) {
+        const mspName = this.getNodeParameter("mspName", i, "") as string;
+        if (mspName) filterBy.push(createMspNameFilter(mspName));
       }
 
       // Prepare request body with the correct structure using helper function
@@ -150,8 +225,8 @@ export async function executeReportUsageOperation(
       // Set endpoint based on operation
       const endpoint =
         operation === "getItemizedConsumption"
-          ? "/msp/reporting/v2/reports/consumptionItemized"
-          : "/msp/reporting/v2/reports/quotaItemized";
+          ? "/msp/reporting/v3/reports/consumptionItemized"
+          : "/msp/reporting/v3/reports/quotaItemized";
 
       // Create filters array for all filters
       const filterBy: IReportFilter[] = [];
@@ -255,6 +330,36 @@ export async function executeReportUsageOperation(
               editionNames,
             ),
           );
+        }
+      }
+
+      // Add MSP global ID filter if specified
+      const filterByMspGlobalId = this.getNodeParameter(
+        "filterByMspGlobalId",
+        i,
+        false,
+      ) as boolean;
+      if (filterByMspGlobalId) {
+        const mspGlobalId = this.getNodeParameter(
+          "mspGlobalId",
+          i,
+          "",
+        ) as string;
+        if (mspGlobalId) {
+          filterBy.push(createMspGlobalIdFilter(mspGlobalId));
+        }
+      }
+
+      // Add MSP name filter if specified
+      const filterByMspName = this.getNodeParameter(
+        "filterByMspName",
+        i,
+        false,
+      ) as boolean;
+      if (filterByMspName) {
+        const mspName = this.getNodeParameter("mspName", i, "") as string;
+        if (mspName) {
+          filterBy.push(createMspNameFilter(mspName));
         }
       }
 

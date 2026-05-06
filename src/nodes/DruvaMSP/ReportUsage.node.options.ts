@@ -106,7 +106,6 @@ export const reportUsageFields: INodeProperties[] = [
       show: {
         resource: ["reportUsage"],
         operation: [
-          "getGlobalReport",
           "getItemizedConsumption",
           "getItemizedQuota",
           "getCommitAndBalance",
@@ -126,7 +125,7 @@ export const reportUsageFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["reportUsage"],
-        operation: ["getGlobalReport", "getCommitAndBalance"],
+        operation: ["getCommitAndBalance"],
         dateSelectionMethod: ["specificDates"],
       },
     },
@@ -163,7 +162,7 @@ export const reportUsageFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ["reportUsage"],
-        operation: ["getGlobalReport", "getCommitAndBalance"],
+        operation: ["getCommitAndBalance"],
         dateSelectionMethod: ["specificDates"],
       },
     },
@@ -200,7 +199,6 @@ export const reportUsageFields: INodeProperties[] = [
       show: {
         resource: ["reportUsage"],
         operation: [
-          "getGlobalReport",
           "getItemizedConsumption",
           "getItemizedQuota",
           "getCommitAndBalance",
@@ -424,6 +422,289 @@ export const reportUsageFields: INodeProperties[] = [
     default: [],
     required: true,
     description: "List of usage descriptions to include in the report",
+  },
+
+  // Global Usage — Account Name Filtering
+  {
+    displayName: "Filter by Account Name",
+    name: "filterByAccountName",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by account name",
+  },
+  {
+    displayName: "Account Name",
+    name: "accountName",
+    type: "string",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+        filterByAccountName: [true],
+      },
+    },
+    default: "",
+    required: true,
+    description: "Account name to filter by (exact match)",
+  },
+
+  // Global Usage — Customer Name Filtering
+  {
+    displayName: "Filter by Customer Name",
+    name: "filterByCustomerName",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by customer name",
+  },
+  {
+    displayName: "Customer Name",
+    name: "customerName",
+    type: "string",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+        filterByCustomerName: [true],
+      },
+    },
+    default: "",
+    required: true,
+    description: "Customer name to filter by (exact match)",
+  },
+
+  // Global Usage — Edition Filtering
+  {
+    displayName: "Filter by Editions",
+    name: "filterByEditions",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by edition",
+  },
+  {
+    displayName: "Editions",
+    name: "editions",
+    type: "multiOptions",
+    options: [
+      { name: "Business", value: "Business" },
+      { name: "Enterprise", value: "Enterprise" },
+      { name: "Elite", value: "Elite" },
+    ],
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+        filterByEditions: [true],
+      },
+    },
+    default: [],
+    required: true,
+    description: "Editions to include in the report",
+  },
+
+  // Global Usage — Tenant Type Filtering
+  {
+    displayName: "Filter by Tenant Type",
+    name: "filterByTenantType",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by tenant type",
+  },
+  {
+    displayName: "Tenant Type",
+    name: "tenantType",
+    type: "options",
+    options: [
+      { name: "Commercial", value: "Commercial" },
+      { name: "Evaluation", value: "Evaluation" },
+    ],
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+        filterByTenantType: [true],
+      },
+    },
+    default: "Commercial",
+    required: true,
+    description: "Tenant type to filter by",
+  },
+
+  // Global Usage — Product Module Filtering
+  {
+    displayName: "Filter by Product Modules",
+    name: "filterByProductModules",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by product module",
+  },
+  {
+    displayName: "Product Modules",
+    name: "productModules",
+    type: "multiOptions",
+    options: [
+      {
+        name: DRUVA_PRODUCT_NAMES.ENTERPRISE_WORKLOADS,
+        value: DRUVA_PRODUCT_NAMES.ENTERPRISE_WORKLOADS,
+      },
+      {
+        name: DRUVA_PRODUCT_NAMES.MICROSOFT_365,
+        value: DRUVA_PRODUCT_NAMES.MICROSOFT_365,
+      },
+      {
+        name: DRUVA_PRODUCT_NAMES.GOOGLE_WORKSPACE,
+        value: DRUVA_PRODUCT_NAMES.GOOGLE_WORKSPACE,
+      },
+      {
+        name: DRUVA_PRODUCT_NAMES.ENDPOINTS,
+        value: DRUVA_PRODUCT_NAMES.ENDPOINTS,
+      },
+    ],
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+        filterByProductModules: [true],
+      },
+    },
+    default: [],
+    required: true,
+    description: "Product modules to include in the report",
+  },
+
+  // Global Usage — Service Plan Filtering
+  {
+    displayName: "Filter by Service Plan",
+    name: "filterByServicePlan",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by service plan name",
+  },
+  {
+    displayName: "Service Plan",
+    name: "servicePlan",
+    type: "string",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: ["getGlobalReport"],
+        filterByServicePlan: [true],
+      },
+    },
+    default: "",
+    required: true,
+    description: "Service plan name to filter by (exact match)",
+  },
+
+  // MSP Global ID Filtering
+  {
+    displayName: "Filter by MSP Global ID",
+    name: "filterByMspGlobalId",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: [
+          "getGlobalReport",
+          "getItemizedConsumption",
+          "getItemizedQuota",
+        ],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by a specific MSP global ID",
+  },
+  {
+    displayName: "MSP Global ID",
+    name: "mspGlobalId",
+    type: "string",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: [
+          "getGlobalReport",
+          "getItemizedConsumption",
+          "getItemizedQuota",
+        ],
+        filterByMspGlobalId: [true],
+      },
+    },
+    default: "",
+    required: true,
+    description: "MSP global ID to filter by (exact match)",
+  },
+
+  // MSP Name Filtering
+  {
+    displayName: "Filter by MSP Name",
+    name: "filterByMspName",
+    type: "boolean",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: [
+          "getGlobalReport",
+          "getItemizedConsumption",
+          "getItemizedQuota",
+        ],
+      },
+    },
+    default: false,
+    description: "Whether to filter results by a specific MSP name",
+  },
+  {
+    displayName: "MSP Name",
+    name: "mspName",
+    type: "string",
+    displayOptions: {
+      show: {
+        resource: ["reportUsage"],
+        operation: [
+          "getGlobalReport",
+          "getItemizedConsumption",
+          "getItemizedQuota",
+        ],
+        filterByMspName: [true],
+      },
+    },
+    default: "",
+    required: true,
+    description: "MSP name to filter by (exact match)",
   },
 
   /* -------------------------------------------------------------------------- */

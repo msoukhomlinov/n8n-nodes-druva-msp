@@ -60,7 +60,7 @@ The Druva MSP integration provides access to the following resources:
   - Feature entitlement data included by default
 
 - **Comprehensive Reporting**
-  - **Usage Reports** — Global Usage, Tenant Consumption/Quota, MSP Commit and Balance, Customer and License (Daily/Monthly), Chargeback Tenant Consumption (Daily/Monthly)
+  - **Usage Reports** — Global Usage, Tenant Consumption/Quota, MSP Commit and Balance, Customer and License (Daily/Monthly), Chargeback Tenant Consumption (Daily/Monthly); filterable by customer, product, edition, usage description, MSP Global ID, and MSP Name
   - **Cyber Resilience Reports** — Rollback Actions, Data Protection Risk
   - **Endpoint Reports** — Users, User Rollout, User Provisioning, License Usage, Last Backup Status, Alerts, Storage Statistics, Storage Alert, Cloud Cache Statistics, Restore Activity, Preserved Users Datasources
   - **Enterprise Workloads Reports** — M365 and Google Workspace operations: Alerts, Groups/Teams/SharePoint/Shared Drive Discovery, License Usage, Preserved Users Datasources, Storage Consumption, User Count and Status, User Last Backup Status, User Provisioning, User Restore/Workload Activity; plus M365 Backup Activity (Groups, Public Folder, SharePoint, Teams)
