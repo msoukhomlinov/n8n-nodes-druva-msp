@@ -3,6 +3,16 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
+## [Unreleased]
+
+### Added
+
+- **Tenant Config - Enterprise Workloads resource (read-only)**: policies, backup sets, jobs, content rules, proxies, hosts, servers, instances per workload (VMware, SQL Server, NAS, FileServer, HyperV, AHV, Oracle SBT, Phoenix Backup Store) plus CloudCache Config and Storage Usage (Cross-Workload). Calls Druva data-plane APIs using customer-scoped Bearer tokens.
+- **Tenant Config - inSync resource (read-only)**: profiles, AD connectors, audit settings, legal holds v4 (policies + clients), M365/Gmail app status, OneDrive/Exchange restore points, SharePoint site collections + restore points, protected cloud app devices, inSync users.
+- **Customer-scoped token exchange** via `POST /msp/v2/customers/{customerID}/token` with per-execution WeakMap caching and 401-triggered token invalidation + retry.
+- **Org discovery** via `/organization/v1/orgs` to bridge MSP tenant UUIDs and data-plane integer OrgIDs. Auto/All/Specific org-scope modes on the Enterprise Workloads resource.
+
+
 ## [1.6.5] - 2026-05-06
 
 ### Added
