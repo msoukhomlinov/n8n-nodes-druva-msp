@@ -70,6 +70,12 @@ export const PRODUCT_ID = {
   2: DRUVA_PRODUCT_NAMES.SAAS_APPS_AND_ENDPOINTS,
 } as const;
 
+/**
+ * Numeric product IDs as named constants (mirror PRODUCT_ID keys)
+ */
+export const PRODUCT_ID_ENTERPRISE_WORKLOADS = 1;
+export const PRODUCT_ID_SAAS_AND_ENDPOINTS = 2;
+
 // Define a type for product ID values
 export type ProductIdCode = keyof typeof PRODUCT_ID;
 export type ProductIdLabel = (typeof PRODUCT_ID)[ProductIdCode];

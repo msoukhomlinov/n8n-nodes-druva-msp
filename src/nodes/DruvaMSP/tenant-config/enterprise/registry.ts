@@ -1,4 +1,4 @@
-import type { WorkloadEntry } from "./types";
+import type { ObjectEntry, WorkloadEntry } from "./types";
 import { vmware } from "./vmware";
 import { sqlServer } from "./sqlserver";
 import { nas } from "./nas";
@@ -25,6 +25,9 @@ export function findWorkload(value: string): WorkloadEntry | undefined {
   return ENTERPRISE_WORKLOADS.find((w) => w.value === value);
 }
 
-export function findObject(workload: WorkloadEntry, value: string) {
+export function findObject(
+  workload: WorkloadEntry,
+  value: string,
+): ObjectEntry | undefined {
   return workload.objects.find((o) => o.value === value);
 }

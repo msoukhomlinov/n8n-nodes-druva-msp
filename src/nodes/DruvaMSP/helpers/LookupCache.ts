@@ -23,12 +23,7 @@ export interface TenantRecord {
   [key: string]: unknown;
 }
 
-interface TenantCacheEntry {
-  byId: Map<string, TenantRecord>;
-  fetchedAtMs: number;
-}
-
-const tenantCache: WeakMap<object, TenantCacheEntry> = new WeakMap();
+const tenantCache: WeakMap<object, Map<string, TenantRecord>> = new WeakMap();
 
 async function fetchAllTenants(
   ctx: ExecutionLike,
@@ -54,9 +49,9 @@ async function ensureCache(
   ctx: ExecutionLike,
 ): Promise<Map<string, TenantRecord>> {
   const existing = tenantCache.get(ctx as object);
-  if (existing) return existing.byId;
+  if (existing) return existing;
   const byId = await fetchAllTenants(ctx);
-  tenantCache.set(ctx as object, { byId, fetchedAtMs: Date.now() });
+  tenantCache.set(ctx as object, byId);
   return byId;
 }
 
@@ -68,6 +63,11 @@ export async function getTenantById(
   const t = byId.get(tenantID);
   if (!t) {
     throw new Error(`Tenant ${tenantID} not found in MSP customer scope`);
+  }
+  if (!t.customerID) {
+    throw new Error(
+      `Tenant ${tenantID} has no customerID — cannot exchange customer-scoped token`,
+    );
   }
   return t;
 }

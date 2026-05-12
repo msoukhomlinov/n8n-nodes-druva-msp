@@ -114,7 +114,11 @@ import { listOrgsForCustomer } from "./helpers/OrgDiscoveryHelpers";
 
 // Import central logger
 import { logger } from "./helpers/LoggerHelper";
-import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
+import {
+  API_MAX_PAGE_SIZE,
+  PRODUCT_ID_ENTERPRISE_WORKLOADS,
+  PRODUCT_ID_SAAS_AND_ENDPOINTS,
+} from "./helpers/Constants";
 
 // Import the value converters at the top of the file
 import {
@@ -430,7 +434,10 @@ export class DruvaMsp implements INodeType {
       async getEnterpriseTenants(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
         try {
-          const tenants = await listTenantsByProduct.call(this, 1);
+          const tenants = await listTenantsByProduct.call(
+            this,
+            PRODUCT_ID_ENTERPRISE_WORKLOADS,
+          );
           for (const t of tenants) {
             returnData.push({
               name: t.tenantName || `Tenant ${t.tenantId}`,
@@ -453,7 +460,10 @@ export class DruvaMsp implements INodeType {
       async getInsyncTenants(this: ILoadOptionsFunctions) {
         const returnData: INodePropertyOptions[] = [];
         try {
-          const tenants = await listTenantsByProduct.call(this, 2);
+          const tenants = await listTenantsByProduct.call(
+            this,
+            PRODUCT_ID_SAAS_AND_ENDPOINTS,
+          );
           for (const t of tenants) {
             returnData.push({
               name: t.tenantName || `Tenant ${t.tenantId}`,

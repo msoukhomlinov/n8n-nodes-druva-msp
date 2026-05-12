@@ -79,6 +79,7 @@ export const tenantConfigEnterpriseFields: INodeProperties[] = [
     name: "orgId",
     type: "options",
     typeOptions: { loadOptionsMethod: "getOrgsForEnterpriseTenant" },
+    required: true,
     default: "",
     displayOptions: {
       show: { resource: [RESOURCE_VALUE], orgScope: ["specific"] },
