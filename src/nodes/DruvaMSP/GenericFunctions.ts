@@ -44,3 +44,14 @@ export {
   druvaTenantApiRequestAllItems,
   type DruvaRequestFn,
 } from "./helpers/PaginationHelpers";
+
+export {
+  getTenantById,
+  listTenantsByProduct,
+  type TenantRecord,
+} from "./helpers/LookupCache";
+export {
+  listOrgsForCustomer,
+  resolveOrgIdForTenant,
+  type OrgRecord,
+} from "./helpers/OrgDiscoveryHelpers";
