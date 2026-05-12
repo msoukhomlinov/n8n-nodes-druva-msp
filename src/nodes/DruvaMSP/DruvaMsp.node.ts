@@ -97,6 +97,21 @@ import {
 } from "./BackupHealthSummary.node.options";
 import { executeBackupHealthSummaryOperation } from "./BackupHealthSummary.node.execute";
 
+import {
+  tenantConfigEnterpriseOperations,
+  tenantConfigEnterpriseFields,
+} from "./TenantConfigEnterprise.node.options";
+import { executeTenantConfigEnterpriseOperation } from "./TenantConfigEnterprise.node.execute";
+
+import {
+  tenantConfigInsyncOperations,
+  tenantConfigInsyncFields,
+} from "./TenantConfigInsync.node.options";
+import { executeTenantConfigInsyncOperation } from "./TenantConfigInsync.node.execute";
+
+import { listTenantsByProduct, getTenantById } from "./helpers/LookupCache";
+import { listOrgsForCustomer } from "./helpers/OrgDiscoveryHelpers";
+
 // Import central logger
 import { logger } from "./helpers/LoggerHelper";
 import { API_MAX_PAGE_SIZE } from "./helpers/Constants";
@@ -223,6 +238,14 @@ export class DruvaMsp implements INodeType {
             name: "Tenant",
             value: "tenant",
           },
+          {
+            name: "Tenant Config - Enterprise Workloads",
+            value: "tenantConfigEnterprise",
+          },
+          {
+            name: "Tenant Config - inSync",
+            value: "tenantConfigInsync",
+          },
           // TODO: Add other resources (Reports)
         ],
         default: "customer",
@@ -243,6 +266,8 @@ export class DruvaMsp implements INodeType {
       ...reportEndpointOperations,
       ...reportEnterpriseOperations,
       ...storageRegionOperations,
+      ...tenantConfigEnterpriseOperations,
+      ...tenantConfigInsyncOperations,
 
       // Fields for each resource/operation
       ...adminFields,
@@ -259,6 +284,8 @@ export class DruvaMsp implements INodeType {
       ...reportCyberFields,
       ...reportEndpointFields,
       ...reportEnterpriseFields,
+      ...tenantConfigEnterpriseFields,
+      ...tenantConfigInsyncFields,
 
       {
         displayName: "Wrap Output Items",
@@ -394,6 +421,83 @@ export class DruvaMsp implements INodeType {
           return [
             {
               name: `Error fetching tenants: ${(error as Error).message}`,
+              value: "",
+            },
+          ];
+        }
+      },
+
+      async getEnterpriseTenants(this: ILoadOptionsFunctions) {
+        const returnData: INodePropertyOptions[] = [];
+        try {
+          const tenants = await listTenantsByProduct.call(this, 1);
+          for (const t of tenants) {
+            returnData.push({
+              name: t.tenantName || `Tenant ${t.tenantId}`,
+              value: t.tenantId,
+            });
+          }
+          returnData.sort((a, b) => a.name.localeCompare(b.name));
+          return returnData;
+        } catch (error) {
+          logger.error("Error loading Enterprise tenants:", error as Error);
+          return [
+            {
+              name: `Error: ${(error as Error).message}`,
+              value: "",
+            },
+          ];
+        }
+      },
+
+      async getInsyncTenants(this: ILoadOptionsFunctions) {
+        const returnData: INodePropertyOptions[] = [];
+        try {
+          const tenants = await listTenantsByProduct.call(this, 2);
+          for (const t of tenants) {
+            returnData.push({
+              name: t.tenantName || `Tenant ${t.tenantId}`,
+              value: t.tenantId,
+            });
+          }
+          returnData.sort((a, b) => a.name.localeCompare(b.name));
+          return returnData;
+        } catch (error) {
+          logger.error("Error loading inSync tenants:", error as Error);
+          return [
+            {
+              name: `Error: ${(error as Error).message}`,
+              value: "",
+            },
+          ];
+        }
+      },
+
+      async getOrgsForEnterpriseTenant(this: ILoadOptionsFunctions) {
+        const returnData: INodePropertyOptions[] = [];
+        let tenantId: string;
+        try {
+          tenantId = this.getCurrentNodeParameter("tenantId") as string;
+        } catch {
+          return returnData;
+        }
+        if (!tenantId) return returnData;
+        try {
+          const tenant = await getTenantById.call(this, tenantId);
+          const orgs = await listOrgsForCustomer.call(this, tenant.customerID);
+          for (const o of orgs) {
+            returnData.push({
+              name: `${o.organizationName} (${o.id})`,
+              value: String(o.id),
+            });
+          }
+          returnData.sort((a, b) => a.name.localeCompare(b.name));
+          return returnData;
+        } catch (error) {
+          logger.error("Error loading orgs:", error as Error);
+          return [
+            {
+              name: `Error: ${(error as Error).message}`,
               value: "",
             },
           ];
@@ -651,6 +755,10 @@ export class DruvaMsp implements INodeType {
       consumptionBillingAnalyzer: (index) =>
         executeConsumptionBillingAnalyzerOperation.call(this, index),
       storageRegion: (index) => executeStorageRegionOperation.call(this, index),
+      tenantConfigEnterprise: (index) =>
+        executeTenantConfigEnterpriseOperation.call(this, index),
+      tenantConfigInsync: (index) =>
+        executeTenantConfigInsyncOperation.call(this, index),
     };
 
     const executor = RESOURCE_EXECUTOR[resource];
