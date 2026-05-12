@@ -3,7 +3,7 @@
 All notable changes to the n8n-nodes-druva-msp package will be documented in this file.
 
 
-## [Unreleased]
+## [1.7.0] - 2026-05-12
 
 ### Added
 
@@ -11,6 +11,8 @@ All notable changes to the n8n-nodes-druva-msp package will be documented in thi
 - **Tenant Config - inSync resource (read-only)**: profiles, AD connectors, audit settings, legal holds v4 (policies + clients), M365/Gmail app status, OneDrive/Exchange restore points, SharePoint site collections + restore points, protected cloud app devices, inSync users.
 - **Customer-scoped token exchange** via `POST /msp/v2/customers/{customerID}/token` with per-execution WeakMap caching and 401-triggered token invalidation + retry.
 - **Org discovery** via `/organization/v1/orgs` to bridge MSP tenant UUIDs and data-plane integer OrgIDs. Auto/All/Specific org-scope modes on the Enterprise Workloads resource.
+- **Additive pagination helpers** in `PaginationHelpers.ts`: `druvaApiRequestAllItemsWith` (generic page-token paginator with injected request function) and `druvaTenantApiRequestAllItems` (tenant-aware wrapper). Existing helpers untouched.
+- **Named product ID constants** `PRODUCT_ID_ENTERPRISE_WORKLOADS` and `PRODUCT_ID_SAAS_AND_ENDPOINTS` in `helpers/Constants.ts`.
 
 
 ## [1.6.5] - 2026-05-06
