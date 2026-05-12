@@ -9,6 +9,7 @@ import type {
 
 import { druvaMspApiRequest } from "./ApiRequestHelpers";
 import { getDruvaMspAccessToken } from "./AuthHelpers";
+import { druvaTenantApiRequest } from "./TenantApiRequest";
 import { logger } from "./LoggerHelper";
 import { API_MAX_PAGE_SIZE } from "./Constants";
 
@@ -696,4 +697,97 @@ export async function druvaMspApiRequestAllPagedItems(
   } while (loopCounter < MAX_LOOP_COUNT && previousItemCount !== 0);
 
   return allItems;
+}
+
+export type DruvaRequestFn = (
+  method: IHttpRequestMethods,
+  endpoint: string,
+  body?: IDataObject,
+  qs?: IDataObject,
+) => Promise<unknown>;
+
+/**
+ * Generic page-token paginator. Caller injects the request function
+ * (e.g. a closure over druvaMspApiRequest or druvaTenantApiRequest).
+ */
+export async function druvaApiRequestAllItemsWith(
+  this: IHookFunctions | IExecuteFunctions | ILoadOptionsFunctions,
+  requestFn: DruvaRequestFn,
+  method: IHttpRequestMethods,
+  endpoint: string,
+  responseKey: string,
+  query: IDataObject = {},
+): Promise<IDataObject[]> {
+  const returnData: IDataObject[] = [];
+  const initialQuery = { ...query };
+  const seenTokens = new Set<string>();
+  let loopCounter = 0;
+  const MAX_LOOP_COUNT = 100;
+  let pageToken: string | undefined | null = undefined;
+
+  do {
+    const requestQuery: IDataObject = pageToken
+      ? { pageToken }
+      : { ...initialQuery };
+
+    const responseData = (await requestFn(
+      method,
+      endpoint,
+      undefined,
+      requestQuery,
+    )) as IDataObject;
+
+    const items = responseData[responseKey] as IDataObject[] | undefined;
+    if (items === undefined) {
+      throw new Error(
+        `Response does not contain key "${responseKey}". Response was: ${JSON.stringify(responseData)}`,
+      );
+    }
+    returnData.push(...items);
+
+    pageToken = responseData.nextPageToken as string | undefined | null;
+
+    if (pageToken) {
+      if (seenTokens.has(pageToken)) {
+        logger.warn(
+          `AllItemsWith: pagination loop detected on token ${pageToken}; stopping.`,
+        );
+        break;
+      }
+      seenTokens.add(pageToken);
+      loopCounter++;
+      if (loopCounter > MAX_LOOP_COUNT) {
+        logger.warn(
+          `AllItemsWith: hit max ${MAX_LOOP_COUNT} pagination requests; stopping.`,
+        );
+        break;
+      }
+    }
+  } while (pageToken);
+
+  return returnData;
+}
+
+/**
+ * Tenant-aware pagination wrapper. Closes over customerID and delegates to
+ * druvaApiRequestAllItemsWith.
+ */
+export async function druvaTenantApiRequestAllItems(
+  this: IHookFunctions | IExecuteFunctions | ILoadOptionsFunctions,
+  customerID: string,
+  method: IHttpRequestMethods,
+  endpoint: string,
+  responseKey: string,
+  query: IDataObject = {},
+): Promise<IDataObject[]> {
+  const requestFn: DruvaRequestFn = (m, ep, body, qs) =>
+    druvaTenantApiRequest.call(this, customerID, m, ep, body ?? {}, qs ?? {});
+  return druvaApiRequestAllItemsWith.call(
+    this,
+    requestFn,
+    method,
+    endpoint,
+    responseKey,
+    query,
+  );
 }
